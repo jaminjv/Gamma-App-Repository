@@ -1,0 +1,704 @@
+<title>Gamma Crew</title>
+<style>/*__FONTS__*/</style>
+<style>/*__GLASS_CSS__*/
+
+/* ============================================================
+   App de líderes — disposición de teléfono
+   ============================================================ */
+#shell{max-width:470px;margin:0 auto;min-height:100vh;padding-bottom:96px;}
+
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px;}
+.login-card{width:100%;max-width:390px;padding:34px 28px;text-align:center;}
+.login-card img{width:104px;height:auto;margin-bottom:18px;filter:drop-shadow(0 10px 24px rgba(0,0,0,.6));}
+.login-card h1{font-size:var(--t-xl);margin-bottom:5px;}
+.login-card .sub{color:var(--text-dim);font-size:var(--t-sm);margin-bottom:24px;line-height:1.55;}
+.login-card .field{text-align:left;}
+.login-hint{margin-top:16px;padding-top:14px;border-top:1px solid var(--glass-brd);
+  font-size:var(--t-xs);color:var(--text-faint);line-height:1.75;text-align:left;}
+.login-hint b{color:var(--text-dim);}
+.err{margin:-4px 0 12px;padding:10px 13px;border-radius:var(--r-sm);
+  background:rgba(216,69,47,.16);box-shadow:inset 0 0 0 1px rgba(216,69,47,.4);
+  color:#F0765F;font-size:var(--t-sm);text-align:left;}
+
+.topbar{
+  position:sticky;top:0;z-index:30;margin:0 0 16px;padding:13px 16px;
+  border-radius:0 0 var(--r-lg) var(--r-lg);
+  display:flex;align-items:center;gap:12px;
+}
+.topbar img{width:36px;height:auto;flex:none;}
+.topbar .who{min-width:0;flex:1;}
+.topbar .who b{display:block;font-size:var(--t-md);font-weight:600;line-height:1.25;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.topbar .who span{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-faint);
+  letter-spacing:.05em;}
+.lang{display:flex;padding:3px;border-radius:999px;background:rgba(0,0,0,.32);flex:none;
+  box-shadow:inset 0 0 0 1px var(--glass-brd);}
+.lang button{padding:5px 11px;border-radius:999px;font-size:10.5px;font-weight:700;
+  letter-spacing:.06em;color:var(--text-faint);transition:all .3s var(--ease);}
+.lang button.on{background:linear-gradient(140deg,var(--burgundy-lit),var(--burgundy));color:#fff;
+  box-shadow:0 4px 12px -5px rgba(168,28,54,.9);}
+
+.body{padding:0 15px;}
+.sec-head{margin-bottom:15px;}
+.sec-head h1{font-size:var(--t-xl);line-height:1.15;margin-bottom:3px;}
+.sec-head .sub{color:var(--text-dim);font-size:var(--t-sm);}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:20px;}
+.stat{padding:14px 12px;text-align:center;}
+.stat .v{font-family:'Fraunces',serif;font-size:var(--t-2xl);line-height:1;margin-bottom:5px;
+  font-variant-numeric:tabular-nums;}
+.stat .k{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--text-dim);line-height:1.4;}
+
+.job{padding:17px;margin-bottom:12px;}
+.job-top{display:flex;align-items:flex-start;justify-content:space-between;gap:11px;margin-bottom:7px;}
+.job h3{font-family:'Archivo',sans-serif;font-size:var(--t-lg);font-weight:600;letter-spacing:0;line-height:1.3;}
+.job .meta{font-family:'IBM Plex Mono',monospace;font-size:var(--t-xs);color:var(--text-dim);
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center;letter-spacing:.03em;}
+.job .meta .dot{opacity:.4;}
+.job-actions{display:flex;flex-direction:column;gap:9px;margin-top:14px;}
+.row2{display:flex;gap:9px;}
+.row2 .btn{flex:1;}
+
+.sketch-btn{
+  display:flex;align-items:center;gap:11px;width:100%;padding:11px;border-radius:var(--r-sm);
+  background:rgba(0,0,0,.26);box-shadow:inset 0 0 0 1px var(--glass-brd);
+  text-align:left;font-size:var(--t-sm);font-weight:600;color:var(--gold-lit);
+  transition:all .3s var(--ease);
+}
+.sketch-btn:hover{background:rgba(0,0,0,.4);}
+.sketch-btn img{width:44px;height:34px;object-fit:cover;border-radius:6px;flex:none;}
+
+.seg{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px;}
+
+.photo-drop{
+  display:grid;place-items:center;gap:7px;padding:26px 16px;margin-bottom:14px;
+  border-radius:var(--r-md);cursor:pointer;text-align:center;
+  background:rgba(0,0,0,.26);
+  border:1.5px dashed rgba(255,255,255,.22);
+  transition:all .3s var(--ease);
+}
+.photo-drop:hover{border-color:var(--gold-lit);background:rgba(0,0,0,.36);}
+.photo-drop span{font-size:var(--t-sm);color:var(--text-dim);}
+.photo-drop img{max-width:100%;max-height:190px;border-radius:var(--r-sm);display:block;}
+
+.tabs{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:50;
+  width:calc(100% - 30px);max-width:440px;
+  display:flex;gap:4px;padding:6px;border-radius:999px;
+}
+.tab-btn{
+  position:relative;overflow:hidden;flex:1;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:9px 4px;border-radius:999px;
+  font-size:9.5px;font-weight:600;letter-spacing:.04em;color:var(--text-faint);
+  transition:all .35s var(--ease);
+}
+.tab-btn svg{width:19px;height:19px;}
+.tab-btn.on{
+  background:linear-gradient(140deg,var(--burgundy-lit),var(--burgundy));color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.26),0 8px 20px -8px rgba(168,28,54,.9);
+}
+.tab-badge{
+  position:absolute;top:5px;right:calc(50% - 20px);
+  min-width:15px;height:15px;padding:0 4px;border-radius:999px;
+  display:grid;place-items:center;background:var(--gold-lit);color:#2A1206;
+  font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;
+}
+
+.hist{padding:14px 16px;margin-bottom:10px;border-radius:var(--r-md);}
+.hist-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:5px;}
+.hist b{font-size:var(--t-md);font-weight:600;}
+.divider{display:flex;align-items:center;gap:11px;margin:22px 0 13px;}
+.divider span{font-family:'IBM Plex Mono',monospace;font-size:var(--t-xs);text-transform:uppercase;
+  letter-spacing:.14em;color:var(--text-faint);white-space:nowrap;}
+.divider::after{content:'';flex:1;height:1px;background:var(--glass-brd);}
+</style>
+
+<canvas id="ambient"></canvas>
+<div id="shell"></div>
+
+<script>
+/*__GLASS_JS__*/
+
+/* ============================================================
+   GAMMA TREE EXPERTS — Crew Leader App
+   Prototipo funcional. Cada líder entra con su propio correo.
+   ============================================================ */
+const LOGO = '__LOGO__';
+
+const ICONS = {
+  jobs:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6"/></svg>',
+  dump:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18l-1.5 14a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2z"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  reqs:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2z"/><path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16z"/></svg>',
+  out:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  flag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></svg>',
+};
+
+/* ---------- Traducciones ---------- */
+const TR = {
+  es:{
+    signIn:'Ingresar', email:'Correo', pass:'Contraseña',
+    welcome:'App de cuadrilla', tagline:'Tus trabajos del día, vaciados y requerimientos.',
+    badLogin:'Correo o contraseña incorrectos.',
+    demoAccounts:'Cuentas de prueba', demoPass:'Contraseña para todas',
+    tabJobs:'Trabajos', tabDump:'Vaciado', tabReq:'Pedidos',
+    jobsTitle:'Mis trabajos', jobsSub:'Asignados a tu cuadrilla.',
+    today:'Hoy', doneToday:'Hechos', flagged:'Reasignar',
+    active:'Trabajos activos', history:'Historial',
+    start:'Iniciar trabajo', finish:'Terminado', cant:'No terminado',
+    viewSketch:'Ver diagrama del trabajo',
+    noJobs:'Sin trabajos', noJobsSub:'No tienes nada asignado por ahora.',
+    doneTitle:'Cerrar el trabajo', donePrompt:'Toma una foto del trabajo terminado. Es obligatoria.',
+    addPhoto:'Tocar para tomar la foto', confirmDone:'Confirmar terminado',
+    flagTitle:'No se pudo terminar', flagPrompt:'Cuéntale a la oficina qué pasó.',
+    reasonPh:'Ej.: el tocón está muy cerca de la línea de gas.',
+    confirmFlag:'Enviar a la oficina', cancel:'Cancelar',
+    dumpTitle:'Reportar vaciado', dumpSub:'Avisa cada carga que descargues.',
+    dumpWhere:'Lugar del vaciado', dumpWherePh:'Ej.: Frank Scott Dump Site',
+    dumpType:'Tipo de carga', chips:'Astillas', logs:'Troncos',
+    dumpNotes:'Notas', dumpNotesPh:'Carga completa, ramas y tronco.',
+    dumpSend:'Reportar vaciado', dumpDone:'Vaciado reportado',
+    myDumps:'Mis vaciados', noDumps:'Todavía no has reportado vaciados.',
+    reqTitle:'Requerimientos', reqSub:'Pide lo que le falta a tu cuadrilla.',
+    reqCat:'Qué necesitas', reqUrg:'Urgencia',
+    low:'Baja', normal:'Normal', urgent:'Urgente',
+    reqNote:'Detalle', reqNotePh:'Ej.: la cuerda de escalada está deshilachada, necesito una de 45m.',
+    reqSend:'Enviar a la oficina', reqDone:'Requerimiento enviado',
+    myReqs:'Mis pedidos', noReqs:'Todavía no has enviado pedidos.',
+    stNew:'Enviado', stOrdered:'Pedido', stResolved:'Resuelto',
+    needPhoto:'La foto es obligatoria.', needWhere:'Escribe el lugar del vaciado.',
+    needNote:'Escribe el detalle del pedido.',
+    jobStarted:'Trabajo iniciado', jobDone:'Trabajo terminado', jobFlagged:'Enviado a la oficina',
+    catRope:'Cuerda / rigging', catTool:'Daño de herramienta', catPpe:'Equipo de seguridad',
+    catFuel:'Combustible', catParts:'Repuestos', catOther:'Otro',
+    stPending:'Pendiente', stAssigned:'Asignado', stProgress:'En progreso',
+    stDone:'Terminado', stFlag:'Reasignar',
+    jRemoval:'Remoción', jTrim:'Poda / trim', jAerial:'Poda en altura', jStorm:'Daño por tormenta',
+    gBucket:'Bucket truck', gClimbing:'Climbing', gBoth:'Bucket + Climbing',
+    instructions:'Instrucciones',
+  },
+  en:{
+    signIn:'Sign in', email:'Email', pass:'Password',
+    welcome:'Crew app', tagline:'Your jobs, dump reports and requests.',
+    badLogin:'Wrong email or password.',
+    demoAccounts:'Demo accounts', demoPass:'Password for all',
+    tabJobs:'Jobs', tabDump:'Dump', tabReq:'Requests',
+    jobsTitle:'My jobs', jobsSub:'Assigned to your crew.',
+    today:'Today', doneToday:'Done', flagged:'Flagged',
+    active:'Active jobs', history:'History',
+    start:'Start job', finish:'Finished', cant:'Could not finish',
+    viewSketch:'View job sketch',
+    noJobs:'No jobs', noJobsSub:'Nothing assigned to you right now.',
+    doneTitle:'Close the job', donePrompt:'Take a photo of the finished work. It is required.',
+    addPhoto:'Tap to take the photo', confirmDone:'Confirm finished',
+    flagTitle:'Could not finish', flagPrompt:'Tell the office what happened.',
+    reasonPh:'e.g. the stump is too close to the gas line.',
+    confirmFlag:'Send to the office', cancel:'Cancel',
+    dumpTitle:'Report dumping', dumpSub:'Log every load you drop.',
+    dumpWhere:'Dump location', dumpWherePh:'e.g. Frank Scott Dump Site',
+    dumpType:'Load type', chips:'Chips', logs:'Logs',
+    dumpNotes:'Notes', dumpNotesPh:'Full load, brush and trunk.',
+    dumpSend:'Report dumping', dumpDone:'Dumping reported',
+    myDumps:'My dump reports', noDumps:'You have not reported any dumps yet.',
+    reqTitle:'Requests', reqSub:'Ask for what your crew is missing.',
+    reqCat:'What you need', reqUrg:'Urgency',
+    low:'Low', normal:'Normal', urgent:'Urgent',
+    reqNote:'Details', reqNotePh:'e.g. climbing line is frayed, need a 150ft replacement.',
+    reqSend:'Send to the office', reqDone:'Request sent',
+    myReqs:'My requests', noReqs:'You have not sent any requests yet.',
+    stNew:'Sent', stOrdered:'Ordered', stResolved:'Resolved',
+    needPhoto:'The photo is required.', needWhere:'Enter the dump location.',
+    needNote:'Describe what you need.',
+    jobStarted:'Job started', jobDone:'Job finished', jobFlagged:'Sent to the office',
+    catRope:'Rope / rigging', catTool:'Tool damage', catPpe:'Safety gear',
+    catFuel:'Fuel', catParts:'Parts', catOther:'Other',
+    stPending:'Pending', stAssigned:'Assigned', stProgress:'In progress',
+    stDone:'Done', stFlag:'Flagged',
+    jRemoval:'Removal', jTrim:'Trim', jAerial:'Aerial pruning', jStorm:'Storm damage',
+    gBucket:'Bucket truck', gClimbing:'Climbing', gBoth:'Bucket + Climbing',
+    instructions:'Instructions',
+  },
+};
+const t = () => TR[state.lang];
+
+const CATS = ['rope','tool','ppe','fuel','parts','other'];
+const CAT_KEY = {rope:'catRope',tool:'catTool',ppe:'catPpe',fuel:'catFuel',parts:'catParts',other:'catOther'};
+const ST_KEY = {pending:'stPending',assigned:'stAssigned',progress:'stProgress',done:'stDone',flag:'stFlag'};
+const JOB_KEY = {removal:'jRemoval',trim:'jTrim',aerial:'jAerial',storm:'jStorm'};
+const GEAR_KEY = {bucket:'gBucket',climbing:'gClimbing',both:'gBoth'};
+
+/* ---------- Cuentas de líder ---------- */
+const DEMO_PASS = 'gamma1954';
+const LEADERS = [
+  {email:'eliseo@gammatree.com',   name:'Eliseo Marín',    crew:'c1', crewName:"Eliseo's Crew",   gear:'climbing'},
+  {email:'ivan@gammatree.com',     name:'Ivan Delgado',    crew:'c2', crewName:"Ivan's Crew",     gear:'bucket'},
+  {email:'jose@gammatree.com',     name:'Jose Ramírez',    crew:'c3', crewName:"Jose's Crew",     gear:'both'},
+  {email:'baltazar@gammatree.com', name:'Baltazar Ortega', crew:'c4', crewName:"Baltazar's Crew", gear:'bucket'},
+  {email:'ron@gammatree.com',      name:'Ron Whitaker',    crew:'c5', crewName:"Ron's Crew",      gear:'climbing'},
+];
+
+function uid(p){ return p + '-' + Math.random().toString(36).slice(2,7); }
+function iso(o){ const d=new Date(); d.setDate(d.getDate()+o); return d.toISOString().slice(0,10); }
+function esc(s){
+  return String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtDate(s){
+  const d=new Date(s+'T12:00:00');
+  return d.toLocaleDateString(state.lang==='es'?'es-MX':'en-US',{weekday:'short',day:'numeric',month:'short'});
+}
+function ago(ts){
+  const m=Math.floor((Date.now()-ts)/60000);
+  if(m<1) return state.lang==='es'?'ahora':'just now';
+  if(m<60) return m+'m';
+  const h=Math.floor(m/60); if(h<24) return h+'h';
+  return Math.floor(h/24)+'d';
+}
+function sampleSketch(){
+  return 'data:image/svg+xml;utf8,'+encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="200" viewBox="0 0 360 200">
+      <rect width="360" height="200" fill="#F2ECDC"/>
+      <path d="M40,170 L40,80 Q40,55 65,55 Q90,55 90,80 L90,170" fill="none" stroke="#145839" stroke-width="3"/>
+      <circle cx="65" cy="52" r="30" fill="none" stroke="#2D6F4A" stroke-width="3"/>
+      <line x1="130" y1="40" x2="330" y2="40" stroke="#811428" stroke-width="2.5" stroke-dasharray="7 5"/>
+      <text x="130" y="30" font-family="monospace" font-size="12" fill="#811428">POWER LINE</text>
+      <text x="130" y="66" font-family="monospace" font-size="12" fill="#2A1206">Trim 10ft clearance</text>
+      <text x="40" y="192" font-family="monospace" font-size="11" fill="#8A7A69">Gamma Tree Experts</text>
+    </svg>`);
+}
+
+/* ---------- Datos semilla ---------- */
+function seedJobs(){
+  return [
+    {id:'WO-a', crew:'c1', address:'22 Fossil Ridge Dr, Swansea, IL',   date:iso(0), job:'aerial',  gear:'climbing', notes:'High canopy pruning, power line nearby — coordinate with Ameren.', status:'assigned', sketch:sampleSketch()},
+    {id:'WO-b', crew:'c1', address:'560 Carlyle Ave, Belleville, IL',   date:iso(0), job:'trim',    gear:'climbing', notes:'Decorative pruning, backyard.',            status:'assigned', sketch:null},
+    {id:'WO-c', crew:'c1', address:'901 N 4th St, Millstadt, IL',       date:iso(-1),job:'aerial',  gear:'climbing', notes:'High pruning near a phone line.',          status:'done',     sketch:null},
+    {id:'WO-d', crew:'c2', address:'412 Frank Scott Pkwy, Belleville, IL',date:iso(0),job:'removal',gear:'bucket',   notes:'Remove dead oak next to the garage. Client wants the wood stacked.', status:'progress', sketch:null},
+    {id:'WO-e', crew:'c2', address:'890 S Illinois St, Belleville, IL', date:iso(0), job:'trim',    gear:'bucket',   notes:'Trim branches overhanging the roof.',      status:'assigned', sketch:null},
+    {id:'WO-f', crew:'c3', address:'77 Green Mount Rd, Shiloh, IL',     date:iso(0), job:'removal', gear:'bucket',   notes:'Remove 2 dead pines by the driveway.',     status:'assigned', sketch:null},
+    {id:'WO-g', crew:'c4', address:'340 Longacre Dr, O’Fallon, IL',date:iso(0), job:'removal', gear:'bucket',   notes:'Stump close to the gas line — check before cutting.', status:'assigned', sketch:null},
+    {id:'WO-h', crew:'c5', address:'1345 Main St, O’Fallon, IL',   date:iso(0), job:'storm',   gear:'both',     notes:'Tree down on fence after storm. High priority.', status:'assigned', sketch:null},
+  ];
+}
+
+const state = {
+  lang: load('lang','es'),
+  me: null,
+  tab: 'jobs',
+  modal: null,
+  photo: null,
+  dumpType: 'chips',
+  reqCat: 'rope',
+  reqUrg: 'normal',
+  jobs: load('jobs', seedJobs()),
+  dumps: load('mydumps', []),
+  requests: load('myreqs', []),
+  error: null,
+};
+
+function persist(){
+  save('jobs', state.jobs);
+  save('mydumps', state.dumps);
+  save('myreqs', state.requests);
+  save('lang', state.lang);
+  // Bandeja compartida: el panel del admin la lee para mostrar lo que
+  // envía el campo. Si ambos corren en el mismo origen, aparece solo.
+  save('inbox', {requests:state.requests, dumps:state.dumps});
+}
+
+const myJobs = () => state.jobs.filter(j=>j.crew===state.me.crew);
+
+/* ============================================================
+   Render
+   ============================================================ */
+function render(){
+  const shell=document.getElementById('shell');
+  document.documentElement.lang = state.lang;
+  if(!state.me){ shell.innerHTML=renderLogin(); bindLogin(); }
+  else{ shell.innerHTML = renderTop()+`<div class="body view-anim">${renderTab()}</div>`+renderTabs(); bindApp(); }
+  document.querySelector('.scrim')?.remove();
+  if(state.modal){
+    const w=document.createElement('div');
+    w.innerHTML=renderModal();
+    document.body.appendChild(w.firstElementChild);
+    bindModal();
+  }
+  observeReveals();
+  initCounters();
+}
+
+function langToggle(){
+  return `<div class="lang">
+    <button data-lang="es" class="${state.lang==='es'?'on':''}">ES</button>
+    <button data-lang="en" class="${state.lang==='en'?'on':''}">EN</button>
+  </div>`;
+}
+
+function renderLogin(){
+  const T=t();
+  return `
+  <div class="login-wrap">
+    <div class="login-card glass reveal in">
+      <img src="${LOGO}" alt="Gamma Tree Experts">
+      <h1>${T.welcome}</h1>
+      <div class="sub">${T.tagline}</div>
+      <div style="display:flex;justify-content:center;margin-bottom:20px">${langToggle()}</div>
+      ${state.error?`<div class="err">${T.badLogin}</div>`:''}
+      <div class="field">
+        <label for="lg-email">${T.email}</label>
+        <input id="lg-email" class="input" type="email" placeholder="eliseo@gammatree.com" autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="lg-pass">${T.pass}</label>
+        <input id="lg-pass" class="input" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" id="lg-btn" style="width:100%;margin-top:6px">${T.signIn}</button>
+      <div class="login-hint">
+        <b>${T.demoAccounts}:</b><br>
+        ${LEADERS.map(l=>esc(l.email)).join('<br>')}<br>
+        <b>${T.demoPass}:</b> ${DEMO_PASS}
+      </div>
+    </div>
+  </div>`;
+}
+function bindLogin(){
+  document.querySelectorAll('[data-lang]').forEach(b=>{
+    b.onclick=()=>{ state.lang=b.dataset.lang; save('lang',state.lang); render(); };
+  });
+  const go=()=>{
+    const email=document.getElementById('lg-email').value.trim().toLowerCase();
+    const pass=document.getElementById('lg-pass').value;
+    const who=LEADERS.find(l=>l.email===email);
+    if(!who || pass!==DEMO_PASS){ state.error=true; render(); return; }
+    state.error=null; state.me=who; state.tab='jobs'; render();
+  };
+  document.getElementById('lg-btn').onclick=go;
+  document.getElementById('lg-pass').onkeydown=(e)=>{ if(e.key==='Enter') go(); };
+}
+
+function renderTop(){
+  return `
+  <div class="topbar glass">
+    <img src="${LOGO}" alt="">
+    <div class="who">
+      <b>${esc(state.me.name)}</b>
+      <span>${esc(state.me.crewName)}</span>
+    </div>
+    ${langToggle()}
+    <button class="icon-btn" id="logout" aria-label="Sign out">${ICONS.out}</button>
+  </div>`;
+}
+
+function renderTabs(){
+  const T=t();
+  const pend=state.requests.filter(r=>r.status==='new').length;
+  const items=[['jobs',T.tabJobs],['dump',T.tabDump],['reqs',T.tabReq]];
+  return `<div class="tabs glass">
+    ${items.map(([id,label])=>`
+      <button class="tab-btn ${state.tab===id?'on':''}" data-tab="${id}">
+        ${ICONS[id]}<span>${label}</span>
+        ${id==='reqs'&&pend?`<b class="tab-badge">${pend}</b>`:''}
+      </button>`).join('')}
+  </div>`;
+}
+
+function renderTab(){
+  if(state.tab==='jobs') return tabJobs();
+  if(state.tab==='dump') return tabDump();
+  return tabReqs();
+}
+
+/* ---------- Trabajos ---------- */
+function tabJobs(){
+  const T=t();
+  const mine=myJobs();
+  const active=mine.filter(j=>j.status==='assigned'||j.status==='progress');
+  const hist=mine.filter(j=>j.status==='done'||j.status==='flag');
+  return `
+  <div class="sec-head reveal">
+    <h1>${T.jobsTitle}</h1>
+    <div class="sub">${T.jobsSub}</div>
+  </div>
+  <div class="stats">
+    <div class="glass glass-tile stat reveal" style="--i:0">
+      <div class="v num" data-count="${active.length}" style="color:var(--gold-lit)">0</div>
+      <div class="k">${T.today}</div></div>
+    <div class="glass glass-tile stat reveal" style="--i:1">
+      <div class="v num" data-count="${mine.filter(j=>j.status==='done').length}" style="color:var(--st-done)">0</div>
+      <div class="k">${T.doneToday}</div></div>
+    <div class="glass glass-tile stat reveal" style="--i:2">
+      <div class="v num" data-count="${mine.filter(j=>j.status==='flag').length}" style="color:var(--st-flag)">0</div>
+      <div class="k">${T.flagged}</div></div>
+  </div>
+
+  <div class="divider reveal"><span>${T.active}</span></div>
+  ${active.length? active.map((j,i)=>jobCard(j,i)).join('')
+    : `<div class="glass empty reveal"><b>${T.noJobs}</b>${T.noJobsSub}</div>`}
+
+  ${hist.length?`<div class="divider reveal"><span>${T.history}</span></div>
+    ${hist.map((j,i)=>jobCard(j,i)).join('')}`:''}`;
+}
+
+function jobCard(j,i){
+  const T=t();
+  const closed = j.status==='done'||j.status==='flag';
+  return `
+  <div class="glass glass-tile job reveal" style="--i:${i}">
+    <div class="job-top">
+      <h3>${esc(j.address)}</h3>
+      <span class="pill pill-${j.status}">${T[ST_KEY[j.status]]}</span>
+    </div>
+    <div class="meta">
+      <span>${T[JOB_KEY[j.job]]}</span><span class="dot">·</span>
+      <span>${T[GEAR_KEY[j.gear]]}</span><span class="dot">·</span>
+      <span>${fmtDate(j.date)}</span>
+    </div>
+    ${j.notes?`<div class="note-box" style="margin-top:12px"><b>${T.instructions}</b><br>${esc(j.notes)}</div>`:''}
+    ${j.sketch?`<button class="sketch-btn" data-sketch="${j.id}" style="margin-top:11px">
+        <img src="${j.sketch}" alt=""><span>${T.viewSketch}</span></button>`:''}
+    ${j.photo?`<img class="sketch" src="${j.photo}" alt="">`:''}
+    ${j.flagReason?`<div class="note-box" style="margin-top:11px;border-left:3px solid var(--st-flag)">${esc(j.flagReason)}</div>`:''}
+    ${closed?'':`
+      <div class="job-actions">
+        ${j.status==='assigned'
+          ?`<button class="btn btn-gold" data-start="${j.id}">${ICONS.play}<span>${T.start}</span></button>`
+          :`<div class="row2">
+              <button class="btn btn-primary" data-done="${j.id}">${ICONS.check}<span>${T.finish}</span></button>
+              <button class="btn btn-glass" data-flag="${j.id}">${ICONS.flag}<span>${T.cant}</span></button>
+            </div>`}
+      </div>`}
+  </div>`;
+}
+
+/* ---------- Vaciado ---------- */
+function tabDump(){
+  const T=t();
+  const mine=[...state.dumps].sort((a,b)=>b.at-a.at);
+  return `
+  <div class="sec-head reveal">
+    <h1>${T.dumpTitle}</h1>
+    <div class="sub">${T.dumpSub}</div>
+  </div>
+  <div class="glass glass-tile reveal">
+    <div class="field">
+      <label for="d-where">${T.dumpWhere}</label>
+      <input id="d-where" class="input" placeholder="${T.dumpWherePh}">
+    </div>
+    <div class="field">
+      <label>${T.dumpType}</label>
+      <div class="seg">
+        <button class="chip ${state.dumpType==='chips'?'is-on':''}" data-dtype="chips">${T.chips}</button>
+        <button class="chip ${state.dumpType==='logs'?'is-on':''}" data-dtype="logs">${T.logs}</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="d-notes">${T.dumpNotes}</label>
+      <textarea id="d-notes" class="input" placeholder="${T.dumpNotesPh}"></textarea>
+    </div>
+    <button class="btn btn-primary" id="d-send" style="width:100%">${T.dumpSend}</button>
+  </div>
+
+  <div class="divider reveal"><span>${T.myDumps}</span></div>
+  ${mine.length? mine.map((d,i)=>`
+    <div class="glass glass-tile hist reveal" style="--i:${i}">
+      <div class="hist-top">
+        <b>${esc(d.location)}</b>
+        <span class="pill ${d.type==='chips'?'pill-done':'pill-assigned'}">${T[d.type]}</span>
+      </div>
+      <div class="meta">${ago(d.at)}</div>
+      ${d.notes?`<div class="note-box" style="margin-top:9px">${esc(d.notes)}</div>`:''}
+    </div>`).join('')
+  : `<div class="glass empty reveal">${T.noDumps}</div>`}`;
+}
+
+/* ---------- Requerimientos ---------- */
+function tabReqs(){
+  const T=t();
+  const mine=[...state.requests].sort((a,b)=>b.at-a.at);
+  const stPill={new:'pill-flag',ordered:'pill-progress',resolved:'pill-done'};
+  const stLabel={new:T.stNew,ordered:T.stOrdered,resolved:T.stResolved};
+  return `
+  <div class="sec-head reveal">
+    <h1>${T.reqTitle}</h1>
+    <div class="sub">${T.reqSub}</div>
+  </div>
+  <div class="glass glass-tile reveal">
+    <div class="field">
+      <label>${T.reqCat}</label>
+      <div class="seg">
+        ${CATS.map(c=>`<button class="chip ${state.reqCat===c?'is-on':''}" data-rcat="${c}">${T[CAT_KEY[c]]}</button>`).join('')}
+      </div>
+    </div>
+    <div class="field">
+      <label>${T.reqUrg}</label>
+      <div class="seg">
+        ${['low','normal','urgent'].map(u=>`<button class="chip ${state.reqUrg===u?'is-on':''}" data-rurg="${u}">${T[u]}</button>`).join('')}
+      </div>
+    </div>
+    <div class="field">
+      <label for="r-note">${T.reqNote}</label>
+      <textarea id="r-note" class="input" placeholder="${T.reqNotePh}"></textarea>
+    </div>
+    <button class="btn btn-primary" id="r-send" style="width:100%">${T.reqSend}</button>
+  </div>
+
+  <div class="divider reveal"><span>${T.myReqs}</span></div>
+  ${mine.length? mine.map((r,i)=>`
+    <div class="glass glass-tile hist reveal" style="--i:${i}">
+      <div class="hist-top">
+        <b>${T[CAT_KEY[r.cat]]}</b>
+        <span class="pill ${stPill[r.status]}">${stLabel[r.status]}</span>
+      </div>
+      <div class="meta">
+        <span>${T[r.urgency]}</span><span class="dot">·</span><span>${ago(r.at)}</span>
+      </div>
+      <div class="note-box" style="margin-top:9px">${esc(r.note)}</div>
+    </div>`).join('')
+  : `<div class="glass empty reveal">${T.noReqs}</div>`}`;
+}
+
+/* ---------- Modales ---------- */
+function renderModal(){
+  const T=t(), m=state.modal;
+  if(m.type==='sketch'){
+    const j=state.jobs.find(x=>x.id===m.id);
+    return `<div class="scrim" data-close><div class="modal glass">
+      <div class="modal-head"><h2 style="font-size:var(--t-lg)">${T.viewSketch}</h2>
+        <button class="icon-btn" data-close aria-label="Close">&times;</button></div>
+      <img class="sketch" src="${j.sketch}" alt=""></div></div>`;
+  }
+  if(m.type==='done'){
+    return `<div class="scrim" data-close><div class="modal glass">
+      <div class="modal-head"><div><h2 style="font-size:var(--t-lg)">${T.doneTitle}</h2></div>
+        <button class="icon-btn" data-close aria-label="Close">&times;</button></div>
+      <p style="font-size:var(--t-sm);color:var(--text-dim);margin:0 0 14px;line-height:1.6">${T.donePrompt}</p>
+      <label class="photo-drop" for="ph">
+        ${state.photo?`<img src="${state.photo}" alt="">`:`<span>&#128247;</span><span>${T.addPhoto}</span>`}
+      </label>
+      <input type="file" accept="image/*" capture="environment" id="ph" style="display:none">
+      <div class="row2">
+        <button class="btn btn-glass" data-close-btn>${T.cancel}</button>
+        <button class="btn btn-primary" id="ok-done" ${state.photo?'':'disabled'}>${T.confirmDone}</button>
+      </div></div></div>`;
+  }
+  if(m.type==='flag'){
+    return `<div class="scrim" data-close><div class="modal glass">
+      <div class="modal-head"><div><h2 style="font-size:var(--t-lg)">${T.flagTitle}</h2></div>
+        <button class="icon-btn" data-close aria-label="Close">&times;</button></div>
+      <p style="font-size:var(--t-sm);color:var(--text-dim);margin:0 0 14px;line-height:1.6">${T.flagPrompt}</p>
+      <textarea id="fl-reason" class="input" placeholder="${T.reasonPh}" style="margin-bottom:14px"></textarea>
+      <div class="row2">
+        <button class="btn btn-glass" data-close-btn>${T.cancel}</button>
+        <button class="btn btn-primary" id="ok-flag">${T.confirmFlag}</button>
+      </div></div></div>`;
+  }
+  return '';
+}
+
+/* ============================================================
+   Eventos
+   ============================================================ */
+function bindApp(){
+  const T=t();
+  document.querySelectorAll('[data-lang]').forEach(b=>{
+    b.onclick=()=>{ state.lang=b.dataset.lang; save('lang',state.lang); render(); };
+  });
+  document.querySelectorAll('[data-tab]').forEach(b=>{
+    b.onclick=()=>{ state.tab=b.dataset.tab; render(); };
+  });
+  document.getElementById('logout').onclick=()=>{ state.me=null; render(); };
+
+  document.querySelectorAll('[data-start]').forEach(b=>{
+    b.onclick=()=>{
+      const j=state.jobs.find(x=>x.id===b.dataset.start);
+      j.status='progress'; j.startedAt=Date.now();
+      persist(); toast(T.jobStarted,'green'); render();
+    };
+  });
+  document.querySelectorAll('[data-done]').forEach(b=>{
+    b.onclick=()=>{ state.photo=null; state.modal={type:'done',id:b.dataset.done}; render(); };
+  });
+  document.querySelectorAll('[data-flag]').forEach(b=>{
+    b.onclick=()=>{ state.modal={type:'flag',id:b.dataset.flag}; render(); };
+  });
+  document.querySelectorAll('[data-sketch]').forEach(b=>{
+    b.onclick=()=>{ state.modal={type:'sketch',id:b.dataset.sketch}; render(); };
+  });
+
+  /* --- Vaciado --- */
+  document.querySelectorAll('[data-dtype]').forEach(b=>{
+    b.onclick=()=>{
+      state.dumpType=b.dataset.dtype;
+      b.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('is-on'));
+      b.classList.add('is-on');
+    };
+  });
+  document.getElementById('d-send')?.addEventListener('click',()=>{
+    const where=document.getElementById('d-where').value.trim();
+    if(!where){ toast(T.needWhere); return; }
+    state.dumps.unshift({
+      id:uid('DR'), crew:state.me.crew, location:where, type:state.dumpType,
+      notes:document.getElementById('d-notes').value.trim(), at:Date.now(),
+    });
+    persist(); toast(T.dumpDone,'green'); render();
+  });
+
+  /* --- Requerimientos --- */
+  document.querySelectorAll('[data-rcat]').forEach(b=>{
+    b.onclick=()=>{
+      state.reqCat=b.dataset.rcat;
+      b.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('is-on'));
+      b.classList.add('is-on');
+    };
+  });
+  document.querySelectorAll('[data-rurg]').forEach(b=>{
+    b.onclick=()=>{
+      state.reqUrg=b.dataset.rurg;
+      b.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('is-on'));
+      b.classList.add('is-on');
+    };
+  });
+  document.getElementById('r-send')?.addEventListener('click',()=>{
+    const note=document.getElementById('r-note').value.trim();
+    if(!note){ toast(T.needNote); return; }
+    state.requests.unshift({
+      id:uid('RQ'), crew:state.me.crew, cat:state.reqCat,
+      urgency:state.reqUrg, note, at:Date.now(), status:'new',
+    });
+    persist(); toast(T.reqDone,'green'); render();
+  });
+}
+
+function bindModal(){
+  const T=t();
+  const close=()=>{ state.modal=null; state.photo=null; render(); };
+  document.querySelectorAll('[data-close]').forEach(el=>{
+    el.onclick=(e)=>{ if(e.target===el) close(); };
+  });
+  document.querySelectorAll('[data-close-btn]').forEach(b=>{ b.onclick=close; });
+
+  document.getElementById('ph')?.addEventListener('change',(e)=>{
+    const f=e.target.files?.[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=()=>{ state.photo=r.result; render(); };
+    r.readAsDataURL(f);
+  });
+  document.getElementById('ok-done')?.addEventListener('click',()=>{
+    if(!state.photo){ toast(T.needPhoto); return; }
+    const j=state.jobs.find(x=>x.id===state.modal.id);
+    j.status='done'; j.photo=state.photo; j.completedAt=Date.now();
+    persist(); close(); toast(T.jobDone,'green');
+  });
+  document.getElementById('ok-flag')?.addEventListener('click',()=>{
+    const j=state.jobs.find(x=>x.id===state.modal.id);
+    j.status='flag'; j.flagReason=document.getElementById('fl-reason').value.trim();
+    persist(); close(); toast(T.jobFlagged);
+  });
+}
+
+/* ---------- Arranque ---------- */
+initGlass();
+render();
+</script>

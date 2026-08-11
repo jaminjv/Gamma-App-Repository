@@ -1,0 +1,828 @@
+<title>Gamma Operations</title>
+<style>/*__FONTS__*/</style>
+<style>/*__GLASS_CSS__*/
+
+/* ============================================================
+   Panel de administración — disposición
+   ============================================================ */
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px;}
+.login-card{width:100%;max-width:410px;padding:38px 34px;text-align:center;}
+.login-card img{width:118px;height:auto;margin-bottom:20px;filter:drop-shadow(0 10px 24px rgba(0,0,0,.6));}
+.login-card h1{font-size:var(--t-2xl);margin-bottom:6px;}
+.login-card .sub{color:var(--text-dim);font-size:var(--t-sm);margin-bottom:26px;line-height:1.55;}
+.login-card .field{text-align:left;}
+.login-hint{margin-top:18px;font-size:var(--t-xs);color:var(--text-faint);line-height:1.6;}
+
+.layout{display:flex;min-height:100vh;}
+
+.rail{
+  position:sticky;top:0;height:100vh;flex:none;width:230px;
+  display:flex;flex-direction:column;gap:22px;padding:22px 16px;
+  border-radius:0 var(--r-xl) var(--r-xl) 0;
+}
+.rail-brand{display:flex;align-items:center;gap:11px;padding:4px 6px 0;}
+.rail-brand img{width:42px;height:auto;flex:none;}
+.rail-brand b{display:block;font-family:'Fraunces',serif;font-size:15px;letter-spacing:.01em;line-height:1.15;}
+.rail-brand span{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--text-faint);}
+nav{display:flex;flex-direction:column;gap:4px;flex:1;}
+.nav-btn{
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;gap:11px;width:100%;
+  padding:11px 13px;border-radius:var(--r-sm);
+  font-size:var(--t-md);font-weight:500;color:var(--text-dim);text-align:left;
+  transition:all .35s var(--ease);
+}
+.nav-btn svg{width:17px;height:17px;flex:none;opacity:.75;}
+.nav-btn:hover{background:var(--glass-2);color:var(--text);}
+.nav-btn.active{
+  background:linear-gradient(120deg,rgba(168,28,54,.85),rgba(129,20,40,.6));
+  color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 10px 22px -12px rgba(168,28,54,.9);
+}
+.nav-btn.active svg{opacity:1;}
+.nav-badge{
+  margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;
+  display:grid;place-items:center;
+  background:var(--st-flag);color:#fff;
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;
+}
+.rail-foot{padding:0 6px;border-top:1px solid var(--glass-brd);padding-top:15px;}
+.rail-user{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
+.avatar{
+  width:33px;height:33px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:linear-gradient(140deg,var(--gold-lit),var(--gold));color:#2A1206;
+  font-weight:700;font-size:12.5px;
+}
+.rail-user b{display:block;font-size:var(--t-sm);font-weight:600;}
+.rail-user span{font-size:10.5px;color:var(--text-faint);}
+
+main{flex:1;min-width:0;padding:30px 34px 70px;}
+.page-head{margin-bottom:26px;}
+.page-head h1{font-size:var(--t-3xl);line-height:1.05;margin-bottom:5px;}
+.page-head .sub{color:var(--text-dim);font-size:var(--t-md);}
+.head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:15px;margin-bottom:26px;}
+.kpi{padding:19px;}
+.kpi .v{font-family:'Fraunces',serif;font-size:var(--t-3xl);line-height:1;margin-bottom:7px;font-variant-numeric:tabular-nums;}
+.kpi .k{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.14em;color:var(--text-dim);line-height:1.5;}
+.kpi-bar{height:3px;border-radius:99px;margin-top:13px;background:currentColor;opacity:.55;}
+
+.cols{display:grid;grid-template-columns:1.25fr .95fr;gap:18px;align-items:start;}
+.tile-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px;}
+.tile-head h2{font-size:var(--t-lg);}
+
+/* Mapa simulado */
+.map{position:relative;height:315px;border-radius:var(--r-md);overflow:hidden;
+  background:
+    linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px) 0 0/100% 34px,
+    linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px) 0 0/34px 100%,
+    radial-gradient(circle at 30% 25%,rgba(45,111,74,.3),transparent 55%),
+    rgba(0,0,0,.3);
+  box-shadow:inset 0 0 0 1px var(--glass-brd);}
+.pin{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:5px;}
+.pin i{width:11px;height:11px;border-radius:50%;background:var(--gold-lit);
+  box-shadow:0 0 0 4px rgba(205,177,73,.22);animation:pulse 2.6s ease-in-out infinite;}
+.pin.busy i{background:var(--st-progress);box-shadow:0 0 0 4px rgba(226,138,42,.22);}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 4px rgba(205,177,73,.2);}50%{box-shadow:0 0 0 10px rgba(205,177,73,0);}}
+.pin b{font-family:'IBM Plex Mono',monospace;font-size:9.5px;padding:3px 7px;border-radius:5px;
+  background:rgba(0,0,0,.62);white-space:nowrap;letter-spacing:.04em;}
+.map-note{position:absolute;left:12px;bottom:11px;font-family:'IBM Plex Mono',monospace;
+  font-size:9.5px;color:var(--text-faint);letter-spacing:.05em;}
+
+/* Listas y tarjetas */
+.stack{display:flex;flex-direction:column;gap:11px;}
+.row-card{padding:15px 17px;border-radius:var(--r-md);}
+.row-top{display:flex;align-items:flex-start;justify-content:space-between;gap:13px;margin-bottom:6px;}
+.row-card h3{font-family:'Archivo',sans-serif;font-size:var(--t-md);font-weight:600;letter-spacing:0;}
+.meta{font-family:'IBM Plex Mono',monospace;font-size:var(--t-xs);color:var(--text-dim);
+  letter-spacing:.04em;display:flex;flex-wrap:wrap;gap:7px;align-items:center;}
+.meta .dot{opacity:.4;}
+.note-box{margin-top:11px;padding:11px 13px;border-radius:var(--r-sm);
+  background:rgba(0,0,0,.26);font-size:var(--t-sm);line-height:1.6;color:var(--text-dim);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);}
+.note-box b{color:var(--text);font-weight:600;}
+
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+
+/* Cuadrillas */
+.crew-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(325px,1fr));gap:16px;}
+.crew-top{display:flex;align-items:center;gap:12px;margin-bottom:15px;}
+.crew-top .avatar{width:44px;height:44px;font-size:15px;}
+.crew-top b{display:block;font-size:var(--t-lg);font-family:'Fraunces',serif;}
+.crew-top span{font-family:'IBM Plex Mono',monospace;font-size:var(--t-xs);color:var(--text-faint);}
+.crew-line{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:9px 0;border-top:1px solid rgba(255,255,255,.07);}
+.crew-line > span:first-child{font-family:'IBM Plex Mono',monospace;font-size:var(--t-xs);
+  text-transform:uppercase;letter-spacing:.11em;color:var(--text-faint);}
+.skills-box{margin-top:13px;padding-top:13px;border-top:1px solid rgba(255,255,255,.07);}
+.skills-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}
+.stepper{display:flex;align-items:center;gap:9px;}
+.stepper button{width:25px;height:25px;border-radius:7px;background:var(--glass-2);
+  color:var(--text);font-size:15px;line-height:1;display:grid;place-items:center;
+  box-shadow:inset 0 0 0 1px var(--glass-brd);transition:all .25s var(--ease);}
+.stepper button:hover{background:var(--glass-3);}
+.stepper button:active{transform:scale(.88);}
+.stepper b{min-width:20px;text-align:center;font-variant-numeric:tabular-nums;}
+
+/* Cronograma */
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+.day{padding:12px 11px;border-radius:var(--r-md);min-height:190px;}
+.day-h{margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,.09);}
+.day-h b{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.12em;color:var(--text-faint);display:block;}
+.day-h i{font-family:'Fraunces',serif;font-style:normal;font-size:var(--t-xl);}
+.day.today .day-h i{color:var(--gold-lit);}
+.cal-chip{padding:8px 9px;border-radius:9px;margin-bottom:7px;cursor:pointer;
+  font-size:10.5px;line-height:1.4;background:var(--glass-2);
+  box-shadow:inset 0 0 0 1px var(--glass-brd);
+  transition:all .3s var(--ease);}
+.cal-chip:hover{background:var(--glass-3);transform:translateX(2px);}
+.cal-chip b{display:block;font-weight:600;margin-bottom:2px;}
+.cal-chip span{font-family:'IBM Plex Mono',monospace;color:var(--text-faint);font-size:9.5px;}
+
+/* Requerimientos */
+.req-card{padding:16px 18px;border-radius:var(--r-md);border-left:3px solid var(--st-pending);}
+.req-card.u-urgent{border-left-color:var(--st-flag);}
+.req-card.u-normal{border-left-color:var(--st-assigned);}
+.req-card.u-low{border-left-color:var(--st-pending);}
+.req-actions{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap;}
+.empty{padding:44px 22px;text-align:center;color:var(--text-faint);}
+.empty b{display:block;font-family:'Fraunces',serif;font-size:var(--t-lg);color:var(--text-dim);margin-bottom:7px;}
+
+.sketch{width:100%;border-radius:var(--r-sm);margin-top:11px;display:block;
+  box-shadow:inset 0 0 0 1px var(--glass-brd);}
+
+@media (max-width:1020px){
+  .cols{grid-template-columns:1fr;}
+  .week{grid-template-columns:repeat(3,1fr);}
+}
+@media (max-width:760px){
+  .layout{flex-direction:column;}
+  .rail{position:sticky;top:0;z-index:40;width:100%;height:auto;flex-direction:row;
+    align-items:center;gap:12px;padding:11px 13px;border-radius:0 0 var(--r-lg) var(--r-lg);
+    overflow-x:auto;}
+  .rail-brand{padding:0;}
+  .rail-brand div{display:none;}
+  nav{flex-direction:row;gap:5px;}
+  .nav-btn span{display:none;}
+  .nav-btn{padding:10px 12px;}
+  .rail-foot{border:none;padding:0;margin-left:auto;}
+  .rail-user{margin:0;}
+  .rail-user div{display:none;}
+  .rail-foot .btn{display:none;}
+  main{padding:22px 16px 60px;}
+  .page-head h1{font-size:var(--t-2xl);}
+  .week{grid-template-columns:1fr;}
+}
+</style>
+
+<canvas id="ambient"></canvas>
+<div id="shell"></div>
+
+<script>
+/*__GLASS_JS__*/
+
+/* ============================================================
+   GAMMA TREE EXPERTS — Operations Dashboard
+   Functional prototype. In-memory data, persisted to localStorage.
+   ============================================================ */
+const LOGO = '__LOGO__';
+
+const ICONS = {
+  overview:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>',
+  orders:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6M9 11h3"/></svg>',
+  schedule:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  crews:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  dumps:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18l-1.5 14a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2z"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>',
+  requests:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2z"/><path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16z"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  out:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>',
+};
+
+const STATUS = {
+  pending:'Pending', assigned:'Assigned', progress:'In progress',
+  done:'Done', flag:'Needs reassign',
+};
+const JOBS = { removal:'Removal', trim:'Trim', aerial:'Aerial pruning', storm:'Storm damage' };
+const GEAR = { bucket:'Bucket truck', climbing:'Climbing', both:'Bucket + Climbing' };
+/* Catálogo de habilidades que el admin puede asignar a cada cuadrilla. */
+const SKILLS = {
+  removal:'Removal', trim:'Trim', aerial:'Aerial pruning', storm:'Storm damage',
+  stump:'Stump grinding', crane:'Crane work', utility:'Utility clearance', chipping:'Chipping',
+};
+const REQ_CAT = {
+  rope:'Rope / rigging', tool:'Tool damage', ppe:'Safety gear',
+  fuel:'Fuel', parts:'Parts', other:'Other',
+};
+const REQ_STATUS = { new:'New', ordered:'Ordered', resolved:'Resolved' };
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function uid(p){ return p + '-' + Math.random().toString(36).slice(2,7); }
+function iso(offset){ const d=new Date(); d.setDate(d.getDate()+offset); return d.toISOString().slice(0,10); }
+function fmtDate(s){
+  const d=new Date(s+'T12:00:00');
+  return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+function ago(ts){
+  const m=Math.floor((Date.now()-ts)/60000);
+  if(m<1) return 'just now';
+  if(m<60) return m+'m ago';
+  const h=Math.floor(m/60); if(h<24) return h+'h ago';
+  return Math.floor(h/24)+'d ago';
+}
+function esc(s){
+  return String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function sampleSketch(){
+  return 'data:image/svg+xml;utf8,'+encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="200" viewBox="0 0 360 200">
+      <rect width="360" height="200" fill="#F2ECDC"/>
+      <path d="M40,170 L40,80 Q40,55 65,55 Q90,55 90,80 L90,170" fill="none" stroke="#145839" stroke-width="3"/>
+      <circle cx="65" cy="52" r="30" fill="none" stroke="#2D6F4A" stroke-width="3"/>
+      <line x1="130" y1="40" x2="330" y2="40" stroke="#811428" stroke-width="2.5" stroke-dasharray="7 5"/>
+      <text x="130" y="30" font-family="monospace" font-size="12" fill="#811428">POWER LINE</text>
+      <path d="M95,60 L125,60" stroke="#A89030" stroke-width="2.5" marker-end="url(#a)"/>
+      <defs><marker id="a" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="#A89030"/></marker></defs>
+      <text x="130" y="66" font-family="monospace" font-size="12" fill="#2A1206">Trim 10ft clearance</text>
+      <text x="40" y="192" font-family="monospace" font-size="11" fill="#8A7A69">Gamma Tree Experts — job sketch</text>
+    </svg>`);
+}
+
+/* ---------- Datos semilla ---------- */
+function seed(){
+  const crews = [
+    {id:'c1', name:"Eliseo's Crew",  leader:'Eliseo Marín',    email:'eliseo@gammatree.com',   gear:'climbing', members:4, skills:['aerial','trim','storm'],       x:38, y:31},
+    {id:'c2', name:"Ivan's Crew",    leader:'Ivan Delgado',    email:'ivan@gammatree.com',     gear:'bucket',   members:5, skills:['removal','trim','chipping'],    x:22, y:58},
+    {id:'c3', name:"Jose's Crew",    leader:'Jose Ramírez',    email:'jose@gammatree.com',     gear:'both',     members:6, skills:['removal','aerial','storm','crane'], x:61, y:47},
+    {id:'c4', name:"Baltazar's Crew",leader:'Baltazar Ortega', email:'baltazar@gammatree.com', gear:'bucket',   members:4, skills:['removal','stump'],              x:74, y:70},
+    {id:'c5', name:"Ron's Crew",     leader:'Ron Whitaker',    email:'ron@gammatree.com',      gear:'climbing', members:3, skills:['aerial','trim','utility'],      x:47, y:79},
+  ];
+  const orders = [
+    {id:uid('WO'), address:'412 Frank Scott Pkwy, Belleville, IL', date:iso(0), job:'removal', gear:'bucket',   notes:'Remove dead oak next to the garage. Client wants the wood stacked.', status:'progress', crew:'c2', sketch:null},
+    {id:uid('WO'), address:'22 Fossil Ridge Dr, Swansea, IL',      date:iso(0), job:'aerial',  gear:'climbing', notes:'High canopy pruning, power line nearby — coordinate with Ameren.',    status:'assigned', crew:'c1', sketch:sampleSketch()},
+    {id:uid('WO'), address:'890 S Illinois St, Belleville, IL',    date:iso(0), job:'trim',    gear:'bucket',   notes:'Trim branches overhanging the roof.',                                status:'pending',  crew:null, sketch:null},
+    {id:uid('WO'), address:'340 Longacre Dr, O’Fallon, IL',   date:iso(0), job:'removal', gear:'bucket',   notes:'Stump too close to gas line — needs a crew with utility clearance.', status:'flag',     crew:'c4', sketch:null, flagReason:'Stump too close to the gas line, needs a different crew.'},
+    {id:uid('WO'), address:'1345 Main St, O’Fallon, IL',      date:iso(1), job:'storm',   gear:'both',     notes:'Tree down on fence after storm. High priority.',                     status:'pending',  crew:null, sketch:null},
+    {id:uid('WO'), address:'77 Green Mount Rd, Shiloh, IL',        date:iso(1), job:'removal', gear:'bucket',   notes:'Remove 2 dead pines by the driveway.',                               status:'assigned', crew:'c3', sketch:null},
+    {id:uid('WO'), address:'560 Carlyle Ave, Belleville, IL',      date:iso(2), job:'trim',    gear:'climbing', notes:'Decorative pruning, backyard.',                                      status:'done',     crew:'c1', sketch:null},
+    {id:uid('WO'), address:'901 N 4th St, Millstadt, IL',          date:iso(3), job:'aerial',  gear:'climbing', notes:'High pruning near a phone line.',                                    status:'pending',  crew:null, sketch:null},
+  ];
+  const dumps = [
+    {id:uid('DR'), crew:'c1', location:'Frank Scott Dump Site',  type:'chips', notes:'Partial load, brush + branches.',   at:Date.now()-1000*60*95},
+    {id:uid('DR'), crew:'c2', location:'Belleville Rd Dump Site', type:'logs',  notes:'Full load, mostly trunk sections.', at:Date.now()-1000*60*260},
+    {id:uid('DR'), crew:'c3', location:'Shiloh Transfer Yard',    type:'chips', notes:'Two loads back to back.',           at:Date.now()-1000*60*640},
+  ];
+  const requests = [
+    {id:uid('RQ'), crew:'c1', cat:'rope', urgency:'urgent', note:'Climbing line is frayed near the splice — need a 150ft replacement before Thursday.', at:Date.now()-1000*60*42,  status:'new'},
+    {id:uid('RQ'), crew:'c4', cat:'tool', urgency:'normal', note:'Stump grinder teeth are worn down, cutting slow. Needs a new set.',                   at:Date.now()-1000*60*180, status:'new'},
+    {id:uid('RQ'), crew:'c2', cat:'ppe',  urgency:'normal', note:'Two new hard hats and a pair of chainsaw chaps, size L.',                             at:Date.now()-1000*60*400, status:'ordered'},
+    {id:uid('RQ'), crew:'c5', cat:'fuel', urgency:'low',    note:'Running low on bar oil, about two jugs left.',                                        at:Date.now()-1000*60*900, status:'resolved'},
+  ];
+  return { crews, orders, dumps, requests };
+}
+
+const state = {
+  loggedIn:false, view:'overview', modal:null, filter:'all',
+  ...load('admin', seed()),
+};
+/* Los envíos de la app de líderes viven en claves propias: si el navegador
+   sirve ambos prototipos desde el mismo origen, aparecen aquí solos. */
+function syncFromCrewApp(){
+  const inbox = load('inbox', null);
+  if(!inbox) return;
+  let added = 0;
+  for(const r of (inbox.requests||[])) if(!state.requests.some(x=>x.id===r.id)){ state.requests.unshift(r); added++; }
+  for(const d of (inbox.dumps||[]))    if(!state.dumps.some(x=>x.id===d.id))   { state.dumps.unshift(d);    added++; }
+  if(added) persist();
+}
+function persist(){
+  save('admin', {crews:state.crews, orders:state.orders, dumps:state.dumps, requests:state.requests});
+}
+
+/* ---------- Consultas ---------- */
+const crewById = (id) => state.crews.find(c=>c.id===id);
+const crewName = (id) => crewById(id)?.name ?? '— Unassigned —';
+const newRequests = () => state.requests.filter(r=>r.status==='new').length;
+const initials = (s) => s.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+
+/* ============================================================
+   Render
+   ============================================================ */
+function render(){
+  const shell = document.getElementById('shell');
+  if(!state.loggedIn){
+    shell.innerHTML = renderLogin();
+    bindLogin();
+  }else{
+    shell.innerHTML = `<div class="layout">${renderRail()}<main class="view-anim">${renderView()}</main></div>`;
+    bindShell();
+  }
+  document.querySelector('.scrim')?.remove();
+  if(state.modal){
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderModal();
+    document.body.appendChild(wrap.firstElementChild);
+    bindModal();
+  }
+  observeReveals();
+  initCounters();
+}
+
+function renderLogin(){
+  return `
+  <div class="login-wrap">
+    <div class="login-card glass reveal in">
+      <img src="${LOGO}" alt="Gamma Tree Experts">
+      <h1>Operations</h1>
+      <div class="sub">Dispatch, crews and field requests<br>for Gamma Tree Experts.</div>
+      <div class="field">
+        <label for="lg-email">Email</label>
+        <input id="lg-email" class="input" type="email" value="paul@gammatree.com" autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="lg-pass">Password</label>
+        <input id="lg-pass" class="input" type="password" value="gamma1954" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" id="lg-btn" style="width:100%;margin-top:6px;">Sign in</button>
+      <div class="login-hint">Demo build — credentials are not verified.<br>Signed in as <b>paul@gammatree.com</b></div>
+    </div>
+  </div>`;
+}
+function bindLogin(){
+  const go = ()=>{ state.loggedIn=true; render(); };
+  document.getElementById('lg-btn').onclick = go;
+  document.getElementById('lg-pass').onkeydown = (e)=>{ if(e.key==='Enter') go(); };
+}
+
+function renderRail(){
+  const items = [
+    ['overview','Overview'], ['orders','Work Orders'], ['schedule','Schedule'],
+    ['crews','Crews'], ['dumps','Dump Reports'], ['requests','Requests'],
+  ];
+  const n = newRequests();
+  return `
+  <aside class="rail glass">
+    <div class="rail-brand">
+      <img src="${LOGO}" alt="">
+      <div><b>Gamma<br>Tree Experts</b><span>Operations</span></div>
+    </div>
+    <nav>
+      ${items.map(([id,label])=>`
+        <button class="nav-btn ${state.view===id?'active':''}" data-nav="${id}">
+          ${ICONS[id]}<span>${label}</span>
+          ${id==='requests'&&n?`<b class="nav-badge num">${n}</b>`:''}
+        </button>`).join('')}
+    </nav>
+    <div class="rail-foot">
+      <div class="rail-user">
+        <div class="avatar">PG</div>
+        <div><b>Paul G.</b><span>paul@gammatree.com</span></div>
+      </div>
+      <button class="btn btn-glass btn-sm" id="logout" style="width:100%;">${ICONS.out}<span>Sign out</span></button>
+    </div>
+  </aside>`;
+}
+
+function renderView(){
+  switch(state.view){
+    case 'overview': return viewOverview();
+    case 'orders':   return viewOrders();
+    case 'schedule': return viewSchedule();
+    case 'crews':    return viewCrews();
+    case 'dumps':    return viewDumps();
+    case 'requests': return viewRequests();
+  }
+}
+
+/* ---------- Resumen ---------- */
+function viewOverview(){
+  const today = state.orders.filter(o=>o.date===iso(0));
+  const kpis = [
+    ['Jobs today',        today.length,                                        'var(--gold-lit)'],
+    ['Crews deployed',    new Set(today.filter(o=>o.crew).map(o=>o.crew)).size,'var(--forest)'],
+    ['Unassigned',        state.orders.filter(o=>o.status==='pending').length, 'var(--st-pending)'],
+    ['Completed today',   today.filter(o=>o.status==='done').length,           'var(--st-done)'],
+    ['Open requests',     newRequests(),                                       'var(--st-flag)'],
+  ];
+  return `
+  <div class="page-head reveal">
+    <div class="eyebrow">${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</div>
+    <h1>Today at a glance</h1>
+    <div class="sub">Everything moving in the field right now.</div>
+  </div>
+
+  <div class="kpis">
+    ${kpis.map(([k,v,c],i)=>`
+      <div class="glass glass-tile kpi reveal" style="--i:${i}">
+        <div class="v num" data-count="${v}" style="color:${c}">0</div>
+        <div class="k">${k}</div>
+        <div class="kpi-bar" style="color:${c}"></div>
+      </div>`).join('')}
+  </div>
+
+  <div class="cols">
+    <div class="glass glass-tile reveal">
+      <div class="tile-head"><h2>Live map</h2><span class="eyebrow">Mapbox next</span></div>
+      <div class="map">
+        ${state.crews.map(c=>{
+          const busy = state.orders.some(o=>o.crew===c.id && o.status==='progress');
+          return `<div class="pin ${busy?'busy':''}" style="left:${c.x}%;top:${c.y}%"><i></i><b>${esc(c.name)}</b></div>`;
+        }).join('')}
+        <div class="map-note">Simulated positions — wired to location_pings in Phase 6</div>
+      </div>
+    </div>
+
+    <div class="glass glass-tile reveal">
+      <div class="tile-head"><h2>Today's orders</h2><span class="eyebrow">${today.length} total</span></div>
+      <div class="stack">
+        ${today.length? today.map(o=>orderRow(o)).join('') : emptyState('Nothing scheduled','No work orders on the board for today.')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function orderRow(o){
+  return `
+  <div class="glass glass-tile is-clickable row-card" data-order="${o.id}">
+    <div class="row-top">
+      <h3>${esc(o.address)}</h3>
+      <span class="pill pill-${o.status}">${STATUS[o.status]}</span>
+    </div>
+    <div class="meta">
+      <span>${JOBS[o.job]}</span><span class="dot">·</span>
+      <span>${GEAR[o.gear]}</span><span class="dot">·</span>
+      <span>${esc(crewName(o.crew))}</span>
+      ${o.sketch?'<span class="dot">·</span><span>&#9639; sketch</span>':''}
+    </div>
+  </div>`;
+}
+
+/* ---------- Órdenes de trabajo ---------- */
+function viewOrders(){
+  const list = state.filter==='all' ? state.orders : state.orders.filter(o=>o.status===state.filter);
+  const counts = (s)=> s==='all'? state.orders.length : state.orders.filter(o=>o.status===s).length;
+  return `
+  <div class="page-head head-row reveal">
+    <div>
+      <div class="eyebrow">Dispatch</div>
+      <h1>Work orders</h1>
+      <div class="sub">${state.orders.length} on the board.</div>
+    </div>
+    <button class="btn btn-primary" id="new-order">${ICONS.plus}<span>New order</span></button>
+  </div>
+
+  <div class="filters reveal">
+    ${[['all','All'],...Object.entries(STATUS)].map(([k,v])=>`
+      <button class="chip ${state.filter===k?'is-on':''}" data-filter="${k}">${v}<b class="num" style="opacity:.6">${counts(k)}</b></button>`).join('')}
+  </div>
+
+  <div class="stack">
+    ${list.length? list.map((o,i)=>`
+      <div class="glass glass-tile row-card reveal" style="--i:${i}">
+        <div class="row-top">
+          <h3>${esc(o.address)}</h3>
+          <span class="pill pill-${o.status}">${STATUS[o.status]}</span>
+        </div>
+        <div class="meta">
+          <span>${fmtDate(o.date)}</span><span class="dot">·</span>
+          <span>${JOBS[o.job]}</span><span class="dot">·</span>
+          <span>${GEAR[o.gear]}</span>
+        </div>
+        ${o.notes?`<div class="note-box">${esc(o.notes)}</div>`:''}
+        ${o.flagReason?`<div class="note-box" style="border-left:3px solid var(--st-flag)"><b>Crew flagged:</b> ${esc(o.flagReason)}</div>`:''}
+        <div class="crew-line" style="margin-top:13px;border-top-color:rgba(255,255,255,.09)">
+          <span>Crew</span>
+          <select class="input" data-assign="${o.id}" style="width:auto;min-width:190px;padding:8px 38px 8px 12px;font-size:12.5px;">
+            <option value="">— Unassigned —</option>
+            ${state.crews.map(c=>`<option value="${c.id}" ${o.crew===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
+          </select>
+        </div>
+        ${o.sketch?`<img class="sketch" src="${o.sketch}" alt="Job sketch">`:''}
+      </div>`).join('')
+    : emptyState('No orders here','Nothing matches this filter right now.')}
+  </div>`;
+}
+
+/* ---------- Cronograma ---------- */
+function viewSchedule(){
+  return `
+  <div class="page-head reveal">
+    <div class="eyebrow">Next 7 days</div>
+    <h1>Schedule</h1>
+    <div class="sub">Click any job to open it.</div>
+  </div>
+  <div class="week">
+    ${Array.from({length:7},(_,i)=>{
+      const d=iso(i), jobs=state.orders.filter(o=>o.date===d);
+      const dt=new Date(d+'T12:00:00');
+      return `
+      <div class="glass glass-tile day reveal ${i===0?'today':''}" style="--i:${i}">
+        <div class="day-h"><b>${DAYS[(dt.getDay()+6)%7]}</b><i>${dt.getDate()}</i></div>
+        ${jobs.map(o=>`
+          <div class="cal-chip" data-order="${o.id}">
+            <b>${esc(o.address.split(',')[0])}</b>
+            <span>${JOBS[o.job]}</span>
+          </div>`).join('') || '<div class="eyebrow" style="opacity:.5">Clear</div>'}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ---------- Cuadrillas (habilidades editables) ---------- */
+function viewCrews(){
+  return `
+  <div class="page-head reveal">
+    <div class="eyebrow">Field teams</div>
+    <h1>Crews</h1>
+    <div class="sub">Skills drive which jobs a crew can be assigned — edit them inline.</div>
+  </div>
+  <div class="crew-grid">
+    ${state.crews.map((c,i)=>{
+      const open = state.orders.filter(o=>o.crew===c.id && o.status!=='done').length;
+      const spare = Object.keys(SKILLS).filter(s=>!c.skills.includes(s));
+      return `
+      <div class="glass glass-tile reveal" style="--i:${i}">
+        <div class="crew-top">
+          <div class="avatar">${initials(c.leader)}</div>
+          <div style="min-width:0">
+            <b>${esc(c.name)}</b>
+            <span>${esc(c.email)}</span>
+          </div>
+        </div>
+
+        <div class="crew-line" style="border-top:none;padding-top:0">
+          <span>Equipment</span>
+          <select class="input" data-gear="${c.id}" style="width:auto;padding:7px 34px 7px 11px;font-size:12.5px;">
+            ${Object.entries(GEAR).map(([k,v])=>`<option value="${k}" ${c.gear===k?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+        <div class="crew-line">
+          <span>Members</span>
+          <div class="stepper">
+            <button data-members="${c.id}" data-delta="-1" aria-label="Remove member">&minus;</button>
+            <b class="num">${c.members}</b>
+            <button data-members="${c.id}" data-delta="1" aria-label="Add member">+</button>
+          </div>
+        </div>
+        <div class="crew-line">
+          <span>Open jobs</span><b class="num">${open}</b>
+        </div>
+
+        <div class="skills-box">
+          <span class="eyebrow">Skills</span>
+          <div class="skills-list">
+            ${c.skills.map(s=>`
+              <span class="chip is-on chip-anim">${SKILLS[s]}
+                <button class="chip-x" data-rmskill="${c.id}" data-skill="${s}" aria-label="Remove ${SKILLS[s]}">&times;</button>
+              </span>`).join('')}
+            ${spare.length?`<button class="chip" data-addskill="${c.id}">+ Add skill</button>`
+              :'<span class="eyebrow" style="opacity:.55">All skills assigned</span>'}
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ---------- Vaciados ---------- */
+function viewDumps(){
+  const list=[...state.dumps].sort((a,b)=>b.at-a.at);
+  return `
+  <div class="page-head reveal">
+    <div class="eyebrow">Reported from the field</div>
+    <h1>Dump reports</h1>
+    <div class="sub">Crews log every load they drop from the app.</div>
+  </div>
+  <div class="stack">
+    ${list.length? list.map((d,i)=>`
+      <div class="glass glass-tile row-card reveal" style="--i:${i}">
+        <div class="row-top">
+          <h3>${esc(d.location)}</h3>
+          <span class="pill ${d.type==='chips'?'pill-done':'pill-assigned'}">${d.type}</span>
+        </div>
+        <div class="meta">
+          <span>${esc(crewName(d.crew))}</span><span class="dot">·</span>
+          <span>${ago(d.at)}</span>
+        </div>
+        ${d.notes?`<div class="note-box">${esc(d.notes)}</div>`:''}
+      </div>`).join('')
+    : emptyState('No dumps logged','Reports from the crew app will land here.')}
+  </div>`;
+}
+
+/* ---------- Requerimientos ---------- */
+function viewRequests(){
+  const order={new:0,ordered:1,resolved:2};
+  const list=[...state.requests].sort((a,b)=> order[a.status]-order[b.status] || b.at-a.at);
+  return `
+  <div class="page-head reveal">
+    <div class="eyebrow">From the crews</div>
+    <h1>Requests</h1>
+    <div class="sub">Rope, tool damage, safety gear — everything the field asks for.</div>
+  </div>
+  <div class="stack">
+    ${list.length? list.map((r,i)=>`
+      <div class="glass glass-tile req-card u-${r.urgency} reveal" style="--i:${i}">
+        <div class="row-top">
+          <h3>${REQ_CAT[r.cat]} &middot; ${esc(crewName(r.crew))}</h3>
+          <span class="pill ${r.status==='new'?'pill-flag':r.status==='ordered'?'pill-progress':'pill-done'}">${REQ_STATUS[r.status]}</span>
+        </div>
+        <div class="meta">
+          <span>${r.urgency==='urgent'?'&#9650; Urgent':r.urgency==='normal'?'Normal':'Low'}</span>
+          <span class="dot">·</span><span>${ago(r.at)}</span>
+        </div>
+        <div class="note-box">${esc(r.note)}</div>
+        <div class="req-actions">
+          ${r.status==='new'?`<button class="btn btn-gold btn-sm" data-req="${r.id}" data-to="ordered">Mark ordered</button>`:''}
+          ${r.status!=='resolved'?`<button class="btn btn-glass btn-sm" data-req="${r.id}" data-to="resolved">Mark resolved</button>`:''}
+          ${r.status==='resolved'?`<button class="btn btn-glass btn-sm" data-req="${r.id}" data-to="new">Reopen</button>`:''}
+        </div>
+      </div>`).join('')
+    : emptyState('Nothing pending','Requests submitted from the crew app land here.')}
+  </div>`;
+}
+
+function emptyState(title,sub){
+  return `<div class="glass empty"><b>${title}</b>${sub}</div>`;
+}
+
+/* ---------- Modales ---------- */
+function renderModal(){
+  const m=state.modal;
+  if(m.type==='newOrder')  return modalNewOrder();
+  if(m.type==='viewOrder') return modalViewOrder(state.orders.find(o=>o.id===m.id));
+  if(m.type==='addSkill')  return modalAddSkill(crewById(m.id));
+  return '';
+}
+function modalNewOrder(){
+  return `
+  <div class="scrim" data-close>
+    <div class="modal glass">
+      <div class="modal-head">
+        <div><div class="eyebrow">Dispatch</div><h2 style="font-size:var(--t-xl)">New work order</h2></div>
+        <button class="icon-btn" data-close aria-label="Close">&times;</button>
+      </div>
+      <div class="field"><label for="f-addr">Address</label>
+        <input id="f-addr" class="input" placeholder="123 Main St, Belleville, IL"></div>
+      <div style="display:flex;gap:11px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:150px"><label for="f-date">Date</label>
+          <input id="f-date" class="input" type="date" value="${iso(0)}"></div>
+        <div class="field" style="flex:1;min-width:150px"><label for="f-job">Job type</label>
+          <select id="f-job" class="input">${Object.entries(JOBS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+      </div>
+      <div style="display:flex;gap:11px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:150px"><label for="f-gear">Equipment</label>
+          <select id="f-gear" class="input">${Object.entries(GEAR).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+        <div class="field" style="flex:1;min-width:150px"><label for="f-crew">Assign crew</label>
+          <select id="f-crew" class="input"><option value="">— Unassigned —</option>
+            ${state.crews.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+      </div>
+      <div class="field"><label for="f-notes">Instructions</label>
+        <textarea id="f-notes" class="input" placeholder="What the crew needs to know on site."></textarea></div>
+      <button class="btn btn-primary" id="f-save" style="width:100%">Create order</button>
+    </div>
+  </div>`;
+}
+function modalViewOrder(o){
+  if(!o) return '';
+  return `
+  <div class="scrim" data-close>
+    <div class="modal glass">
+      <div class="modal-head">
+        <div>
+          <div class="eyebrow">${fmtDate(o.date)}</div>
+          <h2 style="font-size:var(--t-xl)">${esc(o.address)}</h2>
+        </div>
+        <button class="icon-btn" data-close aria-label="Close">&times;</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px">
+        <span class="pill pill-${o.status}">${STATUS[o.status]}</span>
+        <span class="chip">${JOBS[o.job]}</span>
+        <span class="chip">${GEAR[o.gear]}</span>
+      </div>
+      <div class="crew-line" style="border-top:none"><span>Crew</span><b>${esc(crewName(o.crew))}</b></div>
+      ${o.notes?`<div class="note-box" style="margin-top:13px"><b>Instructions</b><br>${esc(o.notes)}</div>`:''}
+      ${o.flagReason?`<div class="note-box" style="margin-top:11px;border-left:3px solid var(--st-flag)"><b>Crew flagged this job</b><br>${esc(o.flagReason)}</div>`:''}
+      ${o.sketch?`<img class="sketch" src="${o.sketch}" alt="Job sketch">`:''}
+    </div>
+  </div>`;
+}
+function modalAddSkill(c){
+  const spare=Object.keys(SKILLS).filter(s=>!c.skills.includes(s));
+  return `
+  <div class="scrim" data-close>
+    <div class="modal glass" style="max-width:430px">
+      <div class="modal-head">
+        <div><div class="eyebrow">${esc(c.name)}</div><h2 style="font-size:var(--t-xl)">Add a skill</h2></div>
+        <button class="icon-btn" data-close aria-label="Close">&times;</button>
+      </div>
+      <div class="skills-list">
+        ${spare.map(s=>`<button class="chip" data-pick="${s}">+ ${SKILLS[s]}</button>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   Eventos
+   ============================================================ */
+function bindShell(){
+  document.querySelectorAll('[data-nav]').forEach(b=>{
+    b.onclick=()=>{ state.view=b.dataset.nav; state.filter='all'; render(); };
+  });
+  document.getElementById('logout').onclick=()=>{ state.loggedIn=false; state.view='overview'; render(); };
+
+  document.querySelectorAll('[data-order]').forEach(el=>{
+    el.onclick=(e)=>{ if(e.target.closest('select')) return;
+      state.modal={type:'viewOrder',id:el.dataset.order}; render(); };
+  });
+  document.querySelectorAll('[data-filter]').forEach(b=>{
+    b.onclick=()=>{ state.filter=b.dataset.filter; render(); };
+  });
+  document.getElementById('new-order')?.addEventListener('click',()=>{
+    state.modal={type:'newOrder'}; render();
+  });
+  document.querySelectorAll('[data-assign]').forEach(sel=>{
+    sel.onchange=()=>{
+      const o=state.orders.find(x=>x.id===sel.dataset.assign);
+      o.crew=sel.value||null;
+      if(o.crew && (o.status==='pending'||o.status==='flag')) o.status='assigned';
+      else if(!o.crew && o.status==='assigned') o.status='pending';
+      persist(); toast(o.crew?`Assigned to ${crewName(o.crew)}`:'Order unassigned'); render();
+    };
+  });
+
+  /* --- Cuadrillas: habilidades, equipo y tamaño --- */
+  document.querySelectorAll('[data-rmskill]').forEach(b=>{
+    b.onclick=(e)=>{
+      e.stopPropagation();
+      const c=crewById(b.dataset.rmskill);
+      c.skills=c.skills.filter(s=>s!==b.dataset.skill);
+      persist(); toast(`${SKILLS[b.dataset.skill]} removed from ${c.name}`); render();
+    };
+  });
+  document.querySelectorAll('[data-addskill]').forEach(b=>{
+    b.onclick=()=>{ state.modal={type:'addSkill',id:b.dataset.addskill}; render(); };
+  });
+  document.querySelectorAll('[data-gear]').forEach(sel=>{
+    sel.onchange=()=>{ crewById(sel.dataset.gear).gear=sel.value; persist(); toast('Equipment updated'); render(); };
+  });
+  document.querySelectorAll('[data-members]').forEach(b=>{
+    b.onclick=()=>{
+      const c=crewById(b.dataset.members);
+      c.members=Math.max(1,Math.min(12,c.members+Number(b.dataset.delta)));
+      persist(); render();
+    };
+  });
+
+  /* --- Requerimientos --- */
+  document.querySelectorAll('[data-req]').forEach(b=>{
+    b.onclick=()=>{
+      const r=state.requests.find(x=>x.id===b.dataset.req);
+      r.status=b.dataset.to;
+      persist(); toast(`Request marked ${REQ_STATUS[r.status].toLowerCase()}`, r.status==='resolved'?'green':'gold'); render();
+    };
+  });
+}
+
+function bindModal(){
+  document.querySelectorAll('[data-close]').forEach(el=>{
+    el.onclick=(e)=>{ if(e.target===el){ state.modal=null; render(); } };
+  });
+  document.getElementById('f-save')?.addEventListener('click',()=>{
+    const addr=document.getElementById('f-addr').value.trim();
+    if(!addr){ toast('An address is required'); return; }
+    const crew=document.getElementById('f-crew').value||null;
+    state.orders.unshift({
+      id:uid('WO'), address:addr,
+      date:document.getElementById('f-date').value,
+      job:document.getElementById('f-job').value,
+      gear:document.getElementById('f-gear').value,
+      notes:document.getElementById('f-notes').value.trim(),
+      status:crew?'assigned':'pending', crew, sketch:null,
+    });
+    persist(); state.modal=null; state.view='orders'; render();
+    toast('Work order created','green');
+  });
+  document.querySelectorAll('[data-pick]').forEach(b=>{
+    b.onclick=()=>{
+      const c=crewById(state.modal.id);
+      c.skills.push(b.dataset.pick);
+      persist(); state.modal=null; render();
+      toast(`${SKILLS[b.dataset.pick]} added to ${c.name}`,'green');
+    };
+  });
+  document.addEventListener('keydown',function esc(e){
+    if(e.key==='Escape'){ state.modal=null; render(); document.removeEventListener('keydown',esc); }
+  });
+}
+
+/* ---------- Arranque ---------- */
+initGlass();
+syncFromCrewApp();
+addEventListener('storage',(e)=>{ if(e.key&&e.key.includes('inbox')){ syncFromCrewApp(); render(); } });
+render();
+</script>
