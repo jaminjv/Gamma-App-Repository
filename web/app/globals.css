@@ -1,0 +1,13 @@
+/* Punto de partida. Cuando conectes esto al diseño del prototipo
+   (ramaje-panel-operaciones.html), trae los tokens de color y
+   tipografía de ahí para mantener la misma identidad visual. */
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f1ede3;
+  color: #2a241d;
+}

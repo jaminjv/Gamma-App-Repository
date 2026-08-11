@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ramaje — Operations Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1EDE3;
+    --paper-dim:#E7E1D2;
+    --ink:#2A241D;
+    --ink-soft:#5C5346;
+    --forest:#1E3A2E;
+    --forest-2:#284A3A;
+    --forest-3:#345E4B;
+    --bark:#6B4A32;
+    --safety:#E0631C;
+    --safety-2:#F4834A;
+    --sap:#5C7A52;
+    --sap-bg:#E4ECDD;
+    --rust:#A63D2E;
+    --rust-bg:#F3DDD8;
+    --line:#D3C9B4;
+    --shadow: 0 2px 10px rgba(30,58,46,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    margin:0;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:'Inter',sans-serif;}
+  ::selection{background:var(--safety-2);color:#fff;}
+
+  /* ===== App shell ===== */
+  #app{min-height:100vh;}
+
+  /* ===== Login ===== */
+  .login-wrap{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(255,255,255,0.05), transparent 40%),
+      linear-gradient(160deg,var(--forest) 0%, #142A20 100%);
+    padding:24px;
+  }
+  .login-card{
+    background:var(--paper);
+    width:100%;max-width:400px;
+    padding:38px 34px 30px;
+    position:relative;
+    box-shadow:0 20px 60px rgba(0,0,0,0.35);
+    border-radius:2px;
+  }
+  .login-card::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:6px;
+    background:repeating-linear-gradient(90deg,var(--safety) 0 14px, var(--paper) 14px 22px);
+  }
+  .ticket-num{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);
+    letter-spacing:0.08em;margin-bottom:18px;display:flex;justify-content:space-between;
+  }
+  .login-card h1{font-size:30px;color:var(--forest);line-height:1.05;}
+  .login-card .sub{color:var(--ink-soft);font-size:13.5px;margin-top:8px;margin-bottom:26px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-soft);margin-bottom:6px;font-weight:600;}
+  .field input{
+    width:100%;padding:11px 12px;border:1.5px solid var(--line);background:#fff;
+    border-radius:3px;font-size:14.5px;color:var(--ink);outline:none;
+  }
+  .field input:focus{border-color:var(--forest-3);}
+  .btn-primary{
+    width:100%;background:var(--safety);color:#fff;border:none;padding:13px;
+    font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.06em;font-size:14.5px;font-weight:600;
+    border-radius:3px;margin-top:6px;transition:background .15s;
+  }
+  .btn-primary:hover{background:var(--safety-2);}
+  .login-role-hint{margin-top:20px;font-size:12px;color:var(--ink-soft);text-align:center;border-top:1px dashed var(--line);padding-top:14px;}
+
+  /* ===== Layout ===== */
+  .layout{display:grid;grid-template-columns:224px 1fr;min-height:100vh;}
+  .sidebar{
+    background:var(--forest);color:#EDE7D9;
+    padding:22px 16px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding:0 4px 22px;border-bottom:1px solid rgba(237,231,217,0.15);margin-bottom:18px;}
+  .brand-mark{width:30px;height:30px;flex:none;}
+  .brand-text{font-family:'Oswald',sans-serif;font-size:19px;text-transform:uppercase;letter-spacing:0.03em;}
+  .brand-text small{display:block;font-family:'IBM Plex Mono',monospace;text-transform:none;letter-spacing:0.02em;font-size:10px;color:#B9C9BE;margin-top:1px;}
+  nav{display:flex;flex-direction:column;gap:3px;flex:1;}
+  .nav-btn{
+    display:flex;align-items:center;gap:11px;padding:10px 11px;border:none;background:transparent;
+    color:#CBD7CC;border-radius:4px;font-size:13.5px;font-weight:500;text-align:left;transition:.15s;
+  }
+  .nav-btn svg{width:17px;height:17px;flex:none;opacity:0.85;}
+  .nav-btn:hover{background:rgba(255,255,255,0.06);color:#fff;}
+  .nav-btn.active{background:var(--safety);color:#fff;}
+  .nav-btn.active svg{opacity:1;}
+  .sidebar-foot{border-top:1px solid rgba(237,231,217,0.15);padding-top:14px;margin-top:10px;}
+  .who{display:flex;align-items:center;gap:9px;font-size:12.5px;color:#CBD7CC;margin-bottom:10px;}
+  .who .dot{width:8px;height:8px;border-radius:50%;background:var(--safety-2);flex:none;}
+  .logout-btn{background:transparent;border:1px solid rgba(237,231,217,0.25);color:#CBD7CC;font-size:12px;padding:7px 10px;border-radius:4px;width:100%;}
+  .logout-btn:hover{border-color:#EDE7D9;color:#fff;}
+
+  .main{padding:26px 32px 60px;max-width:1180px;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+  .topbar h2{font-size:26px;color:var(--forest);}
+  .topbar .date{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-top:4px;}
+  .btn{
+    border:none;padding:10px 16px;border-radius:3px;font-size:13px;font-weight:600;
+    font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.04em;
+  }
+  .btn-safety{background:var(--safety);color:#fff;}
+  .btn-safety:hover{background:var(--safety-2);}
+  .btn-outline{background:transparent;color:var(--forest);border:1.5px solid var(--forest);}
+  .btn-outline:hover{background:var(--forest);color:#fff;}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border:1.5px solid var(--line);font-family:'Inter';text-transform:none;letter-spacing:0;font-weight:500;}
+  .btn-ghost:hover{border-color:var(--ink-soft);}
+  .btn-sm{padding:6px 10px;font-size:11.5px;}
+
+  /* KPI row */
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:26px;}
+  .kpi.k-rust::before{background:var(--rust);}
+  .kpi{
+    background:#fff;border:1px solid var(--line);border-radius:4px;padding:16px 16px 14px;position:relative;overflow:hidden;
+  }
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--forest-3);}
+  .kpi.k-safety::before{background:var(--safety);}
+  .kpi.k-sap::before{background:var(--sap);}
+  .kpi.k-bark::before{background:var(--bark);}
+  .kpi .num{font-family:'Oswald',sans-serif;font-size:32px;color:var(--forest);line-height:1;}
+  .kpi .lbl{font-size:11.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em;margin-top:6px;font-weight:600;}
+
+  .grid-2{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:start;}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:4px;padding:18px 20px;}
+  .panel h3{font-size:14.5px;color:var(--forest);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+  .panel h3 .tag{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);text-transform:none;letter-spacing:0;}
+
+  /* Mock map */
+  .map-box{
+    height:260px;border-radius:3px;position:relative;overflow:hidden;
+    background:
+      linear-gradient(0deg, rgba(30,58,46,0.05) 1px, transparent 1px) 0 0/26px 26px,
+      linear-gradient(90deg, rgba(30,58,46,0.05) 1px, transparent 1px) 0 0/26px 26px,
+      var(--paper-dim);
+    border:1px solid var(--line);
+  }
+  .map-pin{position:absolute;transform:translate(-50%,-100%);text-align:center;}
+  .map-pin .dot{width:13px;height:13px;border-radius:50% 50% 50% 0;background:var(--safety);transform:rotate(-45deg);margin:0 auto;box-shadow:0 2px 5px rgba(0,0,0,0.25);border:2px solid #fff;}
+  .map-pin.idle .dot{background:var(--sap);}
+  .map-pin .pin-lbl{font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:var(--forest);color:#fff;padding:1px 5px;border-radius:2px;white-space:nowrap;margin-top:2px;display:inline-block;}
+  .map-note{position:absolute;bottom:8px;right:10px;font-size:10px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;background:rgba(241,237,227,0.85);padding:2px 6px;border-radius:2px;}
+
+  /* Ticket / order cards */
+  .ticket{
+    border:1.5px dashed var(--line);border-radius:3px;padding:12px 13px;margin-bottom:10px;background:var(--paper-dim);
+    position:relative;
+  }
+  .ticket:last-child{margin-bottom:0;}
+  .ticket-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .ticket-addr{font-weight:600;font-size:13.5px;color:var(--ink);}
+  .ticket-meta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);margin-top:3px;}
+  .stamp{
+    font-family:'Oswald',sans-serif;font-size:9.5px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;
+    padding:3px 8px;border-radius:2px;border:1.5px solid; white-space:nowrap;
+  }
+  .stamp.pendiente{color:var(--bark);border-color:var(--bark);background:#F1E7DC;}
+  .stamp.asignado{color:var(--forest-3);border-color:var(--forest-3);background:#E1EAE4;}
+  .stamp.en_progreso{color:var(--safety);border-color:var(--safety);background:#FBE8DA;}
+  .stamp.hecho{color:var(--sap);border-color:var(--sap);background:var(--sap-bg);}
+  .stamp.reasignar{color:var(--rust);border-color:var(--rust);background:var(--rust-bg);}
+  .status-note{font-size:11.5px;color:var(--ink-soft);margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+  .status-note svg{width:13px;height:13px;flex:none;opacity:0.7;}
+
+  /* Table */
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{
+    text-align:left;font-family:'Oswald',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;
+    color:var(--ink-soft);border-bottom:2px solid var(--ink);padding:8px 10px;font-weight:600;
+  }
+  td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tr:hover td{background:var(--paper-dim);}
+  select.inline-select{border:1px solid var(--line);border-radius:3px;padding:5px 7px;font-size:12px;background:#fff;color:var(--ink);}
+
+  .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .filters select, .filters input{border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-size:12.5px;background:#fff;}
+
+  .empty{text-align:center;padding:36px 10px;color:var(--ink-soft);}
+  .empty .display{color:var(--forest);font-size:16px;margin-bottom:6px;}
+
+  /* Calendar */
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
+  .cal-day{background:#fff;border:1px solid var(--line);border-radius:4px;min-height:150px;padding:8px;}
+  .cal-day-hd{font-family:'Oswald',sans-serif;font-size:11px;text-transform:uppercase;color:var(--ink-soft);letter-spacing:0.04em;display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:6px;}
+  .cal-day-hd .n{font-family:'IBM Plex Mono',monospace;color:var(--forest);font-weight:600;}
+  .cal-chip{
+    font-size:10.8px;background:var(--paper-dim);border-left:3px solid var(--safety);border-radius:2px;padding:4px 6px;margin-bottom:5px;cursor:pointer;
+  }
+  .cal-chip.st-hecho{border-left-color:var(--sap);}
+  .cal-chip.st-pendiente{border-left-color:var(--bark);}
+  .cal-chip.st-reasignar{border-left-color:var(--rust);}
+  .cal-chip .c-addr{font-weight:600;display:block;}
+  .cal-chip .c-crew{color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;font-size:9.5px;}
+
+  /* Crews */
+  .crew-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:14px;}
+  .crew-card{background:#fff;border:1px solid var(--line);border-radius:4px;padding:16px;position:relative;}
+  .crew-card .eq-badge{
+    position:absolute;top:14px;right:14px;font-family:'IBM Plex Mono',monospace;font-size:9.5px;
+    padding:3px 7px;border-radius:2px;background:var(--forest);color:#fff;text-transform:uppercase;
+  }
+  .crew-card h4{font-family:'Oswald',sans-serif;font-size:16px;color:var(--forest);margin:0 0 4px;text-transform:uppercase;}
+  .crew-card .lider{font-size:12px;color:var(--ink-soft);margin-bottom:10px;}
+  .skill-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+  .pill{font-size:10.5px;background:var(--sap-bg);color:var(--sap);padding:3px 8px;border-radius:20px;font-weight:600;}
+  .crew-card .members{font-size:11.5px;color:var(--ink-soft);border-top:1px dashed var(--line);padding-top:9px;}
+
+  /* Modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(20,30,25,0.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;}
+  .modal{background:var(--paper);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;border-radius:4px;box-shadow:0 24px 60px rgba(0,0,0,0.35);}
+  .modal-hd{background:var(--forest);color:#fff;padding:16px 22px;display:flex;justify-content:space-between;align-items:center;}
+  .modal-hd h3{font-size:16px;}
+  .modal-hd button{background:transparent;border:none;color:#EDE7D9;font-size:20px;line-height:1;}
+  .modal-body{padding:20px 22px 24px;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .modal .field label{color:var(--ink-soft);}
+  .modal .field textarea{width:100%;border:1.5px solid var(--line);border-radius:3px;padding:10px;font-size:13.5px;resize:vertical;min-height:70px;}
+  .modal .field select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:3px;font-size:13.5px;background:#fff;}
+  .file-drop{border:1.5px dashed var(--line);border-radius:3px;padding:14px;text-align:center;font-size:12px;color:var(--ink-soft);cursor:pointer;background:#fff;}
+  .file-drop img{max-height:90px;margin-top:8px;border-radius:3px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+
+  .checkbox-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .chk{display:flex;align-items:center;gap:6px;font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:6px 11px;cursor:pointer;}
+  .chk input{accent-color:var(--forest);}
+
+  @media (max-width: 860px){
+    .layout{grid-template-columns:1fr;}
+    .sidebar{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;width:100%;flex-direction:row;padding:8px 10px;z-index:40;overflow-x:auto;}
+    .brand,.sidebar-foot{display:none;}
+    nav{flex-direction:row;gap:4px;width:100%;justify-content:space-around;}
+    .nav-btn{flex-direction:column;font-size:9.5px;padding:7px 6px;gap:3px;}
+    .main{padding:20px 16px 90px;}
+    .kpi-row{grid-template-columns:repeat(2,1fr);}
+    .grid-2{grid-template-columns:1fr;}
+    .form-row{grid-template-columns:1fr;}
+    .cal-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ---------------------------------------------------------
+   RAMAJE — Operations Dashboard (functional prototype, MVP)
+   In-memory data (no backend). See seedData() below.
+--------------------------------------------------------- */
+
+const ICONS = {
+  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9.5a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>`,
+  orders: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5"/><path d="M8 12h6M8 16h6M8 8h2"/></svg>`,
+  calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="15.5" rx="1.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>`,
+  crews: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3.5 20c.7-3.6 3-5.5 5.5-5.5s4.8 1.9 5.5 5.5"/><path d="M14.7 15.2c2 .3 3.5 1.9 4 4.8"/></svg>`,
+  drop: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3s6.5 7.4 6.5 12A6.5 6.5 0 0 1 5.5 15C5.5 10.4 12 3 12 3Z"/></svg>`,
+  tree: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 6 10h3l-4 6h4l-3 5h12l-3-5h4l-4-6h3L12 2Z"/><path d="M12 23v-4"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>`,
+  pin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.6 7-12A7 7 0 0 0 5 9c0 5.4 7 12 7 12Z"/><circle cx="12" cy="9" r="2.3"/></svg>`,
+  sketch: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M20 16l-5-5-4 4-2-2-5 5"/></svg>`,
+};
+
+const STATUS_LABEL = {pendiente:'Pending', asignado:'Assigned', en_progreso:'In progress', hecho:'Done', reasignar:'Reassign'};
+const TIPO_LABEL = {remocion:'Removal', trim:'Trim', poda_alta:'Aerial pruning', emergencia:'Storm Damage'};
+const EQUIPO_LABEL = {bucket:'Bucket truck', climbing:'Climbing', ambos:'Bucket + Climbing'};
+const VACIADO_LABEL = {chips:'Chips', logs:'Logs'};
+const DIAS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function uid(prefix){ return prefix + '-' + Math.random().toString(36).slice(2,7); }
+
+function sampleSketch(){
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="280" viewBox="0 0 400 280">
+    <rect width="400" height="280" fill="#FBF8F0"/>
+    <rect x="8" y="8" width="384" height="264" fill="none" stroke="#C9BFA6" stroke-width="2" stroke-dasharray="4 3"/>
+    <rect x="40" y="150" width="90" height="70" fill="none" stroke="#2A241D" stroke-width="2.5"/>
+    <polygon points="35,150 85,110 135,150" fill="none" stroke="#2A241D" stroke-width="2.5"/>
+    <line x1="10" y1="60" x2="390" y2="45" stroke="#6B4A32" stroke-width="2" stroke-dasharray="6 4"/>
+    <circle cx="60" cy="57" r="4" fill="#6B4A32"/>
+    <circle cx="340" cy="47" r="4" fill="#6B4A32"/>
+    <line x1="230" y1="220" x2="230" y2="120" stroke="#6B4A32" stroke-width="6"/>
+    <ellipse cx="230" cy="95" rx="55" ry="50" fill="#E4ECDD" stroke="#5C7A52" stroke-width="3"/>
+    <line x1="200" y1="70" x2="260" y2="120" stroke="#A63D2E" stroke-width="4"/>
+    <line x1="260" y1="70" x2="200" y2="120" stroke="#A63D2E" stroke-width="4"/>
+    <path d="M180 210 C 210 230, 250 230, 275 205" fill="none" stroke="#E0631C" stroke-width="3" marker-end="url(#arrow)"/>
+    <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#E0631C"/></marker></defs>
+    <text x="20" y="245" font-family="monospace" font-size="13" fill="#2A241D">Trim 10ft from line</text>
+    <text x="175" y="255" font-family="monospace" font-size="13" fill="#A63D2E">Clearance zone</text>
+  </svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+function seedData(){
+  const today = new Date();
+  const iso = (offset) => {
+    const d = new Date(today); d.setDate(d.getDate()+offset);
+    return d.toISOString().slice(0,10);
+  };
+  const groups = [
+    {id:'g1', nombre:"Eliseo's Crew", lider:'Eliseo', tipo_equipo:'climbing', skills:['poda_alta','trim','emergencia'], miembros:4},
+    {id:'g2', nombre:"Ivan's Crew", lider:'Ivan', tipo_equipo:'bucket', skills:['remocion','trim'], miembros:5},
+    {id:'g3', nombre:"Jose's Crew", lider:'Jose', tipo_equipo:'ambos', skills:['remocion','poda_alta','emergencia','trim'], miembros:6},
+    {id:'g4', nombre:"Baltazar's Crew", lider:'Baltazar', tipo_equipo:'bucket', skills:['remocion','trim','emergencia'], miembros:4},
+    {id:'g5', nombre:"Ron's Crew", lider:'Ron', tipo_equipo:'climbing', skills:['poda_alta','trim'], miembros:3},
+  ];
+  const orders = [
+    {id:uid('OT'), direccion:'412 Frank Scott Pkwy, Belleville, IL', fecha:iso(0), tipo:'remocion', equipo:'bucket', instrucciones:'Remove dead oak next to the garage. Client wants the wood stacked.', estado:'en_progreso', group:'g2', foto:null},
+    {id:uid('OT'), direccion:'22 Fossil Ridge Dr, Swansea, IL', fecha:iso(0), tipo:'poda_alta', equipo:'climbing', instrucciones:'High canopy pruning, power line nearby — coordinate with Ameren.', estado:'asignado', group:'g1', foto:sampleSketch()},
+    {id:uid('OT'), direccion:'890 S Illinois St, Belleville, IL', fecha:iso(0), tipo:'trim', equipo:'bucket', instrucciones:'Trim branches overhanging the roof.', estado:'pendiente', group:null, foto:null},
+    {id:uid('OT'), direccion:'1345 Main St, O\u2019Fallon, IL', fecha:iso(1), tipo:'emergencia', equipo:'ambos', instrucciones:'Tree down on fence after storm. High priority.', estado:'pendiente', group:null, foto:null},
+    {id:uid('OT'), direccion:'77 Green Mount Rd, Shiloh, IL', fecha:iso(1), tipo:'remocion', equipo:'bucket', instrucciones:'Remove 2 dead pines by the driveway.', estado:'asignado', group:'g3', foto:null},
+    {id:uid('OT'), direccion:'560 Carlyle Ave, Belleville, IL', fecha:iso(2), tipo:'trim', equipo:'climbing', instrucciones:'Decorative pruning, backyard.', estado:'hecho', group:'g1', foto:null},
+    {id:uid('OT'), direccion:'901 N 4th St, Millstadt, IL', fecha:iso(3), tipo:'poda_alta', equipo:'climbing', instrucciones:'High pruning near a phone line.', estado:'pendiente', group:null, foto:null},
+    {id:uid('OT'), direccion:'12 Signal Hill Dr, Fairview Heights, IL', fecha:iso(-1), tipo:'remocion', equipo:'bucket', instrucciones:'Full removal of a large shade tree.', estado:'hecho', group:'g2', foto:null},
+    {id:uid('OT'), direccion:'340 Longacre Dr, O\u2019Fallon, IL', fecha:iso(0), tipo:'remocion', equipo:'bucket', instrucciones:'Stump too close to gas line — crew flagged, needs a different crew with utility clearance.', estado:'reasignar', group:'g4', foto:null},
+    {id:uid('OT'), direccion:'58 Timberline Dr, Shiloh, IL', fecha:iso(2), tipo:'poda_alta', equipo:'climbing', instrucciones:'Aerial trim around roofline, homeowner requested cleanup of clippings.', estado:'asignado', group:'g5', foto:null},
+  ];
+  const dumps = [
+    {id:uid('V'), group:'g2', ubicacion:'Belleville Rd Dump Site', hora:'10:20', tipo:'logs', notas:'Full load, mostly trunk sections.'},
+    {id:uid('V'), group:'g1', ubicacion:'Frank Scott Dump Site', hora:'08:45', tipo:'chips', notas:'Partial load, brush + branches.'},
+    {id:uid('V'), group:'g3', ubicacion:'Frank Scott Dump Site', hora:'14:05', tipo:'logs', notas:'Full load.'},
+  ];
+  return {groups, orders, dumps};
+}
+
+let pendingOrderSketch = null;
+
+let state = {
+  loggedIn:false,
+  view:'dashboard',
+  modal:null, // {type, payload}
+  filters:{estado:'todos', group:'todos'},
+  ...seedData(),
+};
+
+function fmtDate(d){
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('en-US', {weekday:'short', day:'2-digit', month:'short'});
+}
+
+function groupName(id){
+  if(!id) return '— Unassigned —';
+  const g = state.groups.find(g=>g.id===id);
+  return g ? g.nombre : '— Unassigned —';
+}
+
+/* ================= RENDER ================= */
+function render(){
+  const app = document.getElementById('app');
+  if(!state.loggedIn){ app.innerHTML = renderLogin(); attachLoginEvents(); return; }
+  app.innerHTML = `
+    <div class="layout">
+      ${renderSidebar()}
+      <div class="main">
+        ${renderView()}
+      </div>
+    </div>
+    ${state.modal ? renderModal() : ''}
+  `;
+  attachGlobalEvents();
+}
+
+function renderLogin(){
+  return `
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="ticket-num"><span>ACCESS ORDER NO. 00184</span><span>RAMAJE OPS</span></div>
+      <h1>Sign in to<br>the dashboard</h1>
+      <div class="sub">Admin platform — tree removal &amp; maintenance.</div>
+      <div class="field">
+        <label>Email</label>
+        <input id="login-email" type="email" placeholder="admin@ramaje.co" value="admin@ramaje.co">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="login-pass" type="password" placeholder="••••••••" value="••••••••">
+      </div>
+      <button class="btn-primary" id="login-btn">Sign in</button>
+      <div class="login-role-hint">Demo prototype — sign-in doesn't validate real credentials yet.</div>
+    </div>
+  </div>`;
+}
+function attachLoginEvents(){
+  document.getElementById('login-btn').onclick = () => { state.loggedIn = true; render(); };
+}
+
+function renderSidebar(){
+  const items = [
+    {id:'dashboard', label:'Dashboard', icon:ICONS.home},
+    {id:'orders', label:'Orders', icon:ICONS.orders},
+    {id:'calendar', label:'Schedule', icon:ICONS.calendar},
+    {id:'crews', label:'Crews', icon:ICONS.crews},
+    {id:'dumps', label:'Dumps', icon:ICONS.drop},
+  ];
+  return `
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">${ICONS.tree}</div>
+      <div class="brand-text">Ramaje<small>operations dashboard</small></div>
+    </div>
+    <nav>
+      ${items.map(i=>`
+        <button class="nav-btn ${state.view===i.id?'active':''}" data-nav="${i.id}">
+          ${i.icon}<span>${i.label}</span>
+        </button>`).join('')}
+    </nav>
+    <div class="sidebar-foot">
+      <div class="who"><div class="dot"></div> Admin · shift active</div>
+      <button class="logout-btn" id="logout-btn">Log out</button>
+    </div>
+  </div>`;
+}
+
+function renderView(){
+  if(state.view==='dashboard') return renderDashboard();
+  if(state.view==='orders') return renderOrders();
+  if(state.view==='calendar') return renderCalendar();
+  if(state.view==='crews') return renderCrews();
+  if(state.view==='dumps') return renderDumps();
+  return '';
+}
+
+/* ---- Dashboard ---- */
+function renderDashboard(){
+  const todayISO = new Date().toISOString().slice(0,10);
+  const todays = state.orders.filter(o=>o.fecha===todayISO);
+  const enCampo = state.orders.filter(o=>o.estado==='en_progreso' || o.estado==='asignado').length;
+  const pendientes = state.orders.filter(o=>o.estado==='pendiente').length;
+  const completadasHoy = todays.filter(o=>o.estado==='hecho').length;
+  const reasignar = state.orders.filter(o=>o.estado==='reasignar').length;
+
+  const pins = [
+    {x:'24%', y:'34%', lbl:"Ivan's Crew", idle:false},
+    {x:'58%', y:'20%', lbl:"Eliseo's Crew", idle:false},
+    {x:'42%', y:'64%', lbl:"Jose's Crew", idle:true},
+    {x:'72%', y:'52%', lbl:"Baltazar's Crew", idle:false},
+    {x:'18%', y:'70%', lbl:"Ron's Crew", idle:true},
+  ];
+
+  return `
+  <div class="topbar">
+    <div>
+      <h2>Today's dashboard</h2>
+      <div class="date">${new Date().toLocaleDateString('en-US', {weekday:'long', day:'numeric', month:'long', year:'numeric'})}</div>
+    </div>
+    <button class="btn btn-safety" data-open-order-modal>${ICONS.plus} New order</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi k-bark"><div class="num">${todays.length}</div><div class="lbl">Today's orders</div></div>
+    <div class="kpi k-safety"><div class="num">${enCampo}</div><div class="lbl">Crews in the field</div></div>
+    <div class="kpi"><div class="num">${pendientes}</div><div class="lbl">Pending assignment</div></div>
+    <div class="kpi k-sap"><div class="num">${completadasHoy}</div><div class="lbl">Completed today</div></div>
+    <div class="kpi k-rust"><div class="num">${reasignar}</div><div class="lbl">Needs reassignment</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h3>Live map <span class="tag">coming: Mapbox integration</span></h3>
+      <div class="map-box">
+        ${pins.map(p=>`
+          <div class="map-pin ${p.idle?'idle':''}" style="left:${p.x};top:${p.y}">
+            <div class="dot"></div>
+            <span class="pin-lbl">${p.lbl}</span>
+          </div>`).join('')}
+        <div class="map-note">Simulated location — connects to location_pings in Phase 6</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Today's orders <span class="tag">${todays.length} total</span></h3>
+      ${todays.length ? todays.map(o=>renderTicket(o)).join('') : `<div class="empty"><div class="display">No orders today</div>Create a new order to get started.</div>`}
+    </div>
+  </div>`;
+}
+
+function renderTicket(o){
+  return `
+  <div class="ticket" data-view-order="${o.id}" style="cursor:pointer;">
+    <div class="ticket-top">
+      <div>
+        <div class="ticket-addr">${o.direccion}</div>
+        <div class="ticket-meta">${TIPO_LABEL[o.tipo]} · ${EQUIPO_LABEL[o.equipo]} · ${groupName(o.group)} ${o.foto?`· ${ICONS.sketch.replace('<svg','<svg style="width:11px;vertical-align:-2px;"')} sketch`:''}</div>
+      </div>
+      <div class="stamp ${o.estado}">${STATUS_LABEL[o.estado]}</div>
+    </div>
+  </div>`;
+}
+
+/* ---- Órdenes ---- */
+function renderOrders(){
+  const {estado, group} = state.filters;
+  let list = state.orders.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  if(estado!=='todos') list = list.filter(o=>o.estado===estado);
+  if(group!=='todos') list = list.filter(o=> group==='sin_asignar' ? !o.group : o.group===group);
+
+  return `
+  <div class="topbar">
+    <div><h2>Work orders</h2><div class="date">${state.orders.length} orders on record</div></div>
+    <button class="btn btn-safety" data-open-order-modal>${ICONS.plus} New order</button>
+  </div>
+
+  <div class="filters">
+    <select id="f-estado">
+      <option value="todos" ${estado==='todos'?'selected':''}>All statuses</option>
+      ${Object.entries(STATUS_LABEL).map(([k,v])=>`<option value="${k}" ${estado===k?'selected':''}>${v}</option>`).join('')}
+    </select>
+    <select id="f-group">
+      <option value="todos" ${group==='todos'?'selected':''}>All crews</option>
+      <option value="sin_asignar" ${group==='sin_asignar'?'selected':''}>Unassigned</option>
+      ${state.groups.map(g=>`<option value="${g.id}" ${group===g.id?'selected':''}>${g.nombre}</option>`).join('')}
+    </select>
+  </div>
+
+  <div class="status-note">${ICONS.pin} Status is set by crew leaders from the mobile app (Start / Finish / Reassign) — admins assign the crew here.</div>
+
+  <div class="panel" style="padding:0;">
+    ${list.length ? `
+    <table>
+      <thead><tr>
+        <th>Address</th><th>Date</th><th>Type</th><th>Equipment</th><th>Crew</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+        ${list.map(o=>`
+        <tr>
+          <td data-view-order="${o.id}" style="cursor:pointer;">
+            <strong>${o.direccion}</strong> ${o.foto?ICONS.sketch.replace('<svg','<svg style="width:12px;vertical-align:-2px;color:var(--forest-3);"'):''}
+            <div class="ticket-meta" style="margin-top:2px;">${o.instrucciones ? o.instrucciones.slice(0,46)+(o.instrucciones.length>46?'…':'') : ''}</div>
+          </td>
+          <td class="mono">${fmtDate(o.fecha)}</td>
+          <td>${TIPO_LABEL[o.tipo]}</td>
+          <td>${EQUIPO_LABEL[o.equipo]}</td>
+          <td>
+            <select class="inline-select" data-assign="${o.id}">
+              <option value="">Unassigned</option>
+              ${state.groups.map(g=>`<option value="${g.id}" ${o.group===g.id?'selected':''}>${g.nombre}</option>`).join('')}
+            </select>
+          </td>
+          <td><span class="stamp ${o.estado}">${STATUS_LABEL[o.estado]}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : `<div class="empty"><div class="display">No results</div>Adjust the filters or create a new order.</div>`}
+  </div>`;
+}
+
+/* ---- Cronograma ---- */
+function renderCalendar(){
+  const today = new Date();
+  const monday = new Date(today);
+  const dow = (today.getDay()+6)%7;
+  monday.setDate(today.getDate()-dow);
+  const days = Array.from({length:7}, (_,i)=>{
+    const d = new Date(monday); d.setDate(monday.getDate()+i);
+    return d;
+  });
+  return `
+  <div class="topbar">
+    <div><h2>Weekly schedule</h2><div class="date">${days[0].toLocaleDateString('en-US',{day:'2-digit',month:'short'})} — ${days[6].toLocaleDateString('en-US',{day:'2-digit',month:'short'})}</div></div>
+    <button class="btn btn-safety" data-open-order-modal>${ICONS.plus} New order</button>
+  </div>
+  <div class="cal-grid">
+    ${days.map((d,i)=>{
+      const iso = d.toISOString().slice(0,10);
+      const dayOrders = state.orders.filter(o=>o.fecha===iso);
+      const isToday = iso===today.toISOString().slice(0,10);
+      return `
+      <div class="cal-day" style="${isToday?'border-color:var(--safety);':''}">
+        <div class="cal-day-hd"><span>${DIAS[i]}</span><span class="n">${d.getDate()}</span></div>
+        ${dayOrders.map(o=>`
+          <div class="cal-chip st-${o.estado}" data-view-order="${o.id}">
+            <span class="c-addr">${o.direccion.split(',')[0]}</span>
+            <span class="c-crew">${TIPO_LABEL[o.tipo]} · ${o.group?groupName(o.group).replace(' Crew',''):'Unassg.'}</span>
+          </div>`).join('') || `<div style="font-size:11px;color:var(--ink-soft);padding-top:4px;">No orders</div>`}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ---- Cuadrillas ---- */
+function renderCrews(){
+  return `
+  <div class="topbar">
+    <div><h2>Crews</h2><div class="date">${state.groups.length} active crews</div></div>
+    <button class="btn btn-safety" data-open-crew-modal>${ICONS.plus} New crew</button>
+  </div>
+  <div class="crew-grid">
+    ${state.groups.map(g=>{
+      const activas = state.orders.filter(o=>o.group===g.id && (o.estado==='asignado'||o.estado==='en_progreso')).length;
+      return `
+      <div class="crew-card">
+        <div class="eq-badge">${EQUIPO_LABEL[g.tipo_equipo]}</div>
+        <h4>${g.nombre}</h4>
+        <div class="lider">Leader: ${g.lider}</div>
+        <div class="skill-pills">
+          ${g.skills.map(s=>`<span class="pill">${TIPO_LABEL[s]}</span>`).join('')}
+        </div>
+        <div class="members">${g.miembros} members · ${activas} active order(s)</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ---- Vaciados ---- */
+function renderDumps(){
+  return `
+  <div class="topbar">
+    <div><h2>Dump reports</h2><div class="date">${state.dumps.length} reports on record</div></div>
+    <button class="btn btn-safety" data-open-dump-modal>${ICONS.plus} Log dump</button>
+  </div>
+  <div class="panel" style="padding:0;">
+    ${state.dumps.length ? `
+    <table>
+      <thead><tr><th>Crew</th><th>Location</th><th>Type</th><th>Time</th><th>Notes</th></tr></thead>
+      <tbody>
+        ${state.dumps.slice().reverse().map(d=>`
+          <tr>
+            <td><strong>${groupName(d.group)}</strong></td>
+            <td>${ICONS.pin.replace('<svg','<svg style="width:13px;vertical-align:-2px;margin-right:4px;"')}${d.ubicacion}</td>
+            <td><span class="pill" style="background:${d.tipo==='chips'?'var(--sap-bg)':'#F1E7DC'};color:${d.tipo==='chips'?'var(--sap)':'var(--bark)'};">${VACIADO_LABEL[d.tipo]||'—'}</span></td>
+            <td class="mono">${d.hora}</td>
+            <td>${d.notas||'—'}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>` : `<div class="empty"><div class="display">No dump reports yet</div></div>`}
+  </div>`;
+}
+
+/* ================= MODALS ================= */
+function renderModal(){
+  const m = state.modal;
+  if(m.type==='order') return renderOrderModal();
+  if(m.type==='crew') return renderCrewModal();
+  if(m.type==='dump') return renderDumpModal();
+  if(m.type==='viewOrder') return renderViewOrderModal();
+  return '';
+}
+
+function renderOrderModal(){
+  return `
+  <div class="modal-bg" data-close-modal>
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hd"><h3>New work order</h3><button data-close-modal>&times;</button></div>
+      <div class="modal-body">
+        <div class="field"><label>Address</label><input id="of-direccion" placeholder="Street, city"></div>
+        <div class="form-row">
+          <div class="field"><label>Scheduled date</label><input id="of-fecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+          <div class="field"><label>Job type</label>
+            <select id="of-tipo">${Object.entries(TIPO_LABEL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
+          </div>
+        </div>
+        <div class="field"><label>Equipment required</label>
+          <select id="of-equipo">${Object.entries(EQUIPO_LABEL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>Instructions</label><textarea id="of-instrucciones" placeholder="Details for the crew…"></textarea></div>
+        <div class="field">
+          <label>Instruction photo (hand sketch, optional)</label>
+          <label class="file-drop" id="of-drop">
+            <span id="of-drop-txt">Tap to upload an image</span>
+            <input type="file" accept="image/*" id="of-file" style="display:none">
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" data-close-modal>Cancel</button>
+          <button class="btn btn-safety" id="of-save">Save order</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCrewModal(){
+  return `
+  <div class="modal-bg" data-close-modal>
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hd"><h3>New crew</h3><button data-close-modal>&times;</button></div>
+      <div class="modal-body">
+        <div class="field"><label>Crew name</label><input id="cf-nombre" placeholder="e.g. Ceiba Crew"></div>
+        <div class="field"><label>Leader</label><input id="cf-lider" placeholder="Leader's name"></div>
+        <div class="form-row">
+          <div class="field"><label>Equipment type</label>
+            <select id="cf-equipo">${Object.entries(EQUIPO_LABEL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
+          </div>
+          <div class="field"><label>Number of members</label><input id="cf-miembros" type="number" min="1" value="4"></div>
+        </div>
+        <div class="field"><label>Skills</label>
+          <div class="checkbox-row">
+            ${Object.entries(TIPO_LABEL).map(([k,v])=>`<label class="chk"><input type="checkbox" value="${k}" class="cf-skill"> ${v}</label>`).join('')}
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" data-close-modal>Cancel</button>
+          <button class="btn btn-safety" id="cf-save">Save crew</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderDumpModal(){
+  return `
+  <div class="modal-bg" data-close-modal>
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hd"><h3>Log dump</h3><button data-close-modal>&times;</button></div>
+      <div class="modal-body">
+        <div class="field"><label>Crew</label>
+          <select id="df-group">${state.groups.map(g=>`<option value="${g.id}">${g.nombre}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>Dump site location</label><input id="df-ubicacion" placeholder="e.g. Frank Scott Dump Site"></div>
+        <div class="form-row">
+          <div class="field"><label>Type</label>
+            <select id="df-tipo">${Object.entries(VACIADO_LABEL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
+          </div>
+          <div class="field"><label>Time</label><input id="df-hora" type="time" value="${new Date().toTimeString().slice(0,5)}"></div>
+        </div>
+        <div class="field"><label>Notes (optional)</label><textarea id="df-notas" placeholder="Observations…"></textarea></div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" data-close-modal>Cancel</button>
+          <button class="btn btn-safety" id="df-save">Save report</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderViewOrderModal(){
+  const o = state.orders.find(x=>x.id===state.modal.id);
+  if(!o) return '';
+  return `
+  <div class="modal-bg" data-close-modal>
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hd"><h3>${o.direccion}</h3><button data-close-modal>&times;</button></div>
+      <div class="modal-body">
+        <div class="stamp ${o.estado}" style="margin-bottom:14px;display:inline-block;">${STATUS_LABEL[o.estado]}</div>
+        <table style="width:100%;font-size:13px;">
+          <tr><td style="color:var(--ink-soft);padding:6px 0;width:130px;">Date</td><td>${fmtDate(o.fecha)}</td></tr>
+          <tr><td style="color:var(--ink-soft);padding:6px 0;">Job type</td><td>${TIPO_LABEL[o.tipo]}</td></tr>
+          <tr><td style="color:var(--ink-soft);padding:6px 0;">Equipment</td><td>${EQUIPO_LABEL[o.equipo]}</td></tr>
+          <tr><td style="color:var(--ink-soft);padding:6px 0;">Crew</td><td>${groupName(o.group)}</td></tr>
+          <tr><td style="color:var(--ink-soft);padding:6px 0;vertical-align:top;">Instructions</td><td>${o.instrucciones||'—'}</td></tr>
+        </table>
+        ${o.foto ? `<div style="margin-top:14px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-soft);font-weight:600;margin-bottom:6px;font-family:'Oswald',sans-serif;">Instruction sketch</div><img src="${o.foto}" style="width:100%;border-radius:4px;border:1px solid var(--line);"></div>` : ''}
+        <div class="modal-actions"><button class="btn btn-outline" data-close-modal>Close</button></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ================= EVENTS ================= */
+function attachGlobalEvents(){
+  document.querySelectorAll('[data-nav]').forEach(b=>{
+    b.onclick = ()=>{ state.view = b.dataset.nav; render(); };
+  });
+  const logout = document.getElementById('logout-btn');
+  if(logout) logout.onclick = ()=>{ state.loggedIn=false; state.view='dashboard'; render(); };
+
+  document.querySelectorAll('[data-open-order-modal]').forEach(b=> b.onclick = ()=>{ pendingOrderSketch=null; state.modal={type:'order'}; render(); });
+  document.querySelectorAll('[data-open-crew-modal]').forEach(b=> b.onclick = ()=>{ state.modal={type:'crew'}; render(); });
+  document.querySelectorAll('[data-open-dump-modal]').forEach(b=> b.onclick = ()=>{ state.modal={type:'dump'}; render(); });
+  document.querySelectorAll('[data-view-order]').forEach(b=> b.onclick = ()=>{ state.modal={type:'viewOrder', id:b.dataset.viewOrder}; render(); });
+  document.querySelectorAll('[data-close-modal]').forEach(b=> b.onclick = (e)=>{ if(e.target===b){ state.modal=null; render(); } });
+
+  const fe = document.getElementById('f-estado');
+  if(fe) fe.onchange = ()=>{ state.filters.estado = fe.value; render(); };
+  const fg = document.getElementById('f-group');
+  if(fg) fg.onchange = ()=>{ state.filters.group = fg.value; render(); };
+
+  document.querySelectorAll('[data-assign]').forEach(sel=>{
+    sel.onchange = ()=>{
+      const o = state.orders.find(x=>x.id===sel.dataset.assign);
+      o.group = sel.value || null;
+      if(o.group && (o.estado==='pendiente' || o.estado==='reasignar')) o.estado='asignado';
+      render();
+    };
+  });
+
+  /* order modal */
+  const ofFile = document.getElementById('of-file');
+  const ofDrop = document.getElementById('of-drop');
+  if(ofDrop){
+    ofDrop.onclick = ()=> ofFile.click();
+    ofFile.onchange = ()=>{
+      const f = ofFile.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        pendingOrderSketch = e.target.result;
+        document.getElementById('of-drop-txt').innerHTML = `Image uploaded: ${f.name}<br><img src="${e.target.result}">`;
+      };
+      reader.readAsDataURL(f);
+    };
+  }
+  const ofSave = document.getElementById('of-save');
+  if(ofSave) ofSave.onclick = ()=>{
+    const direccion = document.getElementById('of-direccion').value.trim();
+    if(!direccion){ document.getElementById('of-direccion').style.borderColor='var(--rust)'; return; }
+    state.orders.push({
+      id: uid('OT'),
+      direccion,
+      fecha: document.getElementById('of-fecha').value,
+      tipo: document.getElementById('of-tipo').value,
+      equipo: document.getElementById('of-equipo').value,
+      instrucciones: document.getElementById('of-instrucciones').value.trim(),
+      estado:'pendiente', group:null,
+      foto: pendingOrderSketch,
+    });
+    pendingOrderSketch = null;
+    state.modal=null; state.view='orders'; render();
+  };
+
+  /* crew modal */
+  const cfSave = document.getElementById('cf-save');
+  if(cfSave) cfSave.onclick = ()=>{
+    const nombre = document.getElementById('cf-nombre').value.trim();
+    if(!nombre){ document.getElementById('cf-nombre').style.borderColor='var(--rust)'; return; }
+    const skills = Array.from(document.querySelectorAll('.cf-skill:checked')).map(c=>c.value);
+    state.groups.push({
+      id: uid('g'),
+      nombre,
+      lider: document.getElementById('cf-lider').value.trim()||'Unassigned',
+      tipo_equipo: document.getElementById('cf-equipo').value,
+      skills: skills.length?skills:['trim'],
+      miembros: parseInt(document.getElementById('cf-miembros').value)||1,
+    });
+    state.modal=null; state.view='crews'; render();
+  };
+
+  /* dump modal */
+  const dfSave = document.getElementById('df-save');
+  if(dfSave) dfSave.onclick = ()=>{
+    const ubicacion = document.getElementById('df-ubicacion').value.trim();
+    if(!ubicacion){ document.getElementById('df-ubicacion').style.borderColor='var(--rust)'; return; }
+    state.dumps.push({
+      id: uid('V'),
+      group: document.getElementById('df-group').value,
+      ubicacion,
+      tipo: document.getElementById('df-tipo').value,
+      hora: document.getElementById('df-hora').value,
+      notas: document.getElementById('df-notas').value.trim(),
+    });
+    state.modal=null; state.view='dumps'; render();
+  };
+}
+
+render();
+</script>
+</body>
+</html>
