@@ -38,7 +38,10 @@ export async function createOrder(input: {
 }
 
 // El admin asigna (o reasigna) una cuadrilla a una orden.
-// Si la orden estaba "pendiente" o "reasignar", pasa a "asignado".
+// Si la orden estaba "pendiente" o "reasignar", pasa a "asignado"; y si se
+// le quita la cuadrilla estando "asignado", vuelve a "pendiente" (si no,
+// quedaba como "asignado" sin cuadrilla). Los estados en los que la
+// cuadrilla ya tocó el trabajo — "en_progreso", "hecho" — no se tocan.
 export async function assignGroup(orderId: string, groupId: string | null) {
   const supabase = createClient();
 
@@ -50,10 +53,12 @@ export async function assignGroup(orderId: string, groupId: string | null) {
 
   if (fetchError) throw new Error(fetchError.message);
 
-  const nextStatus =
-    groupId && (order.status === 'pendiente' || order.status === 'reasignar')
-      ? 'asignado'
-      : order.status;
+  let nextStatus = order.status;
+  if (groupId && (order.status === 'pendiente' || order.status === 'reasignar')) {
+    nextStatus = 'asignado';
+  } else if (!groupId && order.status === 'asignado') {
+    nextStatus = 'pendiente';
+  }
 
   const { error } = await supabase
     .from('work_orders')

@@ -25,7 +25,9 @@ export default function LoginPage() {
       return;
     }
 
-    router.push('/dashboard');
+    // /orders es la primera pantalla real del panel; el dashboard con KPIs
+    // todavía no existe (ver README, "Qué falta").
+    router.push('/orders');
     router.refresh();
   }
 

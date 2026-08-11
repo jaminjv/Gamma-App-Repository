@@ -17,7 +17,11 @@ puede instalar `node_modules` ni levantar un servidor de verdad.
 ## 1. Crea tu proyecto en Supabase
 
 1. Ve a [supabase.com](https://supabase.com), crea una cuenta y un proyecto nuevo.
-2. Ve a **SQL Editor** y pega el contenido de `supabase/migrations/0001_init.sql`. Ejecútalo.
+2. Ve a **SQL Editor** y corre las migraciones **en orden**:
+   - `supabase/migrations/0001_init.sql` — esquema, RLS y buckets
+   - `supabase/migrations/0003_fix_role_escalation.sql` — impide que un
+     líder se ascienda a admin (ver "Notas de seguridad" abajo). No es
+     opcional.
 3. (Opcional) Si quieres datos de ejemplo, pega y ejecuta también `supabase/migrations/0002_seed.sql`.
 4. Ve a **Settings → API** y copia:
    - `Project URL`
@@ -65,7 +69,8 @@ update groups set leader_id = 'UUID-DEL-LIDER' where name = 'Eliseo''s Crew';
 
 ## Qué ya funciona
 
-- **Login real** con Supabase Auth (`app/login`)
+- **Login y cierre de sesión** con Supabase Auth (`app/login`,
+  `app/auth`). Tras entrar, el panel abre en `/orders`.
 - **Órdenes de trabajo**: listado y creación conectados de verdad a
   Postgres (`app/orders`), incluyendo **subida real del boceto/diagrama**
   al bucket `order-sketches` de Supabase Storage
@@ -74,6 +79,20 @@ update groups set leader_id = 'UUID-DEL-LIDER' where name = 'Eliseo''s Crew';
 - **RLS (seguridad a nivel de fila)** ya configurada: un líder de
   cuadrilla solo puede ver/actuar sobre las órdenes de su propia
   cuadrilla; el admin ve y edita todo
+
+## Notas de seguridad
+
+- La migración `0003` es **obligatoria**. Sin ella, cualquier líder de
+  cuadrilla puede ascenderse a administrador con
+  `update profiles set role = 'admin' where id = auth.uid()`, porque la
+  política de "actualizar mi propio perfil" no restringía columnas.
+  Ahora un trigger bloquea el cambio de `role` a quien no sea admin, sin
+  estorbar el bootstrap del primer admin desde el SQL Editor.
+- **Decide qué hacer con el registro público.** El trigger
+  `handle_new_user` da perfil de `group_leader` a cualquiera que se
+  registre, así que si dejas el signup abierto en Supabase Auth,
+  cualquier persona con un correo entra como líder. Lo normal aquí es
+  desactivar el signup y que el admin cree las cuentas a mano.
 
 ## Qué falta (siguientes pasos sugeridos para Claude Code)
 

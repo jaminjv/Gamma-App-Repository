@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import type { WorkOrder, Group } from '@/lib/types';
 import { OrderForm } from './OrderForm';
 import { AssignSelect } from './AssignSelect';
+import { SignOutButton } from '../auth/SignOutButton';
 
 export const dynamic = 'force-dynamic'; // siempre trae datos frescos
 
@@ -18,10 +19,15 @@ export default async function OrdersPage() {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px' }}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Órdenes de trabajo</h1>
-      <p style={{ color: '#5C5346', fontSize: 13, marginBottom: 20 }}>
-        Datos reales desde Supabase — {(orders as WorkOrder[] | null)?.length ?? 0} órdenes.
-      </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div>
+          <h1 style={{ fontSize: 22, marginBottom: 4 }}>Órdenes de trabajo</h1>
+          <p style={{ color: '#5C5346', fontSize: 13, marginBottom: 20 }}>
+            Datos reales desde Supabase — {(orders as WorkOrder[] | null)?.length ?? 0} órdenes.
+          </p>
+        </div>
+        <SignOutButton />
+      </div>
 
       <OrderForm groups={(groups as Group[]) ?? []} />
 
