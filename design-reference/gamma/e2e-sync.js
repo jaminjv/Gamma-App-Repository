@@ -29,7 +29,7 @@ const wrap = (f) =>
   execSync(`psql -h /tmp/pgs -U postgres -tAc "create database gamma_sync" 2>&1`);
   for (const f of ['00_shim.sql', null, null, null, null]) void f;
   psql('gamma_sync', D + '/00_shim.sql');
-  for (const m of ['0001_init.sql', '0003_fix_role_escalation.sql', '0004_gamma_model.sql', '0005_client_ready.sql'])
+  for (const m of ['0001_init.sql', '0003_fix_role_escalation.sql', '0004_gamma_model.sql', '0005_client_ready.sql', '0006_deletable.sql'])
     psql('gamma_sync', `${M}/${m}`);
   psql('gamma_sync', D + '/seed-sync.sql');
   console.log('   base preparada con las migraciones reales\n');

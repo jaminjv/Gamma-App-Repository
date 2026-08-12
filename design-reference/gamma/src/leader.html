@@ -141,6 +141,15 @@
 .photo-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
 .photo-row img{width:88px;height:66px;object-fit:cover;border-radius:9px;
   box-shadow:inset 0 0 0 1px var(--glass-brd);}
+
+/* Foto de cierre. Una foto de teléfono es vertical y de miles de píxeles:
+   sin acotar la altura ocupaba pantallas enteras dentro de la tarjeta. */
+.done-shot{margin-top:12px;border-radius:var(--r-md);overflow:hidden;position:relative;
+  cursor:pointer;box-shadow:inset 0 0 0 1px var(--glass-brd);}
+.done-shot img{display:block;width:100%;height:170px;object-fit:cover;}
+.done-shot b{position:absolute;left:10px;bottom:9px;padding:4px 10px;border-radius:999px;
+  background:rgba(6,64,43,.86);color:#fff;font-size:10px;font-weight:600;
+  letter-spacing:.07em;text-transform:uppercase;}
 </style>
 
 <canvas id="ambient"></canvas>
@@ -214,6 +223,7 @@ const TR = {
     connOn:'Conectado', connOff:'Modo demostración',
     syncing:'Sincronizando…', noCrew:'Tu cuenta todavía no está asignada a una cuadrilla.',
     instructions:'Instrucciones', openMaps:'Abrir en Google Maps',
+    donePhoto:'Foto de cierre',
     dropWire:'Retiro de cable requerido', jobPhotos:'Fotos del trabajo',
   },
   en:{
@@ -260,6 +270,7 @@ const TR = {
     connOn:'Connected', connOff:'Demo mode',
     syncing:'Syncing…', noCrew:'Your account is not linked to a crew yet.',
     instructions:'Instructions', openMaps:'Open in Google Maps',
+    donePhoto:'Completion photo',
     dropWire:'Drop wire required', jobPhotos:'Job photos',
   },
 };
@@ -594,7 +605,8 @@ function jobCard(j,i){
     ${(j.photos||[]).length?`<div class="photo-row">${j.photos.map(p=>`<img src="${p}" alt="">`).join('')}</div>`:''}
     ${j.sketch?`<button class="sketch-btn" data-sketch="${j.id}" style="margin-top:11px">
         <img src="${j.sketch}" alt=""><span>${T.viewSketch}</span></button>`:''}
-    ${j.photo?`<img class="sketch" src="${j.photo}" alt="">`:''}
+    ${j.photo?`<div class="done-shot" data-shot="${j.id}">
+        <img src="${j.photo}" alt="${T.donePhoto}"><b>${T.donePhoto}</b></div>`:''}
     ${j.flagReason?`<div class="note-box" style="margin-top:11px;border-left:3px solid var(--st-flag)">${esc(j.flagReason)}</div>`:''}
     ${closed?'':`
       <div class="job-actions">
@@ -719,6 +731,13 @@ function renderModal(){
       </div>
     </div></div>`;
   }
+  if(m.type==='shot'){
+    const j=state.jobs.find(x=>x.id===m.id);
+    return `<div class="scrim" data-close><div class="modal glass">
+      <div class="modal-head"><h2 style="font-size:var(--t-lg)">${T.donePhoto}</h2>
+        <button class="icon-btn" data-close aria-label="Close">&times;</button></div>
+      <img src="${j.photo}" alt="" style="width:100%;border-radius:var(--r-sm);display:block"></div></div>`;
+  }
   if(m.type==='sketch'){
     const j=state.jobs.find(x=>x.id===m.id);
     return `<div class="scrim" data-close><div class="modal glass">
@@ -788,6 +807,9 @@ function bindApp(){
   });
   document.querySelectorAll('[data-flag]').forEach(b=>{
     b.onclick=()=>{ state.modal={type:'flag',id:b.dataset.flag}; render(); };
+  });
+  document.querySelectorAll('[data-shot]').forEach(b=>{
+    b.onclick=()=>{ state.modal={type:'shot',id:b.dataset.shot}; render(); };
   });
   document.querySelectorAll('[data-sketch]').forEach(b=>{
     b.onclick=()=>{ state.modal={type:'sketch',id:b.dataset.sketch}; render(); };

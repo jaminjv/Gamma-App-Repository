@@ -620,6 +620,17 @@ main{flex:1;min-width:0;padding:30px 34px 70px;}
 .photo-row{display:flex;flex-wrap:wrap;gap:9px;margin-top:11px;}
 .photo-row img{width:104px;height:78px;object-fit:cover;border-radius:10px;cursor:pointer;
   box-shadow:inset 0 0 0 1px var(--glass-brd);transition:transform .3s var(--ease);}
+
+/* La foto que sube la cuadrilla al cerrar. Acotada en altura por lo mismo
+   que en la app: llegan verticales y enormes. */
+.done-shot{position:relative;margin-top:12px;border-radius:var(--r-md);overflow:hidden;
+  cursor:pointer;max-width:340px;box-shadow:inset 0 0 0 1px var(--glass-brd);}
+.done-shot img{display:block;width:100%;height:180px;object-fit:cover;
+  transition:transform .4s var(--ease);}
+.done-shot:hover img{transform:scale(1.04);}
+.done-shot b{position:absolute;left:10px;bottom:9px;padding:4px 10px;border-radius:999px;
+  background:rgba(6,64,43,.88);color:#fff;font-size:10px;font-weight:600;
+  letter-spacing:.07em;text-transform:uppercase;}
 .photo-row img:hover{transform:scale(1.05);}
 .sketch{width:100%;border-radius:var(--r-sm);margin-top:11px;display:block;
   box-shadow:inset 0 0 0 1px var(--glass-brd);}
@@ -1280,6 +1291,7 @@ const ICONS = {
   pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
   camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
   pencil:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></svg>',
   tick:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
   /* Iconos de estado del cronograma */
   ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
@@ -1720,6 +1732,7 @@ function viewOverview(){
               <span>${jobNames(o.jobs)}</span><span class="dot">·</span>
               <span>${esc(crewName(o.crew))}</span>
               ${o.dropWire?'<span class="dot">·</span><span style="color:#A2510C">Drop wire</span>':''}
+              ${o.photo?'<span class="dot">·</span><span style="color:var(--green)">&#9633; photo</span>':''}
             </div>
           </div>`).join('')
         : emptyState('Nothing scheduled','No work orders on the board for today.')}
@@ -1766,6 +1779,8 @@ function viewOrders(){
         ${o.notes?`<div class="note-box"><b>Instructions</b><br>${esc(o.notes)}</div>`:''}
         ${o.flagReason?fieldNote('fl-'+o.id, o.flagReason, 'Crew flagged'):''}
         ${(o.photos||[]).length?`<div class="photo-row">${o.photos.map(p=>`<img src="${p}" alt="Job photo" data-zoom="${p}">`).join('')}</div>`:''}
+        ${o.photo?`<div class="done-shot" data-zoom="${o.photo}">
+            <img src="${o.photo}" alt="Completion photo"><b>Completion photo</b></div>`:''}
         ${o.sketch?`<img class="sketch" src="${o.sketch}" alt="Job sketch">`:''}
         <div class="crew-line" style="margin-top:13px">
           <span>Crew</span>
@@ -1778,6 +1793,10 @@ function viewOrders(){
           <span>Scheduled date</span>
           <input class="input" type="date" data-resched="${o.id}" value="${o.date}"
                  style="width:auto;padding:8px 12px;font-size:12.5px;">
+        </div>
+        <div class="req-actions">
+          <button class="btn btn-glass btn-sm" data-editorder="${o.id}">${ICONS.pencil}<span>Edit</span></button>
+          <button class="btn btn-glass btn-sm" data-delorder="${o.id}">${ICONS.trash}<span>Delete</span></button>
         </div>
       </div>`).join('')
     : emptyState('No orders here','Nothing matches this filter right now.')}
@@ -1897,6 +1916,11 @@ function viewCrews(){
           </div>
         </div>
         <div class="crew-line"><span>Open jobs</span><b class="num">${open}</b></div>
+
+        <div class="req-actions" style="margin-top:12px">
+          <button class="btn btn-glass btn-sm" data-editcrew="${c.id}">${ICONS.pencil}<span>Edit</span></button>
+          <button class="btn btn-glass btn-sm" data-delcrew="${c.id}">${ICONS.trash}<span>Delete</span></button>
+        </div>
 
         <div class="skills-box">
           <span class="eyebrow">Skills</span>
@@ -2022,9 +2046,66 @@ function renderModal(){
   if(m.type==='addSkill')  return modalAddSkill(crewById(m.id));
   if(m.type==='newCrew')   return modalNewCrew();
   if(m.type==='config')    return modalConfig();
+  if(m.type==='delOrder')  return modalDelOrder(state.orders.find(o=>o.id===m.id));
+  if(m.type==='delCrew')   return modalDelCrew(crewById(m.id));
   if(m.type==='zoom')      return `<div class="scrim" data-close><img src="${m.src}" alt=""
       style="max-width:92vw;max-height:88vh;border-radius:var(--r-md);box-shadow:var(--shadow-lift)"></div>`;
   return '';
+}
+
+function modalDelOrder(o){
+  if(!o) return '';
+  return `
+  <div class="scrim" data-close>
+    <div class="modal glass" style="max-width:440px">
+      <div class="modal-head">
+        <div><div class="eyebrow">Work order</div><h2 style="font-size:var(--t-xl)">Delete this order?</h2></div>
+        <button class="icon-btn" data-close aria-label="Close">&times;</button>
+      </div>
+      <div class="note-box" style="margin-top:0">${esc(o.address)}<br>
+        <span style="color:var(--text-faint)">Scheduled ${fmtDate(o.date)} · ${esc(crewName(o.crew))}</span></div>
+      <p style="font-size:var(--t-sm);color:var(--text-dim);line-height:1.6;margin:14px 0 16px">
+        The order and its photos are removed for good. Dump reports logged
+        against it stay in the totals.
+      </p>
+      <div style="display:flex;gap:9px">
+        <button class="btn btn-glass" data-close-btn style="flex:1">Keep it</button>
+        <button class="btn btn-wine" id="ok-delorder" style="flex:1">${ICONS.trash}<span>Delete</span></button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function modalDelCrew(c){
+  if(!c) return '';
+  // Se dice de antemano qué arrastra el borrado: la cuadrilla se va, su
+  // trabajo no, y las órdenes abiertas vuelven a la bolsa sin asignar.
+  const open = state.orders.filter(o=>o.crew===c.id && o.status!=='done');
+  const dumps = state.dumps.filter(x=>x.crew===c.id).length;
+  return `
+  <div class="scrim" data-close>
+    <div class="modal glass" style="max-width:460px">
+      <div class="modal-head">
+        <div><div class="eyebrow">${esc(c.name)}</div><h2 style="font-size:var(--t-xl)">Delete this crew?</h2></div>
+        <button class="icon-btn" data-close aria-label="Close">&times;</button>
+      </div>
+      <p style="font-size:var(--t-sm);color:var(--text-dim);line-height:1.7;margin:0 0 14px">
+        Here is what happens:
+      </p>
+      <div class="note-box" style="margin-top:0;line-height:1.8">
+        · <b>${open.length}</b> open order${open.length===1?'':'s'} go back to unassigned.<br>
+        · <b>${dumps}</b> dump report${dumps===1?'':'s'} stay in the totals, without a crew.<br>
+        · <b>${esc(c.email||'the leader')}</b> loses access to the crew app.
+      </div>
+      <p style="font-size:var(--t-xs);color:var(--text-faint);margin:13px 0 16px">
+        The Supabase account is not deleted — remove it from Authentication if you need to.
+      </p>
+      <div style="display:flex;gap:9px">
+        <button class="btn btn-glass" data-close-btn style="flex:1">Keep it</button>
+        <button class="btn btn-wine" id="ok-delcrew" style="flex:1">${ICONS.trash}<span>Delete crew</span></button>
+      </div>
+    </div>
+  </div>`;
 }
 
 function modalConfig(){
@@ -2066,13 +2147,14 @@ function modalNewOrder(){
   <div class="scrim" data-close>
     <div class="modal glass">
       <div class="modal-head">
-        <div><div class="eyebrow">Dispatch</div><h2 style="font-size:var(--t-xl)">New work order</h2></div>
+        <div><div class="eyebrow">Dispatch</div>
+          <h2 style="font-size:var(--t-xl)">${d.editing?'Edit work order':'New work order'}</h2></div>
         <button class="icon-btn" data-close aria-label="Close">&times;</button>
       </div>
 
       <div class="field">
         <label>Opened</label>
-        <div class="ro-field"><span>Set automatically</span><b>${fmtStamp(d.createdAt)}</b></div>
+        <div class="ro-field"><span>${d.editing?'Not editable':'Set automatically'}</span><b>${fmtStamp(d.createdAt)}</b></div>
       </div>
 
       <div class="field"><label for="f-addr">Address</label>
@@ -2135,7 +2217,7 @@ function modalNewOrder(){
           <img src="${d.sketch}" alt=""><button data-rmsketch aria-label="Remove sketch">&times;</button></div></div>`:''}
       </div>
 
-      <button class="btn btn-primary" id="f-save" style="width:100%">Create order</button>
+      <button class="btn btn-primary" id="f-save" style="width:100%">${d.editing?'Save changes':'Create order'}</button>
     </div>
   </div>`;
 }
@@ -2166,6 +2248,8 @@ function modalViewOrder(o){
       ${o.notes?`<div class="note-box" style="margin-top:13px"><b>Instructions</b><br>${esc(o.notes)}</div>`:''}
       ${o.flagReason?fieldNote('flm-'+o.id, o.flagReason, 'Crew flagged'):''}
       ${(o.photos||[]).length?`<div class="photo-row">${o.photos.map(p=>`<img src="${p}" alt="Job photo" data-zoom="${p}">`).join('')}</div>`:''}
+      ${o.photo?`<div class="done-shot" data-zoom="${o.photo}">
+          <img src="${o.photo}" alt="Completion photo"><b>Completion photo</b></div>`:''}
       ${o.sketch?`<img class="sketch" src="${o.sketch}" alt="Job sketch">`:''}
     </div>
   </div>`;
@@ -2193,7 +2277,8 @@ function modalNewCrew(){
   <div class="scrim" data-close>
     <div class="modal glass" style="max-width:480px">
       <div class="modal-head">
-        <div><div class="eyebrow">Field teams</div><h2 style="font-size:var(--t-xl)">New crew</h2></div>
+        <div><div class="eyebrow">Field teams</div>
+          <h2 style="font-size:var(--t-xl)">${d.editing?'Edit crew':'New crew'}</h2></div>
         <button class="icon-btn" data-close aria-label="Close">&times;</button>
       </div>
       <div class="field"><label for="c-leader">Crew leader</label>
@@ -2221,7 +2306,7 @@ function modalNewCrew(){
             </button>`).join('')}
         </div>
       </div>
-      <button class="btn btn-primary" id="c-save" style="width:100%">Create crew</button>
+      <button class="btn btn-primary" id="c-save" style="width:100%">${d.editing?'Save changes':'Create crew'}</button>
     </div>
   </div>`;
 }
@@ -2347,6 +2432,31 @@ function bindShell(){
   });
 
   /* Requerimientos */
+  document.querySelectorAll('[data-editorder]').forEach(b=>{
+    b.onclick=(e)=>{
+      e.stopPropagation();
+      const o=state.orders.find(x=>x.id===b.dataset.editorder);
+      state.draft={editing:o.id, createdAt:o.createdAt, address:o.address, date:o.date,
+                   jobs:[...(o.jobs||[])], gear:o.gear, dropWire:!!o.dropWire,
+                   crew:o.crew||'', notes:o.notes||'', photos:[...(o.photos||[])], sketch:o.sketch};
+      state.modal={type:'newOrder'}; render();
+    };
+  });
+  document.querySelectorAll('[data-delorder]').forEach(b=>{
+    b.onclick=(e)=>{ e.stopPropagation(); state.modal={type:'delOrder',id:b.dataset.delorder}; render(); };
+  });
+  document.querySelectorAll('[data-editcrew]').forEach(b=>{
+    b.onclick=()=>{
+      const c=crewById(b.dataset.editcrew);
+      state.crewDraft={editing:c.id, leader:c.leader==='—'?'':c.leader, name:c.name,
+                       email:c.email, gear:c.gear, members:c.members, skills:[...c.skills]};
+      state.modal={type:'newCrew'}; render();
+    };
+  });
+  document.querySelectorAll('[data-delcrew]').forEach(b=>{
+    b.onclick=()=>{ state.modal={type:'delCrew',id:b.dataset.delcrew}; render(); };
+  });
+
   document.querySelectorAll('[data-req]').forEach(b=>{
     b.onclick=()=>{
       const r=state.requests.find(x=>x.id===b.dataset.req);
@@ -2360,6 +2470,10 @@ function bindShell(){
 function bindModal(){
   document.querySelectorAll('[data-close]').forEach(el=>{
     el.onclick=(e)=>{ if(e.target===el){ state.modal=null; render(); } };
+  });
+  // Botones explícitos de cancelar: sin esto, "Keep it" no cerraba nada.
+  document.querySelectorAll('[data-close-btn]').forEach(b=>{
+    b.onclick=()=>{ state.modal=null; render(); };
   });
   document.querySelectorAll('[data-tr]').forEach(b=>{
     b.onclick=(e)=>{ e.stopPropagation(); state.translated[b.dataset.tr]=!state.translated[b.dataset.tr]; render(); };
@@ -2432,6 +2546,28 @@ function bindModal(){
     const d=state.draft;
     if(!d.address.trim()){ toast('An address is required','warn'); return; }
     if(!d.jobs.length){ toast('Pick at least one job type','warn'); return; }
+    // Editando: se conserva id, fecha de apertura y estado de avance.
+    if(d.editing){
+      const o=state.orders.find(x=>x.id===d.editing);
+      Object.assign(o,{address:d.address.trim(), date:d.date, jobs:d.jobs, gear:d.gear,
+        dropWire:d.dropWire, notes:d.notes.trim(), photos:d.photos, sketch:d.sketch,
+        crew:d.crew||null});
+      if(!o.crew && o.status==='assigned') o.status='pending';
+      else if(o.crew && o.status==='pending') o.status='assigned';
+      state.modal=null; state.draft=null;
+      if(!online()){ persist(); render(); toast('Order updated'); return; }
+      commit(async()=>{
+        const nuevas=o.photos.filter(p=>p.startsWith('data:'));
+        const urls=[];
+        for(const ph of nuevas) urls.push(await Gamma.upload('order-photos','job.jpg',ph));
+        const sketchUrl = o.sketch && o.sketch.startsWith('data:')
+          ? await Gamma.upload('order-sketches','sketch.jpg',o.sketch) : o.sketch;
+        await Gamma.patch('work_orders', o.id, Map2.orderToRow({...o, sketch:sketchUrl}));
+        if(urls.length) await Gamma.insert('work_order_photos', urls.map(u=>({work_order_id:o.id,url:u})));
+      }).then(()=>toast('Order updated'));
+      return;
+    }
+
     const fresh={
       id:uid('WO'), address:d.address.trim(), createdAt:d.createdAt, date:d.date,
       jobs:d.jobs, gear:d.gear, dropWire:d.dropWire, notes:d.notes.trim(),
@@ -2472,9 +2608,24 @@ function bindModal(){
     const d=state.crewDraft;
     if(!d.leader.trim()){ toast('The crew leader name is required','warn'); return; }
     if(!/^\S+@\S+\.\S+$/.test(d.email.trim())){ toast('A valid email is required — it is their app login','warn'); return; }
-    if(state.crews.some(c=>c.email.toLowerCase()===d.email.trim().toLowerCase())){
+    if(state.crews.some(c=>c.id!==d.editing && c.email.toLowerCase()===d.email.trim().toLowerCase())){
       toast('That email already belongs to another crew','warn'); return;
     }
+    if(d.editing){
+      const c=crewById(d.editing);
+      Object.assign(c,{name:d.name.trim() || `${d.leader.trim().split(/\s+/)[0]}'s Crew`,
+        leader:d.leader.trim(), email:d.email.trim().toLowerCase(),
+        gear:d.gear, members:Math.max(1,Math.min(12,d.members||1))});
+      const antes=state.crews.find(x=>x.id===c.id).skills;
+      state.modal=null; state.crewDraft=null;
+      if(!online()){ c.skills=d.skills; persist(); render(); toast('Crew updated'); return; }
+      commit(async()=>{
+        await Gamma.patch('groups', c.id, Map2.crewToRow(c));
+        await saveSkills(c.id, antes, d.skills);
+      }).then(()=>toast('Crew updated'));
+      return;
+    }
+
     const crew={
       id:uid('c'), name:d.name.trim() || `${d.leader.trim().split(/\s+/)[0]}'s Crew`,
       leader:d.leader.trim(), email:d.email.trim().toLowerCase(),
@@ -2489,6 +2640,24 @@ function bindModal(){
       if(crew.skills.length)
         await Gamma.insert('group_skills', crew.skills.map(skill=>({group_id:row.id, skill})));
     }).then(()=>toast('Crew created'));
+  });
+
+  document.getElementById('ok-delorder')?.addEventListener('click',()=>{
+    const id=state.modal.id;
+    state.orders=state.orders.filter(o=>o.id!==id);
+    state.modal=null;
+    if(!online()){ persist(); render(); toast('Order deleted'); return; }
+    commit(()=>Gamma.remove('work_orders', `id=eq.${id}`)).then(()=>toast('Order deleted'));
+  });
+  document.getElementById('ok-delcrew')?.addEventListener('click',()=>{
+    const id=state.modal.id, nombre=crewName(id);
+    // El servidor deja las órdenes sin cuadrilla por la clave foránea; en
+    // memoria se refleja igual para que la pantalla no mienta mientras llega.
+    state.orders.forEach(o=>{ if(o.crew===id){ o.crew=null; if(o.status==='assigned') o.status='pending'; } });
+    state.crews=state.crews.filter(c=>c.id!==id);
+    state.modal=null;
+    if(!online()){ persist(); render(); toast(`${nombre} deleted`); return; }
+    commit(()=>Gamma.remove('groups', `id=eq.${id}`)).then(()=>toast(`${nombre} deleted`));
   });
 
   document.querySelectorAll('[data-pick]').forEach(b=>{
