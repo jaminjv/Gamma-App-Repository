@@ -114,6 +114,14 @@
   letter-spacing:.14em;color:var(--text-faint);white-space:nowrap;}
 .divider::after{content:'';flex:1;height:1px;background:var(--glass-brd);}
 
+.conn{display:flex;align-items:center;justify-content:center;gap:7px;padding:7px 11px;
+  border-radius:999px;font-size:10px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;margin-bottom:11px;}
+.conn i{width:7px;height:7px;border-radius:50%;flex:none;}
+.conn-on {background:var(--green-tint);color:var(--green);box-shadow:inset 0 0 0 1px rgba(6,64,43,.2);}
+.conn-on i{background:var(--green);}
+.conn-off{background:rgba(147,130,110,.14);color:var(--text-dim);box-shadow:inset 0 0 0 1px rgba(147,130,110,.28);}
+.conn-off i{background:var(--st-pending);}
 .map-link{display:inline-flex;align-items:center;gap:5px;color:var(--green);font-weight:600;
   text-decoration:none;border-bottom:1px solid rgba(6,64,43,.28);transition:all .25s var(--ease);}
 .map-link:hover{color:var(--green-lit);}
@@ -140,6 +148,7 @@
 
 <script>
 /*__GLASS_JS__*/
+/*__STORE__*/
 
 /* ============================================================
    GAMMA TREE EXPERTS — Crew Leader App
@@ -201,6 +210,9 @@ const TR = {
     jRemoval:'Remoción', jTrimming:'Poda', jStump:'Tocón', jStorm:'Daño por tormenta',
     jCatchlogs:'Recoger troncos', jBrush:'Maleza',
     gBucket:'Bucket truck', gClimbing:'Climbing', gBoth:'Bucket + Climbing',
+    connect:'Conectar con la oficina', settings:'Configuración del servidor',
+    connOn:'Conectado', connOff:'Modo demostración',
+    syncing:'Sincronizando…', noCrew:'Tu cuenta todavía no está asignada a una cuadrilla.',
     instructions:'Instrucciones', openMaps:'Abrir en Google Maps',
     dropWire:'Retiro de cable requerido', jobPhotos:'Fotos del trabajo',
   },
@@ -244,6 +256,9 @@ const TR = {
     jRemoval:'Removal', jTrimming:'Trimming', jStump:'Stump', jStorm:'Storm Damage',
     jCatchlogs:'Catch Logs', jBrush:'Brush',
     gBucket:'Bucket truck', gClimbing:'Climbing', gBoth:'Bucket + Climbing',
+    connect:'Connect to the office', settings:'Backend settings',
+    connOn:'Connected', connOff:'Demo mode',
+    syncing:'Syncing…', noCrew:'Your account is not linked to a crew yet.',
     instructions:'Instructions', openMaps:'Open in Google Maps',
     dropWire:'Drop wire required', jobPhotos:'Job photos',
   },
@@ -313,6 +328,9 @@ function seedJobs(){
   ];
 }
 
+const online = () => Gamma.online() && Gamma.signedIn();
+let pollTimer = null;
+
 const state = {
   lang: load('lang','es'),
   me: null,
@@ -328,7 +346,43 @@ const state = {
   error: null,
 };
 
+async function refresh(){
+  if(!online()) return;
+  try{
+    const data = await pullAll();          // RLS deja pasar solo su cuadrilla
+    state.jobs = data.orders;
+    state.dumps = data.dumps;
+    state.requests = data.requests;
+  }catch(e){ toast(e.message,'warn'); }
+}
+
+async function commit(cloudFn){
+  if(!online()){ persist(); render(); return; }
+  state.busy = true;
+  try{ await cloudFn(); await refresh(); }
+  catch(e){ toast(e.message,'warn'); await refresh(); }
+  state.busy = false;
+  render();
+}
+
+function startPolling(){
+  clearInterval(pollTimer);
+  if(!online()) return;
+  pollTimer = setInterval(async ()=>{
+    if(state.modal || state.busy) return;
+    await refresh(); render();
+  }, 8000);
+}
+
+function connBadge(){
+  const T=t();
+  return online() || Gamma.online()
+    ? `<div class="conn conn-on"><i></i>${T.connOn}</div>`
+    : `<div class="conn conn-off"><i></i>${T.connOff}</div>`;
+}
+
 function persist(){
+  if(online()) return;   // conectado, la base manda
   save('jobs', state.jobs);
   save('mydumps', state.dumps);
   save('myreqs', state.requests);
@@ -375,7 +429,7 @@ function renderLogin(){
       <h1>${T.welcome}</h1>
       <div class="sub">${T.tagline}</div>
       <div style="display:flex;justify-content:center;margin-bottom:20px">${langToggle()}</div>
-      ${state.error?`<div class="err">${T.badLogin}</div>`:''}
+      ${state.error?`<div class="err">${esc(state.error===true?T.badLogin:state.error)}</div>`:''}
       <div class="field">
         <label for="lg-email">${T.email}</label>
         <input id="lg-email" class="input" type="email" placeholder="eliseo@gammatree.com" autocomplete="username">
@@ -385,11 +439,17 @@ function renderLogin(){
         <input id="lg-pass" class="input" type="password" placeholder="••••••••" autocomplete="current-password">
       </div>
       <button class="btn btn-primary" id="lg-btn" style="width:100%;margin-top:6px">${T.signIn}</button>
-      <div class="login-hint">
+      <div style="margin-top:16px;padding-top:15px;border-top:1px solid var(--glass-brd)">
+        ${connBadge()}
+        <button class="btn btn-glass btn-sm" id="cfg-btn" style="width:100%">
+          ${Gamma.online()?T.settings:T.connect}
+        </button>
+      </div>
+      ${Gamma.online()?'':`<div class="login-hint">
         <b>${T.demoAccounts}:</b><br>
         ${LEADERS.map(l=>esc(l.email)).join('<br>')}<br>
         <b>${T.demoPass}:</b> ${DEMO_PASS}
-      </div>
+      </div>`}
     </div>
   </div>`;
 }
@@ -397,15 +457,37 @@ function bindLogin(){
   document.querySelectorAll('[data-lang]').forEach(b=>{
     b.onclick=()=>{ state.lang=b.dataset.lang; save('lang',state.lang); render(); };
   });
-  const go=()=>{
+  const go=async()=>{
     const email=document.getElementById('lg-email').value.trim().toLowerCase();
     const pass=document.getElementById('lg-pass').value;
+    state.error=null;
+
+    if(Gamma.online()){
+      const btn=document.getElementById('lg-btn');
+      btn.disabled=true; btn.textContent=t().syncing;
+      try{ await Gamma.signIn(email,pass); }
+      catch(e){ state.error=e.message; render(); return; }
+      // Quién es y qué cuadrilla lidera lo dice la base, no una lista local.
+      try{
+        const groups = await Gamma.get('groups?select=*');   // RLS: solo la suya
+        const g = groups[0];
+        if(!g){ state.error=t().noCrew; await Gamma.signOut(); render(); return; }
+        state.me = { email, name:(g.leader_name||email), crew:g.id,
+                     crewName:g.name, gear:GEAR_FROM_DB[g.equipment_type]||'bucket' };
+      }catch(e){ state.error=e.message; render(); return; }
+      await refresh();
+      startPolling();
+      state.tab='jobs'; render();
+      return;
+    }
+
     const who=LEADERS.find(l=>l.email===email);
     if(!who || pass!==DEMO_PASS){ state.error=true; render(); return; }
-    state.error=null; state.me=who; state.tab='jobs'; render();
+    state.me=who; state.tab='jobs'; render();
   };
   document.getElementById('lg-btn').onclick=go;
   document.getElementById('lg-pass').onkeydown=(e)=>{ if(e.key==='Enter') go(); };
+  document.getElementById('cfg-btn').onclick=()=>{ state.modal={type:'config'}; render(); };
 }
 
 function renderTop(){
@@ -598,6 +680,27 @@ function tabReqs(){
 /* ---------- Modales ---------- */
 function renderModal(){
   const T=t(), m=state.modal;
+  if(m.type==='config'){
+    const c = Gamma.cfg || {url:'',key:''};
+    return `<div class="scrim" data-close><div class="modal glass">
+      <div class="modal-head">
+        <div><h2 style="font-size:var(--t-lg)">${T.connect}</h2></div>
+        <button class="icon-btn" data-close aria-label="Close">&times;</button></div>
+      <p style="font-size:var(--t-sm);color:var(--text-dim);line-height:1.6;margin:0 0 14px">
+        ${state.lang==='es'
+          ? 'Pega aquí los datos del proyecto de Supabase de la empresa. Los encuentras en Settings → API. Con esto tus trabajos y tus reportes se comparten con la oficina.'
+          : 'Paste the company Supabase project details. You will find them under Settings → API. This is what shares your jobs and reports with the office.'}
+      </p>
+      <div class="field"><label for="cf-url">Project URL</label>
+        <input id="cf-url" class="input" placeholder="https://abcdefgh.supabase.co" value="${esc(c.url)}"></div>
+      <div class="field"><label for="cf-key">Anon public key</label>
+        <textarea id="cf-key" class="input" style="min-height:66px;font-size:12px">${esc(c.key)}</textarea></div>
+      <div class="row2">
+        ${Gamma.online()?`<button class="btn btn-wine" id="cf-off">${state.lang==='es'?'Desconectar':'Disconnect'}</button>`:''}
+        <button class="btn btn-primary" id="cf-save">${state.lang==='es'?'Guardar y probar':'Save and test'}</button>
+      </div>
+    </div></div>`;
+  }
   if(m.type==='sketch'){
     const j=state.jobs.find(x=>x.id===m.id);
     return `<div class="scrim" data-close><div class="modal glass">
@@ -644,13 +747,18 @@ function bindApp(){
   document.querySelectorAll('[data-tab]').forEach(b=>{
     b.onclick=()=>{ state.tab=b.dataset.tab; render(); };
   });
-  document.getElementById('logout').onclick=()=>{ state.me=null; render(); };
+  document.getElementById('logout').onclick=async()=>{
+    clearInterval(pollTimer);
+    if(Gamma.online()) await Gamma.signOut();
+    state.me=null; render();
+  };
 
   document.querySelectorAll('[data-start]').forEach(b=>{
     b.onclick=()=>{
       const j=state.jobs.find(x=>x.id===b.dataset.start);
       j.status='progress'; j.startedAt=Date.now();
-      persist(); toast(T.jobStarted,'green'); render();
+      toast(T.jobStarted);
+      commit(()=>Gamma.rpc('crew_update_order',{p_order:j.id,p_state:'progress'}));
     };
   });
   document.querySelectorAll('[data-done]').forEach(b=>{
@@ -674,11 +782,11 @@ function bindApp(){
   document.getElementById('d-send')?.addEventListener('click',()=>{
     const where=document.getElementById('d-where').value.trim();
     if(!where){ toast(T.needWhere,'warn'); return; }
-    state.dumps.unshift({
-      id:uid('DR'), crew:state.me.crew, location:where, type:state.dumpType,
-      notes:document.getElementById('d-notes').value.trim(), at:Date.now(),
-    });
-    persist(); toast(T.dumpDone,'green'); render();
+    const d={ id:uid('DR'), crew:state.me.crew, location:where, type:state.dumpType,
+              notes:document.getElementById('d-notes').value.trim(), at:Date.now() };
+    toast(T.dumpDone);
+    if(!online()){ state.dumps.unshift(d); persist(); render(); return; }
+    commit(()=>Gamma.insert('dump_reports', Map2.dumpToRow(d)));
   });
 
   /* --- Requerimientos --- */
@@ -699,11 +807,11 @@ function bindApp(){
   document.getElementById('r-send')?.addEventListener('click',()=>{
     const note=document.getElementById('r-note').value.trim();
     if(!note){ toast(T.needNote,'warn'); return; }
-    state.requests.unshift({
-      id:uid('RQ'), crew:state.me.crew, cat:state.reqCat,
-      urgency:state.reqUrg, note, at:Date.now(), status:'new',
-    });
-    persist(); toast(T.reqDone,'green'); render();
+    const r={ id:uid('RQ'), crew:state.me.crew, cat:state.reqCat,
+              urgency:state.reqUrg, note, at:Date.now(), status:'new' };
+    toast(T.reqDone);
+    if(!online()){ state.requests.unshift(r); persist(); render(); return; }
+    commit(()=>Gamma.insert('equipment_requests', Map2.reqToRow(r)));
   });
 }
 
@@ -715,6 +823,22 @@ function bindModal(){
   });
   document.querySelectorAll('[data-close-btn]').forEach(b=>{ b.onclick=close; });
 
+  document.getElementById('cf-save')?.addEventListener('click',async()=>{
+    const url=document.getElementById('cf-url').value.trim();
+    const key=document.getElementById('cf-key').value.trim();
+    if(!/^https?:\/\/.+/.test(url)||key.length<20){ toast('URL o llave inválida','warn'); return; }
+    const btn=document.getElementById('cf-save'); btn.disabled=true; btn.textContent=t().syncing;
+    Gamma.configure(url,key);
+    try{
+      await Gamma.get('groups?select=id&limit=1');
+      state.modal=null; render(); toast(t().connOn);
+    }catch(e){ Gamma.disconnect(); render(); toast(e.message,'warn'); }
+  });
+  document.getElementById('cf-off')?.addEventListener('click',()=>{
+    Gamma.disconnect(); clearInterval(pollTimer);
+    state.me=null; state.modal=null; render();
+  });
+
   document.getElementById('ph')?.addEventListener('change',(e)=>{
     const f=e.target.files?.[0]; if(!f) return;
     const r=new FileReader();
@@ -724,13 +848,21 @@ function bindModal(){
   document.getElementById('ok-done')?.addEventListener('click',()=>{
     if(!state.photo){ toast(T.needPhoto,'warn'); return; }
     const j=state.jobs.find(x=>x.id===state.modal.id);
-    j.status='done'; j.photo=state.photo; j.completedAt=Date.now();
-    persist(); close(); toast(T.jobDone,'green');
+    const shot=state.photo;
+    j.status='done'; j.photo=shot; j.completedAt=Date.now();
+    close(); toast(T.jobDone);
+    if(online()) commit(async()=>{
+      const url=await Gamma.upload('completion-photos','done.jpg',shot);
+      await Gamma.rpc('crew_update_order',{p_order:j.id,p_state:'done',p_photo:url});
+    });
   });
   document.getElementById('ok-flag')?.addEventListener('click',()=>{
     const j=state.jobs.find(x=>x.id===state.modal.id);
     j.status='flag'; j.flagReason=document.getElementById('fl-reason').value.trim();
-    persist(); close(); toast(T.jobFlagged);
+    const reason=j.flagReason;
+    close(); toast(T.jobFlagged);
+    if(online()) commit(()=>Gamma.rpc('crew_update_order',
+      {p_order:j.id,p_state:'flag',p_reason:reason}));
   });
 }
 

@@ -624,6 +624,14 @@ main{flex:1;min-width:0;padding:30px 34px 70px;}
 .sketch{width:100%;border-radius:var(--r-sm);margin-top:11px;display:block;
   box-shadow:inset 0 0 0 1px var(--glass-brd);}
 
+.conn{display:flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;
+  font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  margin-bottom:11px;width:100%;justify-content:center;}
+.conn i{width:7px;height:7px;border-radius:50%;flex:none;}
+.conn-on {background:var(--green-tint);color:var(--green);box-shadow:inset 0 0 0 1px rgba(6,64,43,.2);}
+.conn-on i{background:var(--green);}
+.conn-off{background:rgba(147,130,110,.14);color:var(--text-dim);box-shadow:inset 0 0 0 1px rgba(147,130,110,.28);}
+.conn-off i{background:var(--st-pending);}
 .tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
 .tag{padding:3px 9px;border-radius:999px;font-size:10px;font-weight:600;
   background:var(--green-tint);color:var(--green);box-shadow:inset 0 0 0 1px rgba(6,64,43,.14);}
@@ -877,6 +885,235 @@ function initGlass(){
 }
 
 /* ============================================================
+   GAMMA — capa de datos
+   Dos modos, misma interfaz para las dos aplicaciones:
+     · local  — sin configurar: todo vive en localStorage (modo demostración)
+     · nube   — configurado: habla con Supabase por REST, y entonces los
+                datos sí viajan entre la oficina y los teléfonos
+   Se elige solo según haya o no configuración guardada.
+
+   Aviso: dentro de un artifact publicado el modo nube no puede funcionar,
+   porque ese entorno bloquea toda petición a hosts externos. Sirve al
+   abrir el archivo localmente o al servirlo desde tu propio hosting.
+   ============================================================ */
+const Gamma = {
+  cfg: load('cfg', null),          // {url, key}
+  session: load('session', null),  // {access_token, refresh_token, user}
+
+  online(){ return !!(this.cfg && this.cfg.url && this.cfg.key); },
+  signedIn(){ return !!(this.session && this.session.access_token); },
+
+  configure(url, key){
+    this.cfg = { url:String(url).replace(/\/+$/,''), key:String(key).trim() };
+    save('cfg', this.cfg);
+  },
+  disconnect(){
+    this.cfg = null; this.session = null;
+    save('cfg', null); save('session', null);
+  },
+
+  headers(extra){
+    const h = {
+      apikey: this.cfg.key,
+      Authorization: 'Bearer ' + (this.session?.access_token || this.cfg.key),
+      'Content-Type': 'application/json',
+      ...extra,
+    };
+    return h;
+  },
+
+  /* --- Autenticación --------------------------------------------------- */
+  async signIn(email, password){
+    const r = await fetch(`${this.cfg.url}/auth/v1/token?grant_type=password`, {
+      method:'POST',
+      headers:{ apikey:this.cfg.key, 'Content-Type':'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const body = await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(body.error_description || body.msg || body.message || 'No se pudo iniciar sesión');
+    this.session = body; save('session', body);
+    return body.user;
+  },
+  async signOut(){
+    try{
+      if(this.session) await fetch(`${this.cfg.url}/auth/v1/logout`, {
+        method:'POST', headers:this.headers(),
+      });
+    }catch{}
+    this.session = null; save('session', null);
+  },
+  // Renueva el token cuando caduca; sin esto la sesión muere a la hora.
+  async refresh(){
+    if(!this.session?.refresh_token) return false;
+    const r = await fetch(`${this.cfg.url}/auth/v1/token?grant_type=refresh_token`, {
+      method:'POST',
+      headers:{ apikey:this.cfg.key, 'Content-Type':'application/json' },
+      body: JSON.stringify({ refresh_token:this.session.refresh_token }),
+    });
+    if(!r.ok){ this.session=null; save('session',null); return false; }
+    this.session = await r.json(); save('session', this.session);
+    return true;
+  },
+
+  /* --- REST ------------------------------------------------------------ */
+  async rest(path, opts = {}, retry = true){
+    const r = await fetch(`${this.cfg.url}/rest/v1/${path}`, {
+      ...opts,
+      headers: this.headers(opts.headers),
+    });
+    if(r.status === 401 && retry && await this.refresh()) return this.rest(path, opts, false);
+    if(!r.ok){
+      const e = await r.json().catch(()=>({}));
+      throw new Error(e.message || e.hint || `${r.status} en ${path}`);
+    }
+    return r.status === 204 ? null : r.json();
+  },
+  get(path){ return this.rest(path); },
+  insert(table, row){
+    return this.rest(table, {
+      method:'POST',
+      headers:{ Prefer:'return=representation' },
+      body: JSON.stringify(row),
+    });
+  },
+  patch(table, id, changes){
+    return this.rest(`${table}?id=eq.${id}`, {
+      method:'PATCH',
+      headers:{ Prefer:'return=representation' },
+      body: JSON.stringify(changes),
+    });
+  },
+  remove(table, query){ return this.rest(`${table}?${query}`, { method:'DELETE' }); },
+  rpc(fn, args){
+    return this.rest(`rpc/${fn}`, { method:'POST', body: JSON.stringify(args) });
+  },
+
+  /* --- Storage ---------------------------------------------------------
+     Las fotos van al bucket y a la fila solo su URL: guardar el data URI
+     en una columna hincha cada consulta con megabytes de imagen. */
+  async upload(bucket, name, dataUrl){
+    const blob = await (await fetch(dataUrl)).blob();
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2,7)}-${name}`;
+    const r = await fetch(`${this.cfg.url}/storage/v1/object/${bucket}/${path}`, {
+      method:'POST',
+      headers:{
+        apikey:this.cfg.key,
+        Authorization:'Bearer ' + (this.session?.access_token || this.cfg.key),
+        'Content-Type': blob.type || 'image/jpeg',
+      },
+      body: blob,
+    });
+    if(!r.ok) throw new Error('No se pudo subir la imagen');
+    return `${this.cfg.url}/storage/v1/object/public/${bucket}/${path}`;
+  },
+};
+
+/* ============================================================
+   Traducción entre las filas de la base y la forma que usan las apps
+   ============================================================ */
+const GEAR_TO_DB   = { bucket:'bucket', climbing:'climbing', both:'ambos' };
+const GEAR_FROM_DB = { bucket:'bucket', climbing:'climbing', ambos:'both' };
+
+// La posición en el mapa es decorativa y no está en la base: se deriva del
+// id para que cada cuadrilla caiga siempre en el mismo punto.
+function pinFor(id){
+  let h = 0;
+  for(const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return { x: 15 + (h % 70), y: 20 + ((h >> 8) % 60) };
+}
+
+const Map2 = {
+  orderFromRow(r, photos){
+    return {
+      id:r.id, address:r.address,
+      createdAt: Date.parse(r.created_at),
+      date: r.scheduled_date,
+      jobs: r.job_types || [],
+      gear: GEAR_FROM_DB[r.equipment_required] || 'bucket',
+      dropWire: !!r.drop_wire,
+      notes: r.instructions || '',
+      status: r.state,
+      crew: r.group_id,
+      sketch: r.sketch_image_url || null,
+      flagReason: r.reassign_reason || null,
+      photo: r.completion_photo_url || null,
+      photos: (photos || []).filter(p => p.work_order_id === r.id).map(p => p.url),
+    };
+  },
+  orderToRow(o){
+    return {
+      address:o.address, scheduled_date:o.date, job_types:o.jobs,
+      equipment_required: GEAR_TO_DB[o.gear] || 'bucket',
+      drop_wire: !!o.dropWire, instructions:o.notes || null,
+      state:o.status, group_id:o.crew || null,
+      sketch_image_url:o.sketch || null,
+    };
+  },
+  crewFromRow(r, skills){
+    return {
+      id:r.id, name:r.name,
+      leader: r.leader_name || '—',
+      email: r.leader_email || '',
+      gear: GEAR_FROM_DB[r.equipment_type] || 'bucket',
+      members: r.member_count,
+      skills: (skills || []).filter(s => s.group_id === r.id).map(s => s.skill),
+      ...pinFor(r.id),
+    };
+  },
+  crewToRow(c){
+    return {
+      name:c.name, leader_name:c.leader, leader_email:c.email,
+      equipment_type: GEAR_TO_DB[c.gear] || 'bucket', member_count:c.members,
+    };
+  },
+  dumpFromRow(r){
+    return { id:r.id, crew:r.group_id, location:r.location_name,
+             type:r.dump_type, notes:r.notes || '', at:Date.parse(r.reported_at) };
+  },
+  dumpToRow(d){
+    return { group_id:d.crew, location_name:d.location, dump_type:d.type,
+             notes:d.notes || null };
+  },
+  reqFromRow(r){
+    return { id:r.id, crew:r.group_id, cat:r.category, urgency:r.urgency,
+             note:r.note, at:Date.parse(r.created_at), status:r.state };
+  },
+  reqToRow(r){
+    return { group_id:r.crew, category:r.cat, urgency:r.urgency, note:r.note };
+  },
+};
+
+/* ============================================================
+   Lectura completa. RLS decide qué ve cada quien: el admin lo ve todo y
+   el líder solo lo de su cuadrilla, sin que el cliente filtre nada.
+   ============================================================ */
+async function pullAll(){
+  const [groups, skills, orders, photos, dumps, requests] = await Promise.all([
+    Gamma.get('groups?select=*&order=name.asc'),
+    Gamma.get('group_skills?select=*'),
+    Gamma.get('work_orders?select=*&order=scheduled_date.asc,created_at.desc'),
+    Gamma.get('work_order_photos?select=*'),
+    Gamma.get('dump_reports?select=*&order=reported_at.desc'),
+    Gamma.get('equipment_requests?select=*&order=created_at.desc'),
+  ]);
+  return {
+    crews:    groups.map(g => Map2.crewFromRow(g, skills)),
+    orders:   orders.map(o => Map2.orderFromRow(o, photos)),
+    dumps:    dumps.map(Map2.dumpFromRow),
+    requests: requests.map(Map2.reqFromRow),
+  };
+}
+
+/* Reconcilia las habilidades de una cuadrilla: la base guarda una fila por
+   habilidad, así que se inserta lo que falta y se borra lo que sobra. */
+async function saveSkills(crewId, before, after){
+  const add = after.filter(s => !before.includes(s));
+  const del = before.filter(s => !after.includes(s));
+  if(add.length) await Gamma.insert('group_skills', add.map(s => ({ group_id:crewId, skill:s })));
+  for(const s of del) await Gamma.remove('group_skills', `group_id=eq.${crewId}&skill=eq.${s}`);
+}
+
+/* ============================================================
    Traducción ES -> EN de lo que escriben los líderes.
    Sin servicio externo: el CSP de la página bloquea cualquier host, así
    que la traducción es local. Funciona en dos pasos:
@@ -1121,8 +1358,11 @@ function seed(){
   return { crews, orders, dumps, requests };
 }
 
+const online = () => Gamma.online() && Gamma.signedIn();
+let pollTimer = null;
+
 const state = {
-  loggedIn:false, view:'overview', modal:null, filter:'all',
+  loggedIn:false, view:'overview', modal:null, filter:'all', loginErr:null, busy:false,
   weekStart: mondayOf(new Date()),
   translated: {},          // id de nota -> mostrando inglés
   draft: null,             // formulario de orden en curso
@@ -1139,8 +1379,40 @@ function syncFromCrewApp(){
   if(added) persist();
 }
 function persist(){
+  // Conectado, la base manda: no se guarda copia local que pueda divergir.
+  if(online()) return;
   const ok = save('admin', {crews:state.crews, orders:state.orders, dumps:state.dumps, requests:state.requests});
   if(!ok) toast('Storage is full — remove some photos to keep saving','warn');
+}
+
+/* Relee del servidor. RLS decide qué llega; el cliente no filtra nada. */
+async function refresh(){
+  if(!online()) return;
+  try{ Object.assign(state, await pullAll()); }
+  catch(e){ toast(e.message,'warn'); }
+}
+
+/* Toda mutación pasa por aquí: en modo local guarda y ya; conectado manda
+   el cambio y vuelve a leer, de modo que la pantalla refleje el servidor y
+   no una suposición del cliente. */
+async function commit(cloudFn){
+  if(!online()){ persist(); render(); return; }
+  state.busy = true;
+  try{ await cloudFn(); await refresh(); }
+  catch(e){ toast(e.message,'warn'); await refresh(); }
+  state.busy = false;
+  render();
+}
+
+function startPolling(){
+  clearInterval(pollTimer);
+  if(!online()) return;
+  // Sondeo y no websocket: es lo que sobrevive a proxies y a la pestaña
+  // en segundo plano sin reconexiones raras.
+  pollTimer = setInterval(async ()=>{
+    if(state.modal || state.busy) return;   // no interrumpir lo que se edita
+    await refresh(); render();
+  }, 8000);
 }
 
 const crewById = (id) => state.crews.find(c=>c.id===id);
@@ -1186,15 +1458,44 @@ function renderLogin(){
         <label for="lg-pass">Password</label>
         <input id="lg-pass" class="input" type="password" value="gamma1954" autocomplete="current-password">
       </div>
+      ${state.loginErr?`<div class="err" style="margin-bottom:12px">${esc(state.loginErr)}</div>`:''}
       <button class="btn btn-primary" id="lg-btn" style="width:100%;margin-top:6px;">Sign in</button>
-      <div class="login-hint">Demo build — credentials are not verified.<br>Signed in as <b>paul@gammatree.com</b></div>
+      <div style="margin-top:16px;padding-top:15px;border-top:1px solid var(--glass-brd)">
+        ${connBadge()}
+        <button class="btn btn-glass btn-sm" id="cfg-btn" style="width:100%">
+          ${Gamma.online()?'Backend settings':'Connect to Supabase'}
+        </button>
+      </div>
+      <div class="login-hint">${Gamma.online()
+        ? 'Signing in against your Supabase project.'
+        : 'Demo mode — data stays in this browser and is not shared.'}</div>
     </div>
   </div>`;
 }
+function connBadge(){
+  return Gamma.online()
+    ? `<div class="conn conn-on"><i></i>Connected to Supabase</div>`
+    : `<div class="conn conn-off"><i></i>Demo mode · this browser only</div>`;
+}
+
 function bindLogin(){
-  const go = ()=>{ state.loggedIn=true; render(); };
+  const go = async ()=>{
+    const email=document.getElementById('lg-email').value.trim();
+    const pass=document.getElementById('lg-pass').value;
+    state.loginErr=null;
+    if(Gamma.online()){
+      const btn=document.getElementById('lg-btn');
+      btn.disabled=true; btn.textContent='Signing in…';
+      try{ await Gamma.signIn(email,pass); }
+      catch(e){ state.loginErr=e.message; render(); return; }
+      await refresh();
+      startPolling();
+    }
+    state.loggedIn=true; render();
+  };
   document.getElementById('lg-btn').onclick = go;
   document.getElementById('lg-pass').onkeydown = (e)=>{ if(e.key==='Enter') go(); };
+  document.getElementById('cfg-btn').onclick = ()=>{ state.modal={type:'config'}; render(); };
 }
 
 function renderRail(){
@@ -1221,6 +1522,7 @@ function renderRail(){
         <div class="avatar">PG</div>
         <div><b>Paul G.</b><span>paul@gammatree.com</span></div>
       </div>
+      ${connBadge()}
       <button class="btn btn-glass btn-sm" id="logout" style="width:100%;">${ICONS.out}<span>Sign out</span></button>
     </div>
   </aside>`;
@@ -1605,9 +1907,43 @@ function renderModal(){
   if(m.type==='viewOrder') return modalViewOrder(state.orders.find(o=>o.id===m.id));
   if(m.type==='addSkill')  return modalAddSkill(crewById(m.id));
   if(m.type==='newCrew')   return modalNewCrew();
+  if(m.type==='config')    return modalConfig();
   if(m.type==='zoom')      return `<div class="scrim" data-close><img src="${m.src}" alt=""
       style="max-width:92vw;max-height:88vh;border-radius:var(--r-md);box-shadow:var(--shadow-lift)"></div>`;
   return '';
+}
+
+function modalConfig(){
+  const c = Gamma.cfg || {url:'',key:''};
+  return `
+  <div class="scrim" data-close>
+    <div class="modal glass" style="max-width:520px">
+      <div class="modal-head">
+        <div><div class="eyebrow">Backend</div><h2 style="font-size:var(--t-xl)">Connect to Supabase</h2></div>
+        <button class="icon-btn" data-close aria-label="Close">&times;</button>
+      </div>
+      <p style="font-size:var(--t-sm);color:var(--text-dim);line-height:1.6;margin:0 0 16px">
+        Point both apps at the same project and the office and the crews share
+        one live database. In Supabase go to <b>Settings → API</b> and copy the
+        two values below. The anon key is meant to be public — row level
+        security is what protects the data.
+      </p>
+      <div class="field"><label for="cf-url">Project URL</label>
+        <input id="cf-url" class="input" placeholder="https://abcdefgh.supabase.co" value="${esc(c.url)}"></div>
+      <div class="field"><label for="cf-key">Anon public key</label>
+        <textarea id="cf-key" class="input" style="min-height:70px;font-size:12px"
+          placeholder="eyJhbGciOi…">${esc(c.key)}</textarea></div>
+      <div class="row2" style="display:flex;gap:9px">
+        ${Gamma.online()?`<button class="btn btn-wine" id="cf-off" style="flex:1">Disconnect</button>`:''}
+        <button class="btn btn-primary" id="cf-save" style="flex:2">Save and test</button>
+      </div>
+      <p style="font-size:var(--t-xs);color:var(--text-faint);line-height:1.6;margin:14px 0 0">
+        Stored only in this browser. Inside a published artifact the connection
+        is blocked by the sandbox — run the file locally or from your own
+        hosting for it to work.
+      </p>
+    </div>
+  </div>`;
 }
 
 function modalNewOrder(){
@@ -1783,7 +2119,11 @@ function bindShell(){
   document.querySelectorAll('[data-nav]').forEach(b=>{
     b.onclick=()=>{ state.view=b.dataset.nav; state.filter='all'; render(); };
   });
-  document.getElementById('logout').onclick=()=>{ state.loggedIn=false; state.view='overview'; render(); };
+  document.getElementById('logout').onclick=async()=>{
+    clearInterval(pollTimer);
+    if(Gamma.online()) await Gamma.signOut();
+    state.loggedIn=false; state.view='overview'; render();
+  };
 
   document.querySelectorAll('[data-order]').forEach(el=>{
     el.onclick=(e)=>{
@@ -1825,13 +2165,15 @@ function bindShell(){
       o.crew=sel.value||null;
       if(o.crew && (o.status==='pending'||o.status==='flag')) o.status='assigned';
       else if(!o.crew && o.status==='assigned') o.status='pending';
-      persist(); toast(o.crew?`Assigned to ${crewName(o.crew)}`:'Order unassigned'); render();
+      toast(o.crew?`Assigned to ${crewName(o.crew)}`:'Order unassigned');
+      commit(()=>Gamma.patch('work_orders', o.id, {group_id:o.crew, state:o.status}));
     };
   });
   document.querySelectorAll('[data-resched]').forEach(inp=>{
     inp.onchange=()=>{
       const o=state.orders.find(x=>x.id===inp.dataset.resched);
-      o.date=inp.value; persist(); toast(`Rescheduled to ${fmtDate(o.date)}`); render();
+      o.date=inp.value; toast(`Rescheduled to ${fmtDate(o.date)}`);
+      commit(()=>Gamma.patch('work_orders', o.id, {scheduled_date:o.date}));
     };
   });
 
@@ -1859,22 +2201,27 @@ function bindShell(){
   document.querySelectorAll('[data-rmskill]').forEach(b=>{
     b.onclick=(e)=>{
       e.stopPropagation();
-      const c=crewById(b.dataset.rmskill);
-      c.skills=c.skills.filter(s=>s!==b.dataset.skill);
-      persist(); toast(`${SKILLS[b.dataset.skill]} removed from ${c.name}`); render();
+      const c=crewById(b.dataset.rmskill), skill=b.dataset.skill;
+      c.skills=c.skills.filter(s=>s!==skill);
+      toast(`${SKILLS[skill]} removed from ${c.name}`);
+      commit(()=>Gamma.remove('group_skills', `group_id=eq.${c.id}&skill=eq.${skill}`));
     };
   });
   document.querySelectorAll('[data-addskill]').forEach(b=>{
     b.onclick=()=>{ state.modal={type:'addSkill',id:b.dataset.addskill}; render(); };
   });
   document.querySelectorAll('[data-gear]').forEach(sel=>{
-    sel.onchange=()=>{ crewById(sel.dataset.gear).gear=sel.value; persist(); toast('Equipment updated'); render(); };
+    sel.onchange=()=>{
+      const c=crewById(sel.dataset.gear); c.gear=sel.value;
+      toast('Equipment updated');
+      commit(()=>Gamma.patch('groups', c.id, {equipment_type:GEAR_TO_DB[c.gear]}));
+    };
   });
   document.querySelectorAll('[data-members]').forEach(b=>{
     b.onclick=()=>{
       const c=crewById(b.dataset.members);
       c.members=Math.max(1,Math.min(12,c.members+Number(b.dataset.delta)));
-      persist(); render();
+      commit(()=>Gamma.patch('groups', c.id, {member_count:c.members}));
     };
   });
 
@@ -1883,7 +2230,8 @@ function bindShell(){
     b.onclick=()=>{
       const r=state.requests.find(x=>x.id===b.dataset.req);
       r.status=b.dataset.to;
-      persist(); toast(`Request marked ${REQ_STATUS[r.status].toLowerCase()}`); render();
+      toast(`Request marked ${REQ_STATUS[r.status].toLowerCase()}`);
+      commit(()=>Gamma.patch('equipment_requests', r.id, {state:r.status}));
     };
   });
 }
@@ -1894,6 +2242,30 @@ function bindModal(){
   });
   document.querySelectorAll('[data-tr]').forEach(b=>{
     b.onclick=(e)=>{ e.stopPropagation(); state.translated[b.dataset.tr]=!state.translated[b.dataset.tr]; render(); };
+  });
+
+  document.getElementById('cf-save')?.addEventListener('click',async()=>{
+    const url=document.getElementById('cf-url').value.trim();
+    const key=document.getElementById('cf-key').value.trim();
+    if(!/^https?:\/\/.+/.test(url)){ toast('The project URL must start with https://','warn'); return; }
+    if(key.length<20){ toast('That anon key looks too short','warn'); return; }
+    const btn=document.getElementById('cf-save'); btn.disabled=true; btn.textContent='Testing…';
+    Gamma.configure(url,key);
+    try{
+      // Una lectura real: confirma URL, llave y que el esquema esté aplicado.
+      await Gamma.get('groups?select=id&limit=1');
+      state.modal=null; render();
+      toast('Connected — sign in with your Supabase account');
+    }catch(e){
+      Gamma.disconnect();
+      render();
+      toast('Could not reach that project: '+e.message,'warn');
+    }
+  });
+  document.getElementById('cf-off')?.addEventListener('click',()=>{
+    Gamma.disconnect(); clearInterval(pollTimer);
+    state.loggedIn=false; state.modal=null; render();
+    toast('Disconnected — back to demo mode');
   });
 
   /* --- Formulario de orden: el borrador guarda lo tecleado entre renders --- */
@@ -1937,14 +2309,22 @@ function bindModal(){
     const d=state.draft;
     if(!d.address.trim()){ toast('An address is required','warn'); return; }
     if(!d.jobs.length){ toast('Pick at least one job type','warn'); return; }
-    state.orders.unshift({
+    const fresh={
       id:uid('WO'), address:d.address.trim(), createdAt:d.createdAt, date:d.date,
       jobs:d.jobs, gear:d.gear, dropWire:d.dropWire, notes:d.notes.trim(),
       photos:d.photos, sketch:d.sketch,
       status:d.crew?'assigned':'pending', crew:d.crew||null,
-    });
-    persist(); state.modal=null; state.draft=null; state.view='orders'; render();
-    toast('Work order created');
+    };
+    state.modal=null; state.draft=null; state.view='orders';
+    if(!online()){ state.orders.unshift(fresh); persist(); render(); toast('Work order created'); return; }
+    commit(async()=>{
+      // Las imágenes van primero al bucket; en la fila solo queda su URL.
+      const sketchUrl = fresh.sketch ? await Gamma.upload('order-sketches','sketch.jpg',fresh.sketch) : null;
+      const urls = [];
+      for(const ph of fresh.photos) urls.push(await Gamma.upload('order-photos','job.jpg',ph));
+      const [row] = await Gamma.insert('work_orders', Map2.orderToRow({...fresh, sketch:sketchUrl}));
+      if(urls.length) await Gamma.insert('work_order_photos', urls.map(u=>({work_order_id:row.id, url:u})));
+    }).then(()=>toast('Work order created'));
   });
 
   /* --- Formulario de cuadrilla --- */
@@ -1972,23 +2352,29 @@ function bindModal(){
     if(state.crews.some(c=>c.email.toLowerCase()===d.email.trim().toLowerCase())){
       toast('That email already belongs to another crew','warn'); return;
     }
-    state.crews.push({
+    const crew={
       id:uid('c'), name:d.name.trim() || `${d.leader.trim().split(/\s+/)[0]}'s Crew`,
       leader:d.leader.trim(), email:d.email.trim().toLowerCase(),
       gear:d.gear, members:Math.max(1,Math.min(12,d.members||1)),
       skills:d.skills,
       x:15+Math.round(Math.random()*70), y:20+Math.round(Math.random()*60),
-    });
-    persist(); state.modal=null; state.crewDraft=null; render();
-    toast('Crew created');
+    };
+    state.modal=null; state.crewDraft=null;
+    if(!online()){ state.crews.push(crew); persist(); render(); toast('Crew created'); return; }
+    commit(async()=>{
+      const [row] = await Gamma.insert('groups', Map2.crewToRow(crew));
+      if(crew.skills.length)
+        await Gamma.insert('group_skills', crew.skills.map(skill=>({group_id:row.id, skill})));
+    }).then(()=>toast('Crew created'));
   });
 
   document.querySelectorAll('[data-pick]').forEach(b=>{
     b.onclick=()=>{
-      const c=crewById(state.modal.id);
-      c.skills.push(b.dataset.pick);
-      persist(); state.modal=null; render();
-      toast(`${SKILLS[b.dataset.pick]} added to ${c.name}`);
+      const c=crewById(state.modal.id), skill=b.dataset.pick;
+      c.skills.push(skill);
+      state.modal=null;
+      toast(`${SKILLS[skill]} added to ${c.name}`);
+      commit(()=>Gamma.insert('group_skills', {group_id:c.id, skill}));
     };
   });
   document.addEventListener('keydown',function onEsc(e){
