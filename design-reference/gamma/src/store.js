@@ -18,7 +18,7 @@ const Gamma = {
   signedIn(){ return !!(this.session && this.session.access_token); },
 
   configure(url, key){
-    this.cfg = { url:String(url).replace(/\/+$/,''), key:String(key).trim() };
+    this.cfg = { url: normalizeUrl(url), key: String(key).trim() };
     save('cfg', this.cfg);
   },
   disconnect(){
@@ -121,6 +121,33 @@ const Gamma = {
     return `${this.cfg.url}/storage/v1/object/public/${bucket}/${path}`;
   },
 };
+
+/* Normaliza lo que sea que hayan pegado.
+   Copiar del panel de Supabase arrastra espacios y saltos de línea, y mucha
+   gente pega la URL ya con el sufijo de la API. Cualquiera de esas tres cosas
+   produce una ruta con doble barra o duplicada, y Supabase responde
+   "Invalid path specified in request URL", que no dice dónde mirar. */
+function normalizeUrl(raw){
+  let u = String(raw).trim();
+  u = u.replace(/^[<"'\s]+|[>"'\s]+$/g, '');       // comillas y espacios pegados
+  u = u.replace(/\/(rest|auth|storage)\/v\d+\/?.*$/i, '');  // sufijo de la API
+  u = u.replace(/\/+$/, '');                        // barras finales
+  if(u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
+  return u;
+}
+
+/* Revisa la forma de la URL antes de gastar una petición, y devuelve el
+   motivo concreto cuando no puede ser la del proyecto. */
+function urlProblem(raw){
+  const u = normalizeUrl(raw);
+  if(!u) return 'EMPTY';
+  let host;
+  try{ host = new URL(u).hostname; }catch{ return 'MALFORMED'; }
+  if(/supabase\.(com|green)$/i.test(host)) return 'DASHBOARD';   // el panel, no el proyecto
+  if(/^(localhost|127\.|\[)/.test(host)) return null;            // desarrollo local
+  if(!/supabase\.(co|in)$/i.test(host) && !host.includes('.')) return 'MALFORMED';
+  return null;
+}
 
 /* Diagnóstico de conexión.
    Un fallo de red y una URL mal escrita se ven igual desde JavaScript, pero

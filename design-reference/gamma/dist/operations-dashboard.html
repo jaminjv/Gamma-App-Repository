@@ -904,7 +904,7 @@ const Gamma = {
   signedIn(){ return !!(this.session && this.session.access_token); },
 
   configure(url, key){
-    this.cfg = { url:String(url).replace(/\/+$/,''), key:String(key).trim() };
+    this.cfg = { url: normalizeUrl(url), key: String(key).trim() };
     save('cfg', this.cfg);
   },
   disconnect(){
@@ -1007,6 +1007,33 @@ const Gamma = {
     return `${this.cfg.url}/storage/v1/object/public/${bucket}/${path}`;
   },
 };
+
+/* Normaliza lo que sea que hayan pegado.
+   Copiar del panel de Supabase arrastra espacios y saltos de línea, y mucha
+   gente pega la URL ya con el sufijo de la API. Cualquiera de esas tres cosas
+   produce una ruta con doble barra o duplicada, y Supabase responde
+   "Invalid path specified in request URL", que no dice dónde mirar. */
+function normalizeUrl(raw){
+  let u = String(raw).trim();
+  u = u.replace(/^[<"'\s]+|[>"'\s]+$/g, '');       // comillas y espacios pegados
+  u = u.replace(/\/(rest|auth|storage)\/v\d+\/?.*$/i, '');  // sufijo de la API
+  u = u.replace(/\/+$/, '');                        // barras finales
+  if(u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
+  return u;
+}
+
+/* Revisa la forma de la URL antes de gastar una petición, y devuelve el
+   motivo concreto cuando no puede ser la del proyecto. */
+function urlProblem(raw){
+  const u = normalizeUrl(raw);
+  if(!u) return 'EMPTY';
+  let host;
+  try{ host = new URL(u).hostname; }catch{ return 'MALFORMED'; }
+  if(/supabase\.(com|green)$/i.test(host)) return 'DASHBOARD';   // el panel, no el proyecto
+  if(/^(localhost|127\.|\[)/.test(host)) return null;            // desarrollo local
+  if(!/supabase\.(co|in)$/i.test(host) && !host.includes('.')) return 'MALFORMED';
+  return null;
+}
 
 /* Diagnóstico de conexión.
    Un fallo de red y una URL mal escrita se ven igual desde JavaScript, pero
@@ -1490,6 +1517,15 @@ function connMessage(){
     It runs inside a sandbox that blocks every outside request, whatever you paste.
     Download the file and open it from your computer, or put it on your own hosting —
     both work.`;
+  if(state.connErr==='DASHBOARD') return `<b>That is the Supabase dashboard address, not your project's.</b><br>
+    The one you need is under <b>Settings → API → Project URL</b>, and looks like
+    <code>https://abcdefgh.supabase.co</code>.`;
+  if(state.connErr==='MALFORMED') return `<b>That does not look like a project URL.</b><br>
+    It should look like <code>https://abcdefgh.supabase.co</code> — Settings → API → Project URL.`;
+  if(state.connErr==='EMPTY') return `<b>The project URL is empty.</b>`;
+  if(state.connErr==='PATH') return `<b>The URL reached Supabase but the address had something extra.</b><br>
+    Paste only <code>https://abcdefgh.supabase.co</code> — no <code>/rest/v1</code> at the end,
+    and no trailing slash.`;
   if(state.connErr==='NET') return `<b>No answer from that URL.</b><br>
     Check it is copied whole, starts with https:// and ends in .supabase.co, and that
     the project is not paused.`;
@@ -2271,7 +2307,8 @@ function bindModal(){
   document.getElementById('cf-save')?.addEventListener('click',async()=>{
     const url=document.getElementById('cf-url').value.trim();
     const key=document.getElementById('cf-key').value.trim();
-    if(!/^https?:\/\/.+/.test(url)){ toast('The project URL must start with https://','warn'); return; }
+    const problem = urlProblem(url);
+    if(problem){ state.connErr = problem; render(); return; }
     if(key.length<20){ toast('That anon key looks too short','warn'); return; }
     const btn=document.getElementById('cf-save'); btn.disabled=true; btn.textContent='Testing…';
     Gamma.configure(url,key);
@@ -2282,7 +2319,8 @@ function bindModal(){
       toast('Connected — sign in with your Supabase account');
     }catch(e){
       Gamma.disconnect();
-      state.connErr = connectionHint(e) || e.message;
+      state.connErr = /invalid path/i.test(e.message||'')
+        ? 'PATH' : (connectionHint(e) || e.message);
       render();
     }
   });

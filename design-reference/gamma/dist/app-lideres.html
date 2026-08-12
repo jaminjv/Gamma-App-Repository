@@ -717,7 +717,7 @@ const Gamma = {
   signedIn(){ return !!(this.session && this.session.access_token); },
 
   configure(url, key){
-    this.cfg = { url:String(url).replace(/\/+$/,''), key:String(key).trim() };
+    this.cfg = { url: normalizeUrl(url), key: String(key).trim() };
     save('cfg', this.cfg);
   },
   disconnect(){
@@ -820,6 +820,33 @@ const Gamma = {
     return `${this.cfg.url}/storage/v1/object/public/${bucket}/${path}`;
   },
 };
+
+/* Normaliza lo que sea que hayan pegado.
+   Copiar del panel de Supabase arrastra espacios y saltos de línea, y mucha
+   gente pega la URL ya con el sufijo de la API. Cualquiera de esas tres cosas
+   produce una ruta con doble barra o duplicada, y Supabase responde
+   "Invalid path specified in request URL", que no dice dónde mirar. */
+function normalizeUrl(raw){
+  let u = String(raw).trim();
+  u = u.replace(/^[<"'\s]+|[>"'\s]+$/g, '');       // comillas y espacios pegados
+  u = u.replace(/\/(rest|auth|storage)\/v\d+\/?.*$/i, '');  // sufijo de la API
+  u = u.replace(/\/+$/, '');                        // barras finales
+  if(u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
+  return u;
+}
+
+/* Revisa la forma de la URL antes de gastar una petición, y devuelve el
+   motivo concreto cuando no puede ser la del proyecto. */
+function urlProblem(raw){
+  const u = normalizeUrl(raw);
+  if(!u) return 'EMPTY';
+  let host;
+  try{ host = new URL(u).hostname; }catch{ return 'MALFORMED'; }
+  if(/supabase\.(com|green)$/i.test(host)) return 'DASHBOARD';   // el panel, no el proyecto
+  if(/^(localhost|127\.|\[)/.test(host)) return null;            // desarrollo local
+  if(!/supabase\.(co|in)$/i.test(host) && !host.includes('.')) return 'MALFORMED';
+  return null;
+}
 
 /* Diagnóstico de conexión.
    Un fallo de red y una URL mal escrita se ven igual desde JavaScript, pero
@@ -1615,7 +1642,19 @@ function bindModal(){
   document.getElementById('cf-save')?.addEventListener('click',async()=>{
     const url=document.getElementById('cf-url').value.trim();
     const key=document.getElementById('cf-key').value.trim();
-    if(!/^https?:\/\/.+/.test(url)||key.length<20){ toast('URL o llave inválida','warn'); return; }
+    const problem = urlProblem(url);
+    if(problem || key.length<20){
+      const es = state.lang==='es';
+      state.error =
+        problem==='DASHBOARD' ? (es
+          ? 'Esa es la dirección del panel de Supabase, no la del proyecto. La que necesitas está en Settings → API → Project URL y se ve como https://abcdefgh.supabase.co'
+          : 'That is the Supabase dashboard address, not the project one. You need Settings → API → Project URL, like https://abcdefgh.supabase.co')
+      : problem ? (es
+          ? 'Esa no parece la URL del proyecto. Debe verse como https://abcdefgh.supabase.co'
+          : 'That does not look like the project URL. It should look like https://abcdefgh.supabase.co')
+      : (es ? 'La llave anon parece incompleta.' : 'That anon key looks incomplete.');
+      state.modal=null; render(); return;
+    }
     const btn=document.getElementById('cf-save'); btn.disabled=true; btn.textContent=t().syncing;
     Gamma.configure(url,key);
     try{
@@ -1623,7 +1662,13 @@ function bindModal(){
       state.modal=null; render(); toast(t().connOn);
     }catch(e){
       Gamma.disconnect();
-      const kind = connectionHint(e);
+      const kind = /invalid path/i.test(e.message||'') ? 'PATH' : connectionHint(e);
+      if(kind==='PATH'){
+        state.error = state.lang==='es'
+          ? 'La dirección llegó a Supabase pero llevaba algo de más. Pega solo https://abcdefgh.supabase.co, sin /rest/v1 al final ni barra.'
+          : 'The URL reached Supabase but had something extra. Paste only https://abcdefgh.supabase.co — no /rest/v1, no trailing slash.';
+        state.modal=null; render(); return;
+      }
       state.error = kind==='SANDBOX'
         ? (state.lang==='es'
             ? 'Este enlace publicado no puede conectarse: corre en un entorno aislado que bloquea toda salida. Descarga el archivo y ábrelo desde el teléfono, o pídele a la oficina el enlace propio.'

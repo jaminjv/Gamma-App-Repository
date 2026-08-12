@@ -617,6 +617,15 @@ function connMessage(){
     It runs inside a sandbox that blocks every outside request, whatever you paste.
     Download the file and open it from your computer, or put it on your own hosting —
     both work.`;
+  if(state.connErr==='DASHBOARD') return `<b>That is the Supabase dashboard address, not your project's.</b><br>
+    The one you need is under <b>Settings → API → Project URL</b>, and looks like
+    <code>https://abcdefgh.supabase.co</code>.`;
+  if(state.connErr==='MALFORMED') return `<b>That does not look like a project URL.</b><br>
+    It should look like <code>https://abcdefgh.supabase.co</code> — Settings → API → Project URL.`;
+  if(state.connErr==='EMPTY') return `<b>The project URL is empty.</b>`;
+  if(state.connErr==='PATH') return `<b>The URL reached Supabase but the address had something extra.</b><br>
+    Paste only <code>https://abcdefgh.supabase.co</code> — no <code>/rest/v1</code> at the end,
+    and no trailing slash.`;
   if(state.connErr==='NET') return `<b>No answer from that URL.</b><br>
     Check it is copied whole, starts with https:// and ends in .supabase.co, and that
     the project is not paused.`;
@@ -1398,7 +1407,8 @@ function bindModal(){
   document.getElementById('cf-save')?.addEventListener('click',async()=>{
     const url=document.getElementById('cf-url').value.trim();
     const key=document.getElementById('cf-key').value.trim();
-    if(!/^https?:\/\/.+/.test(url)){ toast('The project URL must start with https://','warn'); return; }
+    const problem = urlProblem(url);
+    if(problem){ state.connErr = problem; render(); return; }
     if(key.length<20){ toast('That anon key looks too short','warn'); return; }
     const btn=document.getElementById('cf-save'); btn.disabled=true; btn.textContent='Testing…';
     Gamma.configure(url,key);
@@ -1409,7 +1419,8 @@ function bindModal(){
       toast('Connected — sign in with your Supabase account');
     }catch(e){
       Gamma.disconnect();
-      state.connErr = connectionHint(e) || e.message;
+      state.connErr = /invalid path/i.test(e.message||'')
+        ? 'PATH' : (connectionHint(e) || e.message);
       render();
     }
   });
