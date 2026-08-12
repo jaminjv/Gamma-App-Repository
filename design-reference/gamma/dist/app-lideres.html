@@ -821,6 +821,18 @@ const Gamma = {
   },
 };
 
+/* Diagnóstico de conexión.
+   Un fallo de red y una URL mal escrita se ven igual desde JavaScript, pero
+   el remedio es opuesto: decirle a alguien "revisa la URL" cuando lo que
+   pasa es que el entorno bloquea toda salida lo manda a buscar donde no es. */
+function connectionHint(err){
+  const blocked = /failed to fetch|networkerror|load failed|not allowed/i.test(err?.message || '');
+  const sandboxed = (() => { try { return window.self !== window.top; } catch { return true; } })();
+  if(blocked && sandboxed) return 'SANDBOX';
+  if(blocked) return 'NET';
+  return null;
+}
+
 /* ============================================================
    Traducción entre las filas de la base y la forma que usan las apps
    ============================================================ */
@@ -1609,7 +1621,19 @@ function bindModal(){
     try{
       await Gamma.get('groups?select=id&limit=1');
       state.modal=null; render(); toast(t().connOn);
-    }catch(e){ Gamma.disconnect(); render(); toast(e.message,'warn'); }
+    }catch(e){
+      Gamma.disconnect();
+      const kind = connectionHint(e);
+      state.error = kind==='SANDBOX'
+        ? (state.lang==='es'
+            ? 'Este enlace publicado no puede conectarse: corre en un entorno aislado que bloquea toda salida. Descarga el archivo y ábrelo desde el teléfono, o pídele a la oficina el enlace propio.'
+            : 'This published link cannot connect: it runs in a sandbox that blocks all outside requests. Open the downloaded file instead, or ask the office for their own link.')
+        : (kind==='NET'
+            ? (state.lang==='es' ? 'No hubo respuesta de esa dirección. Revisa que esté completa.'
+                                 : 'No answer from that URL. Check it is complete.')
+            : e.message);
+      state.modal=null; render();
+    }
   });
   document.getElementById('cf-off')?.addEventListener('click',()=>{
     Gamma.disconnect(); clearInterval(pollTimer);

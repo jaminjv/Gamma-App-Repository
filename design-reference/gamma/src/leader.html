@@ -832,7 +832,19 @@ function bindModal(){
     try{
       await Gamma.get('groups?select=id&limit=1');
       state.modal=null; render(); toast(t().connOn);
-    }catch(e){ Gamma.disconnect(); render(); toast(e.message,'warn'); }
+    }catch(e){
+      Gamma.disconnect();
+      const kind = connectionHint(e);
+      state.error = kind==='SANDBOX'
+        ? (state.lang==='es'
+            ? 'Este enlace publicado no puede conectarse: corre en un entorno aislado que bloquea toda salida. Descarga el archivo y ábrelo desde el teléfono, o pídele a la oficina el enlace propio.'
+            : 'This published link cannot connect: it runs in a sandbox that blocks all outside requests. Open the downloaded file instead, or ask the office for their own link.')
+        : (kind==='NET'
+            ? (state.lang==='es' ? 'No hubo respuesta de esa dirección. Revisa que esté completa.'
+                                 : 'No answer from that URL. Check it is complete.')
+            : e.message);
+      state.modal=null; render();
+    }
   });
   document.getElementById('cf-off')?.addEventListener('click',()=>{
     Gamma.disconnect(); clearInterval(pollTimer);

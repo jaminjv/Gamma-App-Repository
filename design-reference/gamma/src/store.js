@@ -122,6 +122,18 @@ const Gamma = {
   },
 };
 
+/* Diagnóstico de conexión.
+   Un fallo de red y una URL mal escrita se ven igual desde JavaScript, pero
+   el remedio es opuesto: decirle a alguien "revisa la URL" cuando lo que
+   pasa es que el entorno bloquea toda salida lo manda a buscar donde no es. */
+function connectionHint(err){
+  const blocked = /failed to fetch|networkerror|load failed|not allowed/i.test(err?.message || '');
+  const sandboxed = (() => { try { return window.self !== window.top; } catch { return true; } })();
+  if(blocked && sandboxed) return 'SANDBOX';
+  if(blocked) return 'NET';
+  return null;
+}
+
 /* ============================================================
    Traducción entre las filas de la base y la forma que usan las apps
    ============================================================ */

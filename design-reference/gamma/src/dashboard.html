@@ -501,7 +501,7 @@ const online = () => Gamma.online() && Gamma.signedIn();
 let pollTimer = null;
 
 const state = {
-  loggedIn:false, view:'overview', modal:null, filter:'all', loginErr:null, busy:false,
+  loggedIn:false, view:'overview', modal:null, filter:'all', loginErr:null, connErr:null, busy:false,
   weekStart: mondayOf(new Date()),
   translated: {},          // id de nota -> mostrando inglés
   draft: null,             // formulario de orden en curso
@@ -598,6 +598,7 @@ function renderLogin(){
         <input id="lg-pass" class="input" type="password" value="gamma1954" autocomplete="current-password">
       </div>
       ${state.loginErr?`<div class="err" style="margin-bottom:12px">${esc(state.loginErr)}</div>`:''}
+      ${state.connErr?`<div class="err" style="margin-bottom:12px;text-align:left">${connMessage()}</div>`:''}
       <button class="btn btn-primary" id="lg-btn" style="width:100%;margin-top:6px;">Sign in</button>
       <div style="margin-top:16px;padding-top:15px;border-top:1px solid var(--glass-brd)">
         ${connBadge()}
@@ -611,6 +612,17 @@ function renderLogin(){
     </div>
   </div>`;
 }
+function connMessage(){
+  if(state.connErr==='SANDBOX') return `<b>This published link cannot connect.</b><br>
+    It runs inside a sandbox that blocks every outside request, whatever you paste.
+    Download the file and open it from your computer, or put it on your own hosting —
+    both work.`;
+  if(state.connErr==='NET') return `<b>No answer from that URL.</b><br>
+    Check it is copied whole, starts with https:// and ends in .supabase.co, and that
+    the project is not paused.`;
+  return esc(state.connErr);
+}
+
 function connBadge(){
   return Gamma.online()
     ? `<div class="conn conn-on"><i></i>Connected to Supabase</div>`
@@ -634,7 +646,7 @@ function bindLogin(){
   };
   document.getElementById('lg-btn').onclick = go;
   document.getElementById('lg-pass').onkeydown = (e)=>{ if(e.key==='Enter') go(); };
-  document.getElementById('cfg-btn').onclick = ()=>{ state.modal={type:'config'}; render(); };
+  document.getElementById('cfg-btn').onclick = ()=>{ state.connErr=null; state.modal={type:'config'}; render(); };
 }
 
 function renderRail(){
@@ -1397,8 +1409,8 @@ function bindModal(){
       toast('Connected — sign in with your Supabase account');
     }catch(e){
       Gamma.disconnect();
+      state.connErr = connectionHint(e) || e.message;
       render();
-      toast('Could not reach that project: '+e.message,'warn');
     }
   });
   document.getElementById('cf-off')?.addEventListener('click',()=>{
