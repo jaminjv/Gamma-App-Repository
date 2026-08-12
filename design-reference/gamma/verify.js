@@ -129,15 +129,120 @@ function check(cond, label){
   await p.waitForTimeout(600);
   await p.click('#new-order');
   await p.waitForTimeout(500);
+  check(await p.locator('.ro-field').count() >= 1, 'la fecha de apertura se muestra fija y no editable');
+  check(await p.locator('#new-order-date').count() === 0, 'no hay campo editable de fecha de apertura');
+  check(await p.locator('[data-job]').count() === 6, 'el checklist trae los 6 tipos de trabajo');
+
+  // Guardar sin tipo de trabajo debe rechazarse
   await p.fill('#f-addr', '88 Test Ln, Belleville, IL');
   await p.click('#f-save');
-  await p.waitForTimeout(700);
-  check((await p.locator('.row-card h3').first().textContent()).includes('88 Test Ln'), 'se crea la orden nueva');
+  await p.waitForTimeout(400);
+  check(await p.locator('.scrim').count() === 1, 'no deja crear la orden sin tipo de trabajo');
+
+  // Selección múltiple + drop wire
+  await p.click('[data-job="removal"]');
+  await p.waitForTimeout(200);
+  await p.click('[data-job="stump"]');
+  await p.waitForTimeout(200);
+  check(await p.locator('[data-job].on').count() === 2, 'el checklist admite selección múltiple');
+  check(await p.locator('#f-addr').inputValue() === '88 Test Ln, Belleville, IL',
+    'la dirección sobrevive a los re-render del formulario');
+  await p.click('[data-wire]');
+  await p.waitForTimeout(200);
+  check(await p.locator('[data-wire].on').count() === 1, 'la casilla Drop Wire queda marcada');
+  await p.click('#f-save');
+  await p.waitForTimeout(800);
+
+  const card = p.locator('.row-card').first();
+  check((await card.textContent()).includes('88 Test Ln'), 'se crea la orden nueva');
+  check((await card.textContent()).includes('Opened'), 'la orden muestra su fecha de apertura');
+  check(await card.locator('.tag-wire').count() === 1, 'la orden muestra la etiqueta Drop wire');
+  check(await card.locator('.tag').count() >= 3, 'la orden muestra sus tipos de trabajo');
+  const href = await card.locator('.map-link').first().getAttribute('href');
+  check(!!href && href.startsWith('https://www.google.com/maps/'), `la dirección enlaza a Google Maps (${(href||'').slice(0,44)}…)`);
   await shot(p, 'gm-dash-orders');
 
   await p.click('[data-nav="schedule"]');
   await p.waitForTimeout(700);
+  const range0 = await p.locator('.cal-range').first().textContent();
+  await p.click('[data-week="1"]');
+  await p.waitForTimeout(500);
+  const range1 = await p.locator('.cal-range').first().textContent();
+  check(range0 !== range1, `avanza de semana (${range0.trim()} -> ${range1.trim()})`);
+  await p.click('[data-week="-1"]');
+  await p.waitForTimeout(400);
+  check((await p.locator('.cal-range').first().textContent()) === range0, 'vuelve la semana anterior');
+
+  await p.selectOption('#cal-month', '11');
+  await p.waitForTimeout(500);
+  check((await p.locator('.cal-range').first().textContent()).includes('Dec'), 'salta al mes elegido');
+  const yr0 = (await p.locator('.cal-bar .cal-range').nth(1).textContent()).trim();
+  await p.click('[data-year="1"]');
+  await p.waitForTimeout(400);
+  const yr1 = (await p.locator('.cal-bar .cal-range').nth(1).textContent()).trim();
+  check(Number(yr1) === Number(yr0) + 1, `navega de año (${yr0} -> ${yr1})`);
+  await p.click('#cal-today');
+  await p.waitForTimeout(600);
+  check(await p.locator('.day.today').count() === 1, 'el botón Today regresa a la semana actual');
+
+  const chips = await p.locator('.cal-chip').count();
+  check(chips > 0, `el cronograma pinta ${chips} trabajos`);
+  check(await p.locator('.cal-chip.st-assigned .cal-ic').count() > 0, 'los asignados llevan color e icono');
+  const pend = p.locator('.cal-chip.st-pending');
+  if (await pend.count()) check(await pend.first().locator('.cal-ic').count() === 0,
+    'los sin asignar van sin icono');
+  check(await p.locator('.cal-bolt').count() > 0, 'los trabajos con Drop wire llevan rayo');
+  check(await p.locator('.cal-legend .leg').count() === 6, 'la leyenda explica los seis estados');
   await shot(p, 'gm-dash-schedule');
+
+  /* --- New Crew --- */
+  await p.click('[data-nav="crews"]');
+  await p.waitForTimeout(600);
+  const crews0 = await p.locator('.crew-grid > div').count();
+  await p.click('#new-crew');
+  await p.waitForTimeout(500);
+  await p.click('#c-save');
+  await p.waitForTimeout(350);
+  check(await p.locator('.scrim').count() === 1, 'New Crew exige el nombre del líder');
+  await p.fill('#c-leader', 'Marco Salas');
+  await p.fill('#c-email', 'marco@gammatree.com');
+  await p.click('[data-cskill="removal"]');
+  await p.waitForTimeout(200);
+  await p.click('#c-save');
+  await p.waitForTimeout(800);
+  const crews1 = await p.locator('.crew-grid > div').count();
+  check(crews1 === crews0 + 1, `New Crew añade la cuadrilla (${crews0} -> ${crews1})`);
+  check((await p.locator('.crew-grid').textContent()).includes("Marco's Crew"),
+    'la cuadrilla nueva toma el nombre del líder');
+  await shot(p, 'gm-dash-newcrew');
+
+  /* --- Consolidados de vaciados --- */
+  await p.click('[data-nav="dumps"]');
+  await p.waitForTimeout(800);
+  check(await p.locator('.sum').count() === 2, 'hay consolidado diario y mensual');
+  const sums = (await p.locator('.sum-v').allTextContents()).map(Number);
+  check(sums.length === 2 && sums.every(v => !Number.isNaN(v)), `los consolidados totalizan (${sums.join(' / ')})`);
+  check(sums[0] > 0, `el consolidado de hoy no sale vacío (${sums[0]} vaciados)`);
+  check(sums[1] >= sums[0], `el mensual incluye lo del día (${sums[1]} >= ${sums[0]})`);
+  check(await p.locator('.sum-part').count() === 4, 'cada consolidado se desglosa en astillas y troncos');
+  await shot(p, 'gm-dash-dumps');
+
+  /* --- Traducción de notas del campo --- */
+  await p.click('[data-nav="requests"]');
+  await p.waitForTimeout(700);
+  const note = p.locator('.req-card').first().locator('.note-box');
+  const es = await note.textContent();
+  check(/deshilachada|gastados|cascos|aceite/.test(es), 'la nota del líder llega en español');
+  await p.locator('.req-card').first().locator('[data-tr]').click();
+  await p.waitForTimeout(500);
+  const en = await p.locator('.req-card').first().locator('.note-box').textContent();
+  check(en !== es && /frayed|worn|hard hats|bar oil/.test(en), 'el admin la traduce a inglés');
+  check(en.includes('English'), 'la nota queda marcada como traducida');
+  await p.locator('.req-card').first().locator('[data-tr]').click();
+  await p.waitForTimeout(500);
+  check((await p.locator('.req-card').first().locator('.note-box').textContent()) === es,
+    'vuelve al original sin perder nada');
+  await shot(p, 'gm-dash-translate');
   await p.close();
 
   /* ============ APP DE LÍDERES ============ */

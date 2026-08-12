@@ -104,6 +104,30 @@ main{flex:1;min-width:0;padding:30px 34px 70px;}
   box-shadow:inset 0 0 0 1px rgba(6,64,43,.07);}
 .note-box b{color:var(--green);font-weight:600;}
 
+/* Enlace a Google Maps */
+.map-link{
+  display:inline-flex;align-items:center;gap:5px;
+  color:var(--green);font-weight:600;text-decoration:none;
+  border-bottom:1px solid rgba(6,64,43,.28);
+  transition:all .25s var(--ease);
+}
+.map-link:hover{color:var(--green-lit);border-bottom-color:var(--green-lit);}
+.map-link svg{width:13px;height:13px;flex:none;}
+
+/* Traducción de notas del campo */
+.note-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
+.tr-btn{
+  display:inline-flex;align-items:center;gap:5px;flex:none;
+  padding:3px 10px;border-radius:999px;
+  font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;
+  background:rgba(6,64,43,.07);color:var(--green);
+  box-shadow:inset 0 0 0 1px rgba(6,64,43,.14);
+  transition:all .25s var(--ease);
+}
+.tr-btn:hover{background:var(--green);color:#fff;}
+.tr-btn.is-on{background:var(--green);color:#fff;}
+.tr-flag{font-size:9.5px;color:var(--text-faint);font-weight:600;letter-spacing:.1em;text-transform:uppercase;}
+
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
 
 /* Cuadrillas */
@@ -126,21 +150,62 @@ main{flex:1;min-width:0;padding:30px 34px 70px;}
 .stepper button:active{transform:scale(.88);}
 .stepper b{min-width:20px;text-align:center;font-variant-numeric:tabular-nums;}
 
-/* Cronograma */
+/* ============================================================
+   Cronograma: todo el año, en vista semanal
+   ============================================================ */
+.cal-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;padding:12px 15px;}
+.cal-nav{display:flex;align-items:center;gap:4px;}
+.cal-nav button{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
+  background:var(--glass-2);color:var(--green);font-size:15px;
+  box-shadow:inset 0 0 0 1px var(--glass-brd);transition:all .25s var(--ease);}
+.cal-nav button:hover{background:var(--green);color:#fff;}
+.cal-nav button:active{transform:scale(.9);}
+.cal-range{font-weight:700;font-size:var(--t-md);color:var(--green);min-width:210px;}
+.cal-range span{display:block;font-size:10px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--text-faint);}
+.cal-spacer{flex:1;}
+
 .week{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
 .day{padding:12px 11px;border-radius:var(--r-md);min-height:190px;}
+.day.off{opacity:.62;}
 .day-h{margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid rgba(6,64,43,.10);}
 .day-h b{font-weight:600;font-size:10px;text-transform:uppercase;
   letter-spacing:.12em;color:var(--text-faint);display:block;}
 .day-h i{font-weight:700;font-style:normal;font-size:var(--t-xl);}
 .day.today .day-h i{color:var(--green);}
-.cal-chip{padding:8px 9px;border-radius:9px;margin-bottom:7px;cursor:pointer;
-  font-size:10.5px;line-height:1.4;background:var(--glass-2);
+.day.today{box-shadow:inset 0 1px 0 var(--glass-hi),inset 0 0 0 2px var(--green),var(--shadow);}
+
+/* Cada trabajo se colorea por estado; sin asignar va sin color ni icono. */
+.cal-chip{
+  position:relative;display:flex;gap:7px;align-items:flex-start;
+  padding:8px 9px;border-radius:9px;margin-bottom:7px;cursor:pointer;
+  font-size:10.5px;line-height:1.4;
+  background:rgba(255,255,255,.8);
   box-shadow:inset 0 0 0 1px var(--glass-brd);
-  transition:all .3s var(--ease);}
-.cal-chip:hover{background:var(--glass-3);transform:translateX(2px);}
+  border-left:3px solid transparent;
+  transition:all .3s var(--ease);
+}
+.cal-chip:hover{background:#fff;transform:translateX(2px);}
 .cal-chip b{display:block;font-weight:600;margin-bottom:2px;}
-.cal-chip span{font-weight:600;color:var(--text-faint);font-size:9.5px;}
+.cal-chip .cal-sub{font-weight:600;color:var(--text-faint);font-size:9.5px;}
+.cal-ic{flex:none;width:14px;height:14px;margin-top:1px;}
+.cal-ic svg{width:14px;height:14px;display:block;}
+.cal-chip.st-done     {border-left-color:var(--st-done);   background:rgba(6,64,43,.09);}
+.cal-chip.st-done .cal-ic{color:var(--st-done);}
+.cal-chip.st-assigned {border-left-color:#D97A16;          background:rgba(217,122,22,.11);}
+.cal-chip.st-assigned .cal-ic{color:#A2510C;}
+.cal-chip.st-progress {border-left-color:#D97A16;          background:rgba(217,122,22,.11);}
+.cal-chip.st-progress .cal-ic{color:#A2510C;}
+.cal-chip.st-flag     {border-left-color:#C42B1C;          background:rgba(196,43,28,.11);}
+.cal-chip.st-flag .cal-ic{color:#A32014;}
+/* Con rayo, la ficha reserva el hueco: si no, la dirección se le mete debajo. */
+.cal-chip.has-bolt{padding-right:23px;}
+.cal-bolt{position:absolute;top:6px;right:6px;width:12px;height:12px;color:#B85C10;}
+.cal-bolt svg{width:12px;height:12px;display:block;}
+.cal-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px;padding:13px 16px;}
+.leg{display:flex;align-items:center;gap:7px;font-size:var(--t-xs);font-weight:600;color:var(--text-dim);}
+.leg i{width:11px;height:11px;border-radius:3px;flex:none;}
+.leg svg{width:13px;height:13px;}
 
 /* Requerimientos */
 .req-card{padding:16px 18px;border-radius:var(--r-md);border-left:3px solid var(--st-pending);}
@@ -151,8 +216,86 @@ main{flex:1;min-width:0;padding:30px 34px 70px;}
 .empty{padding:44px 22px;text-align:center;color:var(--text-faint);}
 .empty b{display:block;font-weight:700;font-size:var(--t-lg);color:var(--text-dim);margin-bottom:7px;}
 
+/* Consolidados de vaciados */
+.sums{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:15px;margin-bottom:24px;}
+.sum{padding:20px 22px;}
+.sum-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.sum-h b{font-weight:700;font-size:var(--t-lg);color:var(--green);}
+.sum-v{font-weight:700;font-size:var(--t-3xl);line-height:1;font-variant-numeric:tabular-nums;color:var(--green);}
+.sum-split{display:flex;gap:9px;margin-top:14px;}
+.sum-part{flex:1;padding:10px 12px;border-radius:var(--r-sm);background:rgba(6,64,43,.05);
+  box-shadow:inset 0 0 0 1px rgba(6,64,43,.07);}
+.sum-part b{display:block;font-weight:700;font-size:var(--t-xl);font-variant-numeric:tabular-nums;}
+.sum-part span{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.11em;color:var(--text-faint);}
+.sum-crews{margin-top:14px;padding-top:13px;border-top:1px solid rgba(6,64,43,.09);}
+.sum-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0;font-size:var(--t-sm);}
+.sum-row span{color:var(--text-dim);}
+.sum-row b{font-variant-numeric:tabular-nums;}
+
+/* Formularios: checklist múltiple y casillas */
+.check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+.check{
+  display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:var(--r-sm);
+  background:rgba(255,255,255,.8);box-shadow:inset 0 0 0 1px var(--glass-brd);
+  cursor:pointer;font-size:var(--t-sm);font-weight:500;
+  transition:all .25s var(--ease);
+}
+.check:hover{background:#fff;}
+.check.on{background:var(--green-tint);box-shadow:inset 0 0 0 1.5px var(--green);color:var(--green);font-weight:600;}
+.check .box{
+  width:18px;height:18px;border-radius:5px;flex:none;display:grid;place-items:center;
+  background:#fff;box-shadow:inset 0 0 0 1.5px rgba(6,64,43,.25);
+  transition:all .25s var(--ease);
+}
+.check.on .box{background:var(--green);box-shadow:inset 0 0 0 1.5px var(--green);}
+.check .box svg{width:12px;height:12px;color:#fff;opacity:0;transform:scale(.5);
+  transition:all .25s var(--ease);}
+.check.on .box svg{opacity:1;transform:scale(1);}
+.check-wide{width:100%;}
+
+.ro-field{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 15px;border-radius:var(--r-sm);
+  background:rgba(6,64,43,.05);box-shadow:inset 0 0 0 1px rgba(6,64,43,.08);
+  font-size:var(--t-md);
+}
+.ro-field span{font-size:var(--t-xs);font-weight:600;text-transform:uppercase;
+  letter-spacing:.11em;color:var(--text-faint);}
+.ro-field b{font-weight:600;font-variant-numeric:tabular-nums;}
+
+/* Subida de imágenes */
+.up{
+  display:grid;place-items:center;gap:6px;padding:20px 14px;border-radius:var(--r-md);
+  background:rgba(6,64,43,.04);border:1.5px dashed rgba(6,64,43,.24);
+  cursor:pointer;text-align:center;transition:all .25s var(--ease);
+}
+.up:hover{border-color:var(--green);background:rgba(6,64,43,.07);}
+.up b{font-size:var(--t-sm);font-weight:600;color:var(--green);}
+.up span{font-size:var(--t-xs);color:var(--text-faint);}
+.up svg{width:20px;height:20px;color:var(--green);}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.thumb{position:relative;width:74px;height:60px;border-radius:9px;overflow:hidden;
+  box-shadow:inset 0 0 0 1px var(--glass-brd);}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.thumb button{
+  position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;
+  background:rgba(129,20,40,.92);color:#fff;font-size:11px;line-height:1;
+  display:grid;place-items:center;transition:transform .2s var(--ease);
+}
+.thumb button:hover{transform:rotate(90deg) scale(1.1);}
+.photo-row{display:flex;flex-wrap:wrap;gap:9px;margin-top:11px;}
+.photo-row img{width:104px;height:78px;object-fit:cover;border-radius:10px;cursor:pointer;
+  box-shadow:inset 0 0 0 1px var(--glass-brd);transition:transform .3s var(--ease);}
+.photo-row img:hover{transform:scale(1.05);}
 .sketch{width:100%;border-radius:var(--r-sm);margin-top:11px;display:block;
   box-shadow:inset 0 0 0 1px var(--glass-brd);}
+
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.tag{padding:3px 9px;border-radius:999px;font-size:10px;font-weight:600;
+  background:var(--green-tint);color:var(--green);box-shadow:inset 0 0 0 1px rgba(6,64,43,.14);}
+.tag-wire{background:rgba(184,92,16,.13);color:#A2510C;box-shadow:inset 0 0 0 1px rgba(184,92,16,.28);
+  display:inline-flex;align-items:center;gap:4px;}
+.tag-wire svg{width:11px;height:11px;}
 
 @media (max-width:1020px){
   .cols{grid-template-columns:1fr;}
@@ -175,6 +318,7 @@ main{flex:1;min-width:0;padding:30px 34px 70px;}
   main{padding:22px 16px 60px;}
   .page-head h1{font-size:var(--t-2xl);}
   .week{grid-template-columns:1fr;}
+  .cal-range{min-width:0;}
 }
 </style>
 
@@ -183,10 +327,11 @@ main{flex:1;min-width:0;padding:30px 34px 70px;}
 
 <script>
 /*__GLASS_JS__*/
+/*__ES_EN__*/
 
 /* ============================================================
    GAMMA TREE EXPERTS — Operations Dashboard
-   Functional prototype. In-memory data, persisted to localStorage.
+   Prototipo funcional. Datos en memoria, persistidos en localStorage.
    ============================================================ */
 const LOGO = '__LOGO__';
 
@@ -199,18 +344,32 @@ const ICONS = {
   requests:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2z"/><path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16z"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   out:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>',
+  pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+  pencil:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  tick:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  /* Iconos de estado del cronograma */
+  ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
+  thumb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.3a2 2 0 0 0 2-1.7l1.4-9a2 2 0 0 0-2-2.3z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>',
+  warn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  run:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg>',
+  bolt:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>',
 };
 
 const STATUS = {
   pending:'Pending', assigned:'Assigned', progress:'In progress',
   done:'Done', flag:'Needs reassign',
 };
-const JOBS = { removal:'Removal', trim:'Trim', aerial:'Aerial pruning', storm:'Storm damage' };
+/* Tipos de trabajo: ahora se eligen varios por orden. */
+const JOBS = {
+  removal:'Removal', trimming:'Trimming', stump:'Stump',
+  storm:'Storm Damage', catchlogs:'Catch Logs', brush:'Brush',
+};
 const GEAR = { bucket:'Bucket truck', climbing:'Climbing', both:'Bucket + Climbing' };
-/* Catálogo de habilidades que el admin puede asignar a cada cuadrilla. */
 const SKILLS = {
-  removal:'Removal', trim:'Trim', aerial:'Aerial pruning', storm:'Storm damage',
-  stump:'Stump grinding', crane:'Crane work', utility:'Utility clearance', chipping:'Chipping',
+  removal:'Removal', trimming:'Trimming', stump:'Stump', storm:'Storm Damage',
+  catchlogs:'Catch Logs', brush:'Brush', aerial:'Aerial pruning',
+  crane:'Crane work', utility:'Utility clearance',
 };
 const REQ_CAT = {
   rope:'Rope / rigging', tool:'Tool damage', ppe:'Safety gear',
@@ -218,12 +377,31 @@ const REQ_CAT = {
 };
 const REQ_STATUS = { new:'New', ordered:'Ordered', resolved:'Resolved' };
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const MONTHS = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+/* Icono por estado en el cronograma. Sin asignar no lleva icono. */
+const CAL_ICON = { done:'ok', assigned:'thumb', progress:'run', flag:'warn', pending:null };
 
 function uid(p){ return p + '-' + Math.random().toString(36).slice(2,7); }
-function iso(offset){ const d=new Date(); d.setDate(d.getDate()+offset); return d.toISOString().slice(0,10); }
+function esc(s){
+  return String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+/* Fechas: siempre a mediodía, para que el cambio de huso no corra el día. */
+function atNoon(d){ const x=new Date(d); x.setHours(12,0,0,0); return x; }
+function ymd(d){
+  const x=atNoon(d);
+  return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
+}
+function iso(offset){ const d=new Date(); d.setDate(d.getDate()+offset); return ymd(d); }
+function addDays(d,n){ const x=atNoon(d); x.setDate(x.getDate()+n); return x; }
+function mondayOf(d){ const x=atNoon(d); return addDays(x,-((x.getDay()+6)%7)); }
+function parseYmd(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d,12); }
 function fmtDate(s){
-  const d=new Date(s+'T12:00:00');
-  return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  return parseYmd(s).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+function fmtStamp(ms){
+  return new Date(ms).toLocaleString('en-US',
+    {month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
 }
 function ago(ts){
   const m=Math.floor((Date.now()-ts)/60000);
@@ -232,15 +410,19 @@ function ago(ts){
   const h=Math.floor(m/60); if(h<24) return h+'h ago';
   return Math.floor(h/24)+'d ago';
 }
-function esc(s){
-  return String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mapsUrl = (addr) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr);
+function mapLink(addr){
+  return `<a class="map-link" href="${mapsUrl(addr)}" target="_blank" rel="noopener noreferrer"
+     onclick="event.stopPropagation()">${ICONS.pin}<span>${esc(addr)}</span></a>`;
 }
+function jobNames(list){ return (list||[]).map(j=>JOBS[j]).filter(Boolean).join(' · ') || '—'; }
+
 function sampleSketch(){
   return 'data:image/svg+xml;utf8,'+encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="200" viewBox="0 0 360 200">
       <rect width="360" height="200" fill="#F2ECDC"/>
-      <path d="M40,170 L40,80 Q40,55 65,55 Q90,55 90,80 L90,170" fill="none" stroke="#145839" stroke-width="3"/>
-      <circle cx="65" cy="52" r="30" fill="none" stroke="#2D6F4A" stroke-width="3"/>
+      <path d="M40,170 L40,80 Q40,55 65,55 Q90,55 90,80 L90,170" fill="none" stroke="#06402B" stroke-width="3"/>
+      <circle cx="65" cy="52" r="30" fill="none" stroke="#0A5C3E" stroke-width="3"/>
       <line x1="130" y1="40" x2="330" y2="40" stroke="#811428" stroke-width="2.5" stroke-dasharray="7 5"/>
       <text x="130" y="30" font-family="monospace" font-size="12" fill="#811428">POWER LINE</text>
       <path d="M95,60 L125,60" stroke="#A89030" stroke-width="2.5" marker-end="url(#a)"/>
@@ -251,45 +433,70 @@ function sampleSketch(){
     </svg>`);
 }
 
-/* ---------- Datos semilla ---------- */
+/* ---------- Datos semilla ----------
+   Lo que escribe la oficina va en inglés; lo que escriben los líderes va
+   en español, que es el caso real y lo que ejercita la traducción. */
 function seed(){
+  const H = 3600000;
   const crews = [
-    {id:'c1', name:"Eliseo's Crew",  leader:'Eliseo Marín',    email:'eliseo@gammatree.com',   gear:'climbing', members:4, skills:['aerial','trim','storm'],       x:38, y:31},
-    {id:'c2', name:"Ivan's Crew",    leader:'Ivan Delgado',    email:'ivan@gammatree.com',     gear:'bucket',   members:5, skills:['removal','trim','chipping'],    x:22, y:58},
-    {id:'c3', name:"Jose's Crew",    leader:'Jose Ramírez',    email:'jose@gammatree.com',     gear:'both',     members:6, skills:['removal','aerial','storm','crane'], x:61, y:47},
-    {id:'c4', name:"Baltazar's Crew",leader:'Baltazar Ortega', email:'baltazar@gammatree.com', gear:'bucket',   members:4, skills:['removal','stump'],              x:74, y:70},
-    {id:'c5', name:"Ron's Crew",     leader:'Ron Whitaker',    email:'ron@gammatree.com',      gear:'climbing', members:3, skills:['aerial','trim','utility'],      x:47, y:79},
+    {id:'c1', name:"Eliseo's Crew",  leader:'Eliseo Marín',    email:'eliseo@gammatree.com',   gear:'climbing', members:4, skills:['aerial','trimming','storm'],           x:38, y:31},
+    {id:'c2', name:"Ivan's Crew",    leader:'Ivan Delgado',    email:'ivan@gammatree.com',     gear:'bucket',   members:5, skills:['removal','trimming','brush'],           x:22, y:58},
+    {id:'c3', name:"Jose's Crew",    leader:'Jose Ramírez',    email:'jose@gammatree.com',     gear:'both',     members:6, skills:['removal','aerial','storm','crane'],     x:61, y:47},
+    {id:'c4', name:"Baltazar's Crew",leader:'Baltazar Ortega', email:'baltazar@gammatree.com', gear:'bucket',   members:4, skills:['removal','stump','catchlogs'],          x:74, y:70},
+    {id:'c5', name:"Ron's Crew",     leader:'Ron Whitaker',    email:'ron@gammatree.com',      gear:'climbing', members:3, skills:['aerial','trimming','utility'],          x:47, y:79},
   ];
+  const mk = (o) => ({photos:[], sketch:null, dropWire:false, ...o});
   const orders = [
-    {id:uid('WO'), address:'412 Frank Scott Pkwy, Belleville, IL', date:iso(0), job:'removal', gear:'bucket',   notes:'Remove dead oak next to the garage. Client wants the wood stacked.', status:'progress', crew:'c2', sketch:null},
-    {id:uid('WO'), address:'22 Fossil Ridge Dr, Swansea, IL',      date:iso(0), job:'aerial',  gear:'climbing', notes:'High canopy pruning, power line nearby — coordinate with Ameren.',    status:'assigned', crew:'c1', sketch:sampleSketch()},
-    {id:uid('WO'), address:'890 S Illinois St, Belleville, IL',    date:iso(0), job:'trim',    gear:'bucket',   notes:'Trim branches overhanging the roof.',                                status:'pending',  crew:null, sketch:null},
-    {id:uid('WO'), address:'340 Longacre Dr, O’Fallon, IL',   date:iso(0), job:'removal', gear:'bucket',   notes:'Stump too close to gas line — needs a crew with utility clearance.', status:'flag',     crew:'c4', sketch:null, flagReason:'Stump too close to the gas line, needs a different crew.'},
-    {id:uid('WO'), address:'1345 Main St, O’Fallon, IL',      date:iso(1), job:'storm',   gear:'both',     notes:'Tree down on fence after storm. High priority.',                     status:'pending',  crew:null, sketch:null},
-    {id:uid('WO'), address:'77 Green Mount Rd, Shiloh, IL',        date:iso(1), job:'removal', gear:'bucket',   notes:'Remove 2 dead pines by the driveway.',                               status:'assigned', crew:'c3', sketch:null},
-    {id:uid('WO'), address:'560 Carlyle Ave, Belleville, IL',      date:iso(2), job:'trim',    gear:'climbing', notes:'Decorative pruning, backyard.',                                      status:'done',     crew:'c1', sketch:null},
-    {id:uid('WO'), address:'901 N 4th St, Millstadt, IL',          date:iso(3), job:'aerial',  gear:'climbing', notes:'High pruning near a phone line.',                                    status:'pending',  crew:null, sketch:null},
+    mk({id:uid('WO'), address:'412 Frank Scott Pkwy, Belleville, IL', createdAt:Date.now()-30*H, date:iso(0), jobs:['removal','catchlogs'], gear:'bucket',   notes:'Remove dead oak next to the garage. Client wants the wood stacked.', status:'progress', crew:'c2'}),
+    mk({id:uid('WO'), address:'22 Fossil Ridge Dr, Swansea, IL',      createdAt:Date.now()-26*H, date:iso(0), jobs:['trimming'],            gear:'climbing', notes:'High canopy pruning, power line nearby — coordinate with Ameren.',    status:'assigned', crew:'c1', sketch:sampleSketch(), dropWire:true}),
+    mk({id:uid('WO'), address:'890 S Illinois St, Belleville, IL',    createdAt:Date.now()-20*H, date:iso(0), jobs:['trimming','brush'],    gear:'bucket',   notes:'Trim branches overhanging the roof.',                                status:'pending',  crew:null}),
+    mk({id:uid('WO'), address:'340 Longacre Dr, O’Fallon, IL',        createdAt:Date.now()-44*H, date:iso(0), jobs:['removal','stump'],     gear:'bucket',   notes:'Stump grinding next to the meter — check clearances first.',         status:'flag',     crew:'c4',
+        flagReason:'El tocón está muy cerca de la línea de gas, se necesita otra cuadrilla con permiso de servicios.'}),
+    mk({id:uid('WO'), address:'1345 Main St, O’Fallon, IL',           createdAt:Date.now()-8*H,  date:iso(1), jobs:['storm','catchlogs'],   gear:'both',     notes:'Tree down on fence after storm. High priority.',                     status:'pending',  crew:null, dropWire:true}),
+    mk({id:uid('WO'), address:'77 Green Mount Rd, Shiloh, IL',        createdAt:Date.now()-12*H, date:iso(1), jobs:['removal'],             gear:'bucket',   notes:'Remove 2 dead pines by the driveway.',                               status:'assigned', crew:'c3'}),
+    mk({id:uid('WO'), address:'560 Carlyle Ave, Belleville, IL',      createdAt:Date.now()-52*H, date:iso(2), jobs:['trimming'],            gear:'climbing', notes:'Decorative pruning, backyard.',                                      status:'done',     crew:'c1'}),
+    mk({id:uid('WO'), address:'901 N 4th St, Millstadt, IL',          createdAt:Date.now()-6*H,  date:iso(3), jobs:['brush','stump'],       gear:'climbing', notes:'High pruning near a phone line.',                                    status:'pending',  crew:null}),
+    mk({id:uid('WO'), address:'25 Lebanon Ave, Belleville, IL',       createdAt:Date.now()-70*H, date:iso(-2),jobs:['removal'],             gear:'bucket',   notes:'Large silver maple removal, tight access.',                          status:'done',     crew:'c3'}),
+    mk({id:uid('WO'), address:'610 W Highway 50, O’Fallon, IL',       createdAt:Date.now()-4*H,  date:iso(6), jobs:['catchlogs','brush'],   gear:'both',     notes:'Cleanup after the storm route.',                                     status:'assigned', crew:'c5'}),
   ];
+  // Anclados a horas concretas y no a "hace N horas": si no, una corrida
+  // de madrugada empuja los de hoy al día anterior y el consolidado sale en cero.
+  const dayAt = (off,h,m=0)=>{ const d=new Date(); d.setDate(d.getDate()+off); d.setHours(h,m,0,0); return d.getTime(); };
+  // Días de este mismo mes, recortados para no caer en el futuro.
+  const monthAt = (day,h)=>{ const n=new Date();
+    return new Date(n.getFullYear(), n.getMonth(), Math.min(day, n.getDate()), h, 0).getTime(); };
   const dumps = [
-    {id:uid('DR'), crew:'c1', location:'Frank Scott Dump Site',  type:'chips', notes:'Partial load, brush + branches.',   at:Date.now()-1000*60*95},
-    {id:uid('DR'), crew:'c2', location:'Belleville Rd Dump Site', type:'logs',  notes:'Full load, mostly trunk sections.', at:Date.now()-1000*60*260},
-    {id:uid('DR'), crew:'c3', location:'Shiloh Transfer Yard',    type:'chips', notes:'Two loads back to back.',           at:Date.now()-1000*60*640},
+    {id:uid('DR'), crew:'c1', location:'Frank Scott Dump Site',   type:'chips', notes:'Carga parcial, maleza y ramas.',                  at:dayAt(0,8,20)},
+    {id:uid('DR'), crew:'c2', location:'Belleville Rd Dump Site', type:'logs',  notes:'Carga completa, casi todo secciones de tronco.',  at:dayAt(0,11,45)},
+    {id:uid('DR'), crew:'c3', location:'Shiloh Transfer Yard',    type:'chips', notes:'Dos cargas seguidas.',                            at:dayAt(0,14,10)},
+    {id:uid('DR'), crew:'c1', location:'Frank Scott Dump Site',   type:'logs',  notes:'Segunda vuelta del día.',                         at:dayAt(-1,9,30)},
+    {id:uid('DR'), crew:'c4', location:'Millstadt Yard',          type:'chips', notes:'Solo astillas.',                                  at:dayAt(-1,15,5)},
+    {id:uid('DR'), crew:'c5', location:'Shiloh Transfer Yard',    type:'logs',  notes:'Troncos grandes.',                                at:monthAt(3,10)},
+    {id:uid('DR'), crew:'c2', location:'Belleville Rd Dump Site', type:'chips', notes:'Ruta de maleza del barrio.',                      at:monthAt(6,13)},
+    {id:uid('DR'), crew:'c3', location:'Millstadt Yard',          type:'logs',  notes:'Roble grande, dos viajes.',                       at:monthAt(9,16)},
   ];
   const requests = [
-    {id:uid('RQ'), crew:'c1', cat:'rope', urgency:'urgent', note:'Climbing line is frayed near the splice — need a 150ft replacement before Thursday.', at:Date.now()-1000*60*42,  status:'new'},
-    {id:uid('RQ'), crew:'c4', cat:'tool', urgency:'normal', note:'Stump grinder teeth are worn down, cutting slow. Needs a new set.',                   at:Date.now()-1000*60*180, status:'new'},
-    {id:uid('RQ'), crew:'c2', cat:'ppe',  urgency:'normal', note:'Two new hard hats and a pair of chainsaw chaps, size L.',                             at:Date.now()-1000*60*400, status:'ordered'},
-    {id:uid('RQ'), crew:'c5', cat:'fuel', urgency:'low',    note:'Running low on bar oil, about two jugs left.',                                        at:Date.now()-1000*60*900, status:'resolved'},
+    {id:uid('RQ'), crew:'c1', cat:'rope', urgency:'urgent', at:Date.now()-.7*H,  status:'new',
+     note:'La línea de escalada está deshilachada cerca del empalme, necesito un repuesto de 45 metros antes del jueves.'},
+    {id:uid('RQ'), crew:'c4', cat:'tool', urgency:'normal', at:Date.now()-3*H,   status:'new',
+     note:'Los dientes del triturador de tocones están gastados, corta muy lento. Necesita un juego nuevo.'},
+    {id:uid('RQ'), crew:'c2', cat:'ppe',  urgency:'normal', at:Date.now()-6.6*H, status:'ordered',
+     note:'Dos cascos nuevos y un par de zahones de motosierra, talla L.'},
+    {id:uid('RQ'), crew:'c5', cat:'fuel', urgency:'low',    at:Date.now()-15*H,  status:'resolved',
+     note:'Se está acabando el aceite de barra, quedan como dos garrafas.'},
   ];
   return { crews, orders, dumps, requests };
 }
 
 const state = {
   loggedIn:false, view:'overview', modal:null, filter:'all',
+  weekStart: mondayOf(new Date()),
+  translated: {},          // id de nota -> mostrando inglés
+  draft: null,             // formulario de orden en curso
+  crewDraft: null,         // formulario de cuadrilla en curso
   ...load('admin', seed()),
 };
-/* Los envíos de la app de líderes viven en claves propias: si el navegador
-   sirve ambos prototipos desde el mismo origen, aparecen aquí solos. */
+
 function syncFromCrewApp(){
   const inbox = load('inbox', null);
   if(!inbox) return;
@@ -299,14 +506,14 @@ function syncFromCrewApp(){
   if(added) persist();
 }
 function persist(){
-  save('admin', {crews:state.crews, orders:state.orders, dumps:state.dumps, requests:state.requests});
+  const ok = save('admin', {crews:state.crews, orders:state.orders, dumps:state.dumps, requests:state.requests});
+  if(!ok) toast('Storage is full — remove some photos to keep saving','warn');
 }
 
-/* ---------- Consultas ---------- */
 const crewById = (id) => state.crews.find(c=>c.id===id);
 const crewName = (id) => crewById(id)?.name ?? '— Unassigned —';
 const newRequests = () => state.requests.filter(r=>r.status==='new').length;
-const initials = (s) => s.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+const initials = (s) => s.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
 
 /* ============================================================
    Render
@@ -397,15 +604,31 @@ function renderView(){
   }
 }
 
+/* ---------- Nota del campo con traducción ----------
+   El líder escribe en español; el admin puede ver la versión en inglés
+   sin perder el original. */
+function fieldNote(id, text, label){
+  const on = !!state.translated[id];
+  const body = on ? toEnglish(text) : text;
+  return `
+  <div class="note-box">
+    <div class="note-head">
+      <span class="tr-flag">${label} · ${on?'English':'Español'}</span>
+      <button class="tr-btn ${on?'is-on':''}" data-tr="${id}">${on?'Original':'Translate'}</button>
+    </div>
+    ${esc(body)}
+  </div>`;
+}
+
 /* ---------- Resumen ---------- */
 function viewOverview(){
   const today = state.orders.filter(o=>o.date===iso(0));
   const kpis = [
-    ['Jobs today',        today.length,                                        'var(--green)'],
-    ['Crews deployed',    new Set(today.filter(o=>o.crew).map(o=>o.crew)).size,'var(--gold-deep)'],
-    ['Unassigned',        state.orders.filter(o=>o.status==='pending').length, 'var(--st-pending)'],
-    ['Completed today',   today.filter(o=>o.status==='done').length,           'var(--st-done)'],
-    ['Open requests',     newRequests(),                                       'var(--st-flag)'],
+    ['Jobs today',      today.length,                                         'var(--green)'],
+    ['Crews deployed',  new Set(today.filter(o=>o.crew).map(o=>o.crew)).size, 'var(--gold-deep)'],
+    ['Unassigned',      state.orders.filter(o=>o.status==='pending').length,  'var(--st-pending)'],
+    ['Completed today', today.filter(o=>o.status==='done').length,            'var(--st-done)'],
+    ['Open requests',   newRequests(),                                        'var(--st-flag)'],
   ];
   return `
   <div class="page-head reveal">
@@ -438,24 +661,20 @@ function viewOverview(){
     <div class="glass glass-tile reveal">
       <div class="tile-head"><h2>Today's orders</h2><span class="eyebrow">${today.length} total</span></div>
       <div class="stack">
-        ${today.length? today.map(o=>orderRow(o)).join('') : emptyState('Nothing scheduled','No work orders on the board for today.')}
+        ${today.length? today.map(o=>`
+          <div class="glass glass-tile is-clickable row-card" data-order="${o.id}">
+            <div class="row-top">
+              <h3>${esc(o.address)}</h3>
+              <span class="pill pill-${o.status}">${STATUS[o.status]}</span>
+            </div>
+            <div class="meta">
+              <span>${jobNames(o.jobs)}</span><span class="dot">·</span>
+              <span>${esc(crewName(o.crew))}</span>
+              ${o.dropWire?'<span class="dot">·</span><span style="color:#A2510C">Drop wire</span>':''}
+            </div>
+          </div>`).join('')
+        : emptyState('Nothing scheduled','No work orders on the board for today.')}
       </div>
-    </div>
-  </div>`;
-}
-
-function orderRow(o){
-  return `
-  <div class="glass glass-tile is-clickable row-card" data-order="${o.id}">
-    <div class="row-top">
-      <h3>${esc(o.address)}</h3>
-      <span class="pill pill-${o.status}">${STATUS[o.status]}</span>
-    </div>
-    <div class="meta">
-      <span>${JOBS[o.job]}</span><span class="dot">·</span>
-      <span>${GEAR[o.gear]}</span><span class="dot">·</span>
-      <span>${esc(crewName(o.crew))}</span>
-      ${o.sketch?'<span class="dot">·</span><span>&#9639; sketch</span>':''}
     </div>
   </div>`;
 }
@@ -483,61 +702,122 @@ function viewOrders(){
     ${list.length? list.map((o,i)=>`
       <div class="glass glass-tile row-card reveal" style="--i:${i}">
         <div class="row-top">
-          <h3>${esc(o.address)}</h3>
+          <h3>${mapLink(o.address)}</h3>
           <span class="pill pill-${o.status}">${STATUS[o.status]}</span>
         </div>
         <div class="meta">
-          <span>${fmtDate(o.date)}</span><span class="dot">·</span>
-          <span>${JOBS[o.job]}</span><span class="dot">·</span>
+          <span>Opened ${fmtStamp(o.createdAt)}</span><span class="dot">·</span>
+          <span>Scheduled ${fmtDate(o.date)}</span><span class="dot">·</span>
           <span>${GEAR[o.gear]}</span>
         </div>
-        ${o.notes?`<div class="note-box">${esc(o.notes)}</div>`:''}
-        ${o.flagReason?`<div class="note-box" style="border-left:3px solid var(--st-flag)"><b>Crew flagged:</b> ${esc(o.flagReason)}</div>`:''}
-        <div class="crew-line" style="margin-top:13px;border-top-color:rgba(6,64,43,.10)">
+        <div class="tag-row">
+          ${(o.jobs||[]).map(j=>`<span class="tag">${JOBS[j]}</span>`).join('')}
+          ${o.dropWire?`<span class="tag tag-wire">${ICONS.bolt}Drop wire required</span>`:''}
+        </div>
+        ${o.notes?`<div class="note-box"><b>Instructions</b><br>${esc(o.notes)}</div>`:''}
+        ${o.flagReason?fieldNote('fl-'+o.id, o.flagReason, 'Crew flagged'):''}
+        ${(o.photos||[]).length?`<div class="photo-row">${o.photos.map(p=>`<img src="${p}" alt="Job photo" data-zoom="${p}">`).join('')}</div>`:''}
+        ${o.sketch?`<img class="sketch" src="${o.sketch}" alt="Job sketch">`:''}
+        <div class="crew-line" style="margin-top:13px">
           <span>Crew</span>
           <select class="input" data-assign="${o.id}" style="width:auto;min-width:190px;padding:8px 38px 8px 12px;font-size:12.5px;">
             <option value="">— Unassigned —</option>
             ${state.crews.map(c=>`<option value="${c.id}" ${o.crew===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
           </select>
         </div>
-        ${o.sketch?`<img class="sketch" src="${o.sketch}" alt="Job sketch">`:''}
+        <div class="crew-line">
+          <span>Scheduled date</span>
+          <input class="input" type="date" data-resched="${o.id}" value="${o.date}"
+                 style="width:auto;padding:8px 12px;font-size:12.5px;">
+        </div>
       </div>`).join('')
     : emptyState('No orders here','Nothing matches this filter right now.')}
   </div>`;
 }
 
-/* ---------- Cronograma ---------- */
+/* ---------- Cronograma: año completo, vista semanal ---------- */
 function viewSchedule(){
+  const start = state.weekStart;
+  const end = addDays(start,6);
+  const sameMonth = start.getMonth()===end.getMonth();
+  const range = sameMonth
+    ? `${MONTHS[start.getMonth()].slice(0,3)} ${start.getDate()} – ${end.getDate()}, ${end.getFullYear()}`
+    : `${MONTHS[start.getMonth()].slice(0,3)} ${start.getDate()} – ${MONTHS[end.getMonth()].slice(0,3)} ${end.getDate()}, ${end.getFullYear()}`;
+  const todayY = ymd(new Date());
+
   return `
   <div class="page-head reveal">
-    <div class="eyebrow">Next 7 days</div>
+    <div class="eyebrow">Full year · shown one week at a time</div>
     <h1>Schedule</h1>
-    <div class="sub">Click any job to open it.</div>
+    <div class="sub">Jump to any month, step through weeks, click a job to open it.</div>
   </div>
+
+  <div class="glass cal-bar reveal">
+    <div class="cal-nav">
+      <button data-week="-1" title="Previous week" aria-label="Previous week">&lsaquo;</button>
+      <button data-week="1" title="Next week" aria-label="Next week">&rsaquo;</button>
+    </div>
+    <div class="cal-range"><span>Week of</span>${range}</div>
+    <div class="cal-spacer"></div>
+    <select class="input" id="cal-month" style="width:auto;padding:9px 38px 9px 13px;font-size:13px;">
+      ${MONTHS.map((m,i)=>`<option value="${i}" ${start.getMonth()===i?'selected':''}>${m}</option>`).join('')}
+    </select>
+    <div class="cal-nav">
+      <button data-year="-1" title="Previous year" aria-label="Previous year">&lsaquo;</button>
+      <div class="cal-range" style="min-width:0;padding:0 4px">${start.getFullYear()}</div>
+      <button data-year="1" title="Next year" aria-label="Next year">&rsaquo;</button>
+    </div>
+    <button class="btn btn-glass btn-sm" id="cal-today">Today</button>
+  </div>
+
   <div class="week">
     ${Array.from({length:7},(_,i)=>{
-      const d=iso(i), jobs=state.orders.filter(o=>o.date===d);
-      const dt=new Date(d+'T12:00:00');
+      const d = addDays(start,i), key = ymd(d);
+      const jobs = state.orders.filter(o=>o.date===key);
+      const isToday = key===todayY;
+      const offMonth = d.getMonth()!==start.getMonth();
       return `
-      <div class="glass glass-tile day reveal ${i===0?'today':''}" style="--i:${i}">
-        <div class="day-h"><b>${DAYS[(dt.getDay()+6)%7]}</b><i>${dt.getDate()}</i></div>
-        ${jobs.map(o=>`
-          <div class="cal-chip" data-order="${o.id}">
-            <b>${esc(o.address.split(',')[0])}</b>
-            <span>${JOBS[o.job]}</span>
-          </div>`).join('') || '<div class="eyebrow" style="opacity:.5">Clear</div>'}
+      <div class="glass glass-tile day reveal ${isToday?'today':''} ${offMonth?'off':''}" style="--i:${i}">
+        <div class="day-h">
+          <b>${DAYS[i]}${offMonth?' · '+MONTHS[d.getMonth()].slice(0,3):''}</b>
+          <i>${d.getDate()}</i>
+        </div>
+        ${jobs.map(o=>{
+          const ic = CAL_ICON[o.status];
+          return `
+          <div class="cal-chip st-${o.status} ${o.dropWire?'has-bolt':''}" data-order="${o.id}">
+            ${ic?`<span class="cal-ic">${ICONS[ic]}</span>`:''}
+            <span style="min-width:0">
+              <b>${esc(o.address.split(',')[0])}</b>
+              <span class="cal-sub">${jobNames(o.jobs)}</span>
+            </span>
+            ${o.dropWire?`<span class="cal-bolt" title="Drop wire required">${ICONS.bolt}</span>`:''}
+          </div>`;
+        }).join('') || '<div class="eyebrow" style="opacity:.5">Clear</div>'}
       </div>`;
     }).join('')}
+  </div>
+
+  <div class="glass cal-legend reveal">
+    <div class="leg"><span class="cal-ic" style="color:var(--st-done)">${ICONS.ok}</span> Done</div>
+    <div class="leg"><span class="cal-ic" style="color:#A2510C">${ICONS.thumb}</span> Assigned</div>
+    <div class="leg"><span class="cal-ic" style="color:#A2510C">${ICONS.run}</span> In progress</div>
+    <div class="leg"><span class="cal-ic" style="color:#A32014">${ICONS.warn}</span> Needs reassign</div>
+    <div class="leg"><i style="background:rgba(255,255,255,.9);box-shadow:inset 0 0 0 1px var(--glass-brd)"></i> Unassigned</div>
+    <div class="leg"><span class="cal-ic" style="color:#B85C10">${ICONS.bolt}</span> Drop wire required</div>
   </div>`;
 }
 
-/* ---------- Cuadrillas (habilidades editables) ---------- */
+/* ---------- Cuadrillas ---------- */
 function viewCrews(){
   return `
-  <div class="page-head reveal">
-    <div class="eyebrow">Field teams</div>
-    <h1>Crews</h1>
-    <div class="sub">Skills drive which jobs a crew can be assigned — edit them inline.</div>
+  <div class="page-head head-row reveal">
+    <div>
+      <div class="eyebrow">Field teams</div>
+      <h1>Crews</h1>
+      <div class="sub">Skills drive which jobs a crew can take — edit them inline.</div>
+    </div>
+    <button class="btn btn-primary" id="new-crew">${ICONS.plus}<span>New crew</span></button>
   </div>
   <div class="crew-grid">
     ${state.crews.map((c,i)=>{
@@ -567,9 +847,7 @@ function viewCrews(){
             <button data-members="${c.id}" data-delta="1" aria-label="Add member">+</button>
           </div>
         </div>
-        <div class="crew-line">
-          <span>Open jobs</span><b class="num">${open}</b>
-        </div>
+        <div class="crew-line"><span>Open jobs</span><b class="num">${open}</b></div>
 
         <div class="skills-box">
           <span class="eyebrow">Skills</span>
@@ -587,15 +865,52 @@ function viewCrews(){
   </div>`;
 }
 
-/* ---------- Vaciados ---------- */
+/* ---------- Vaciados, con consolidados ---------- */
 function viewDumps(){
+  const now = new Date();
+  const todayKey = ymd(now);
+  const mStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0).getTime();
+  const mEnd   = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59).getTime();
+
+  const ofToday = state.dumps.filter(d=>ymd(new Date(d.at))===todayKey);
+  const ofMonth = state.dumps.filter(d=>d.at>=mStart && d.at<=mEnd);
+  const byType  = (arr,t)=>arr.filter(d=>d.type===t).length;
+  const byCrew  = (arr)=>state.crews
+    .map(c=>({name:c.name, n:arr.filter(d=>d.crew===c.id).length}))
+    .filter(r=>r.n>0).sort((a,b)=>b.n-a.n);
+
+  const sumTile = (title, sub, arr, i) => `
+    <div class="glass glass-tile sum reveal" style="--i:${i}">
+      <div class="sum-h">
+        <div><b>${title}</b><div class="eyebrow" style="margin-top:3px">${sub}</div></div>
+        <div class="sum-v num" data-count="${arr.length}">0</div>
+      </div>
+      <div class="sum-split">
+        <div class="sum-part"><b class="num">${byType(arr,'chips')}</b><span>Chips</span></div>
+        <div class="sum-part"><b class="num">${byType(arr,'logs')}</b><span>Logs</span></div>
+      </div>
+      ${byCrew(arr).length?`
+        <div class="sum-crews">
+          ${byCrew(arr).map(r=>`<div class="sum-row"><span>${esc(r.name)}</span><b>${r.n}</b></div>`).join('')}
+        </div>`:''}
+    </div>`;
+
   const list=[...state.dumps].sort((a,b)=>b.at-a.at);
   return `
   <div class="page-head reveal">
     <div class="eyebrow">Reported from the field</div>
     <h1>Dump reports</h1>
-    <div class="sub">Crews log every load they drop from the app.</div>
+    <div class="sub">Every load the crews drop, totalled by day and by month.</div>
   </div>
+
+  <div class="sums">
+    ${sumTile('Today', now.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}), ofToday, 0)}
+    ${sumTile('This month',
+      `${MONTHS[now.getMonth()]} 1 – ${new Date(now.getFullYear(),now.getMonth()+1,0).getDate()}, ${now.getFullYear()}`,
+      ofMonth, 1)}
+  </div>
+
+  <div class="divider-head eyebrow reveal" style="margin-bottom:12px">All reports</div>
   <div class="stack">
     ${list.length? list.map((d,i)=>`
       <div class="glass glass-tile row-card reveal" style="--i:${i}">
@@ -605,9 +920,10 @@ function viewDumps(){
         </div>
         <div class="meta">
           <span>${esc(crewName(d.crew))}</span><span class="dot">·</span>
-          <span>${ago(d.at)}</span>
+          <span>${ago(d.at)}</span><span class="dot">·</span>
+          <span>${fmtStamp(d.at)}</span>
         </div>
-        ${d.notes?`<div class="note-box">${esc(d.notes)}</div>`:''}
+        ${d.notes?fieldNote('dp-'+d.id, d.notes, 'Crew note'):''}
       </div>`).join('')
     : emptyState('No dumps logged','Reports from the crew app will land here.')}
   </div>`;
@@ -634,7 +950,7 @@ function viewRequests(){
           <span>${r.urgency==='urgent'?'&#9650; Urgent':r.urgency==='normal'?'Normal':'Low'}</span>
           <span class="dot">·</span><span>${ago(r.at)}</span>
         </div>
-        <div class="note-box">${esc(r.note)}</div>
+        ${fieldNote('rq-'+r.id, r.note, 'Crew request')}
         <div class="req-actions">
           ${r.status==='new'?`<button class="btn btn-primary btn-sm" data-req="${r.id}" data-to="ordered">Mark ordered</button>`:''}
           ${r.status!=='resolved'?`<button class="btn btn-glass btn-sm" data-req="${r.id}" data-to="resolved">Mark resolved</button>`:''}
@@ -655,9 +971,14 @@ function renderModal(){
   if(m.type==='newOrder')  return modalNewOrder();
   if(m.type==='viewOrder') return modalViewOrder(state.orders.find(o=>o.id===m.id));
   if(m.type==='addSkill')  return modalAddSkill(crewById(m.id));
+  if(m.type==='newCrew')   return modalNewCrew();
+  if(m.type==='zoom')      return `<div class="scrim" data-close><img src="${m.src}" alt=""
+      style="max-width:92vw;max-height:88vh;border-radius:var(--r-md);box-shadow:var(--shadow-lift)"></div>`;
   return '';
 }
+
 function modalNewOrder(){
+  const d = state.draft;
   return `
   <div class="scrim" data-close>
     <div class="modal glass">
@@ -665,27 +986,77 @@ function modalNewOrder(){
         <div><div class="eyebrow">Dispatch</div><h2 style="font-size:var(--t-xl)">New work order</h2></div>
         <button class="icon-btn" data-close aria-label="Close">&times;</button>
       </div>
+
+      <div class="field">
+        <label>Opened</label>
+        <div class="ro-field"><span>Set automatically</span><b>${fmtStamp(d.createdAt)}</b></div>
+      </div>
+
       <div class="field"><label for="f-addr">Address</label>
-        <input id="f-addr" class="input" placeholder="123 Main St, Belleville, IL"></div>
-      <div style="display:flex;gap:11px;flex-wrap:wrap">
-        <div class="field" style="flex:1;min-width:150px"><label for="f-date">Date</label>
-          <input id="f-date" class="input" type="date" value="${iso(0)}"></div>
-        <div class="field" style="flex:1;min-width:150px"><label for="f-job">Job type</label>
-          <select id="f-job" class="input">${Object.entries(JOBS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+        <input id="f-addr" class="input" placeholder="123 Main St, Belleville, IL" value="${esc(d.address)}">
+        <div class="eyebrow" style="margin-top:6px;text-transform:none;letter-spacing:0;font-size:11px">
+          Opens in Google Maps from the order and from the crew's app.
+        </div>
       </div>
+
       <div style="display:flex;gap:11px;flex-wrap:wrap">
-        <div class="field" style="flex:1;min-width:150px"><label for="f-gear">Equipment</label>
-          <select id="f-gear" class="input">${Object.entries(GEAR).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
-        <div class="field" style="flex:1;min-width:150px"><label for="f-crew">Assign crew</label>
-          <select id="f-crew" class="input"><option value="">— Unassigned —</option>
-            ${state.crews.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+        <div class="field" style="flex:1;min-width:160px"><label for="f-date">Scheduled date</label>
+          <input id="f-date" class="input" type="date" value="${d.date}"></div>
+        <div class="field" style="flex:1;min-width:160px"><label for="f-gear">Equipment</label>
+          <select id="f-gear" class="input">${Object.entries(GEAR).map(([k,v])=>`<option value="${k}" ${d.gear===k?'selected':''}>${v}</option>`).join('')}</select></div>
       </div>
+
+      <div class="field">
+        <label>Job type — pick all that apply</label>
+        <div class="check-grid">
+          ${Object.entries(JOBS).map(([k,v])=>`
+            <button type="button" class="check ${d.jobs.includes(k)?'on':''}" data-job="${k}">
+              <span class="box">${ICONS.tick}</span><span>${v}</span>
+            </button>`).join('')}
+        </div>
+      </div>
+
+      <div class="field">
+        <button type="button" class="check check-wide ${d.dropWire?'on':''}" data-wire>
+          <span class="box">${ICONS.tick}</span>
+          <span>Drop wire required <span style="opacity:.7">— power line must be dropped</span></span>
+        </button>
+      </div>
+
+      <div class="field"><label for="f-crew">Assign crew</label>
+        <select id="f-crew" class="input"><option value="">— Unassigned —</option>
+          ${state.crews.map(c=>`<option value="${c.id}" ${d.crew===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+
       <div class="field"><label for="f-notes">Instructions</label>
-        <textarea id="f-notes" class="input" placeholder="What the crew needs to know on site."></textarea></div>
+        <textarea id="f-notes" class="input" placeholder="What the crew needs to know on site.">${esc(d.notes)}</textarea></div>
+
+      <div class="field">
+        <label>Job photos</label>
+        <label class="up" for="f-photos">
+          ${ICONS.camera}<b>Add photos of the job</b>
+          <span>Camera or gallery · you can pick several</span>
+        </label>
+        <input type="file" id="f-photos" accept="image/*" capture="environment" multiple style="display:none">
+        ${d.photos.length?`<div class="thumbs">${d.photos.map((p,i)=>`
+          <div class="thumb"><img src="${p}" alt=""><button data-rmphoto="${i}" aria-label="Remove photo">&times;</button></div>`).join('')}</div>`:''}
+      </div>
+
+      <div class="field">
+        <label>Sketch</label>
+        <label class="up" for="f-sketch">
+          ${ICONS.pencil}<b>Upload the job sketch</b>
+          <span>Camera or gallery · the drawing that explains the work</span>
+        </label>
+        <input type="file" id="f-sketch" accept="image/*" capture="environment" style="display:none">
+        ${d.sketch?`<div class="thumbs"><div class="thumb" style="width:110px;height:76px">
+          <img src="${d.sketch}" alt=""><button data-rmsketch aria-label="Remove sketch">&times;</button></div></div>`:''}
+      </div>
+
       <button class="btn btn-primary" id="f-save" style="width:100%">Create order</button>
     </div>
   </div>`;
 }
+
 function modalViewOrder(o){
   if(!o) return '';
   return `
@@ -693,23 +1064,30 @@ function modalViewOrder(o){
     <div class="modal glass">
       <div class="modal-head">
         <div>
-          <div class="eyebrow">${fmtDate(o.date)}</div>
+          <div class="eyebrow">Scheduled ${fmtDate(o.date)}</div>
           <h2 style="font-size:var(--t-xl)">${esc(o.address)}</h2>
+          <div style="margin-top:7px">${mapLink(o.address)}</div>
         </div>
         <button class="icon-btn" data-close aria-label="Close">&times;</button>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
         <span class="pill pill-${o.status}">${STATUS[o.status]}</span>
-        <span class="chip">${JOBS[o.job]}</span>
         <span class="chip">${GEAR[o.gear]}</span>
       </div>
+      <div class="tag-row" style="margin-bottom:14px">
+        ${(o.jobs||[]).map(j=>`<span class="tag">${JOBS[j]}</span>`).join('')}
+        ${o.dropWire?`<span class="tag tag-wire">${ICONS.bolt}Drop wire required</span>`:''}
+      </div>
+      <div class="ro-field" style="margin-bottom:11px"><span>Opened</span><b>${fmtStamp(o.createdAt)}</b></div>
       <div class="crew-line" style="border-top:none"><span>Crew</span><b>${esc(crewName(o.crew))}</b></div>
       ${o.notes?`<div class="note-box" style="margin-top:13px"><b>Instructions</b><br>${esc(o.notes)}</div>`:''}
-      ${o.flagReason?`<div class="note-box" style="margin-top:11px;border-left:3px solid var(--st-flag)"><b>Crew flagged this job</b><br>${esc(o.flagReason)}</div>`:''}
+      ${o.flagReason?fieldNote('flm-'+o.id, o.flagReason, 'Crew flagged'):''}
+      ${(o.photos||[]).length?`<div class="photo-row">${o.photos.map(p=>`<img src="${p}" alt="Job photo" data-zoom="${p}">`).join('')}</div>`:''}
       ${o.sketch?`<img class="sketch" src="${o.sketch}" alt="Job sketch">`:''}
     </div>
   </div>`;
 }
+
 function modalAddSkill(c){
   const spare=Object.keys(SKILLS).filter(s=>!c.skills.includes(s));
   return `
@@ -726,6 +1104,45 @@ function modalAddSkill(c){
   </div>`;
 }
 
+function modalNewCrew(){
+  const d = state.crewDraft;
+  return `
+  <div class="scrim" data-close>
+    <div class="modal glass" style="max-width:480px">
+      <div class="modal-head">
+        <div><div class="eyebrow">Field teams</div><h2 style="font-size:var(--t-xl)">New crew</h2></div>
+        <button class="icon-btn" data-close aria-label="Close">&times;</button>
+      </div>
+      <div class="field"><label for="c-leader">Crew leader</label>
+        <input id="c-leader" class="input" placeholder="Eliseo Marín" value="${esc(d.leader)}"></div>
+      <div class="field"><label for="c-name">Crew name</label>
+        <input id="c-name" class="input" placeholder="Eliseo's Crew" value="${esc(d.name)}">
+        <div class="eyebrow" style="margin-top:6px;text-transform:none;letter-spacing:0;font-size:11px">
+          Leave empty to name it after the leader.
+        </div>
+      </div>
+      <div class="field"><label for="c-email">Email — this is their app login</label>
+        <input id="c-email" class="input" type="email" placeholder="eliseo@gammatree.com" value="${esc(d.email)}"></div>
+      <div style="display:flex;gap:11px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:160px"><label for="c-gear">Equipment</label>
+          <select id="c-gear" class="input">${Object.entries(GEAR).map(([k,v])=>`<option value="${k}" ${d.gear===k?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="field" style="flex:1;min-width:120px"><label for="c-members">Members</label>
+          <input id="c-members" class="input" type="number" min="1" max="12" value="${d.members}"></div>
+      </div>
+      <div class="field">
+        <label>Skills</label>
+        <div class="check-grid">
+          ${Object.entries(SKILLS).map(([k,v])=>`
+            <button type="button" class="check ${d.skills.includes(k)?'on':''}" data-cskill="${k}">
+              <span class="box">${ICONS.tick}</span><span>${v}</span>
+            </button>`).join('')}
+        </div>
+      </div>
+      <button class="btn btn-primary" id="c-save" style="width:100%">Create crew</button>
+    </div>
+  </div>`;
+}
+
 /* ============================================================
    Eventos
    ============================================================ */
@@ -736,15 +1153,39 @@ function bindShell(){
   document.getElementById('logout').onclick=()=>{ state.loggedIn=false; state.view='overview'; render(); };
 
   document.querySelectorAll('[data-order]').forEach(el=>{
-    el.onclick=(e)=>{ if(e.target.closest('select')) return;
-      state.modal={type:'viewOrder',id:el.dataset.order}; render(); };
+    el.onclick=(e)=>{
+      if(e.target.closest('select,input,a,.tr-btn,[data-zoom]')) return;
+      state.modal={type:'viewOrder',id:el.dataset.order}; render();
+    };
   });
   document.querySelectorAll('[data-filter]').forEach(b=>{
     b.onclick=()=>{ state.filter=b.dataset.filter; render(); };
   });
+  document.querySelectorAll('[data-zoom]').forEach(img=>{
+    img.onclick=(e)=>{ e.stopPropagation(); state.modal={type:'zoom',src:img.dataset.zoom}; render(); };
+  });
+
+  /* Traducción de notas del campo */
+  document.querySelectorAll('[data-tr]').forEach(b=>{
+    b.onclick=(e)=>{
+      e.stopPropagation();
+      const id=b.dataset.tr;
+      state.translated[id]=!state.translated[id];
+      render();
+    };
+  });
+
   document.getElementById('new-order')?.addEventListener('click',()=>{
+    // La fecha de apertura se fija aquí y ya no se puede tocar.
+    state.draft={createdAt:Date.now(), address:'', date:iso(0), jobs:[], gear:'bucket',
+                 dropWire:false, crew:'', notes:'', photos:[], sketch:null};
     state.modal={type:'newOrder'}; render();
   });
+  document.getElementById('new-crew')?.addEventListener('click',()=>{
+    state.crewDraft={leader:'', name:'', email:'', gear:'bucket', members:3, skills:[]};
+    state.modal={type:'newCrew'}; render();
+  });
+
   document.querySelectorAll('[data-assign]').forEach(sel=>{
     sel.onchange=()=>{
       const o=state.orders.find(x=>x.id===sel.dataset.assign);
@@ -754,8 +1195,34 @@ function bindShell(){
       persist(); toast(o.crew?`Assigned to ${crewName(o.crew)}`:'Order unassigned'); render();
     };
   });
+  document.querySelectorAll('[data-resched]').forEach(inp=>{
+    inp.onchange=()=>{
+      const o=state.orders.find(x=>x.id===inp.dataset.resched);
+      o.date=inp.value; persist(); toast(`Rescheduled to ${fmtDate(o.date)}`); render();
+    };
+  });
 
-  /* --- Cuadrillas: habilidades, equipo y tamaño --- */
+  /* Cronograma */
+  document.querySelectorAll('[data-week]').forEach(b=>{
+    b.onclick=()=>{ state.weekStart=addDays(state.weekStart, 7*Number(b.dataset.week)); render(); };
+  });
+  document.querySelectorAll('[data-year]').forEach(b=>{
+    b.onclick=()=>{
+      const d=new Date(state.weekStart);
+      d.setFullYear(d.getFullYear()+Number(b.dataset.year));
+      state.weekStart=mondayOf(d); render();
+    };
+  });
+  document.getElementById('cal-month')?.addEventListener('change',(e)=>{
+    // Saltar de mes lleva a la semana que contiene su día 1.
+    state.weekStart=mondayOf(new Date(state.weekStart.getFullYear(), Number(e.target.value), 1, 12));
+    render();
+  });
+  document.getElementById('cal-today')?.addEventListener('click',()=>{
+    state.weekStart=mondayOf(new Date()); render();
+  });
+
+  /* Cuadrillas */
   document.querySelectorAll('[data-rmskill]').forEach(b=>{
     b.onclick=(e)=>{
       e.stopPropagation();
@@ -778,7 +1245,7 @@ function bindShell(){
     };
   });
 
-  /* --- Requerimientos --- */
+  /* Requerimientos */
   document.querySelectorAll('[data-req]').forEach(b=>{
     b.onclick=()=>{
       const r=state.requests.find(x=>x.id===b.dataset.req);
@@ -792,31 +1259,107 @@ function bindModal(){
   document.querySelectorAll('[data-close]').forEach(el=>{
     el.onclick=(e)=>{ if(e.target===el){ state.modal=null; render(); } };
   });
-  document.getElementById('f-save')?.addEventListener('click',()=>{
-    const addr=document.getElementById('f-addr').value.trim();
-    if(!addr){ toast('An address is required','warn'); return; }
-    const crew=document.getElementById('f-crew').value||null;
-    state.orders.unshift({
-      id:uid('WO'), address:addr,
-      date:document.getElementById('f-date').value,
-      job:document.getElementById('f-job').value,
-      gear:document.getElementById('f-gear').value,
-      notes:document.getElementById('f-notes').value.trim(),
-      status:crew?'assigned':'pending', crew, sketch:null,
-    });
-    persist(); state.modal=null; state.view='orders'; render();
-    toast('Work order created','green');
+  document.querySelectorAll('[data-tr]').forEach(b=>{
+    b.onclick=(e)=>{ e.stopPropagation(); state.translated[b.dataset.tr]=!state.translated[b.dataset.tr]; render(); };
   });
+
+  /* --- Formulario de orden: el borrador guarda lo tecleado entre renders --- */
+  const grab=()=>{
+    const d=state.draft; if(!d) return;
+    d.address=document.getElementById('f-addr')?.value ?? d.address;
+    d.date=document.getElementById('f-date')?.value ?? d.date;
+    d.gear=document.getElementById('f-gear')?.value ?? d.gear;
+    d.crew=document.getElementById('f-crew')?.value ?? d.crew;
+    d.notes=document.getElementById('f-notes')?.value ?? d.notes;
+  };
+  document.querySelectorAll('[data-job]').forEach(b=>{
+    b.onclick=()=>{
+      grab();
+      const k=b.dataset.job, js=state.draft.jobs;
+      state.draft.jobs = js.includes(k) ? js.filter(x=>x!==k) : [...js,k];
+      render();
+    };
+  });
+  document.querySelector('[data-wire]')?.addEventListener('click',()=>{
+    grab(); state.draft.dropWire=!state.draft.dropWire; render();
+  });
+  document.getElementById('f-photos')?.addEventListener('change',async(e)=>{
+    grab();
+    for(const f of [...e.target.files]) state.draft.photos.push(await readImage(f));
+    render();
+  });
+  document.getElementById('f-sketch')?.addEventListener('change',async(e)=>{
+    grab();
+    const f=e.target.files?.[0]; if(f) state.draft.sketch=await readImage(f,1400,.82);
+    render();
+  });
+  document.querySelectorAll('[data-rmphoto]').forEach(b=>{
+    b.onclick=()=>{ grab(); state.draft.photos.splice(Number(b.dataset.rmphoto),1); render(); };
+  });
+  document.querySelector('[data-rmsketch]')?.addEventListener('click',()=>{
+    grab(); state.draft.sketch=null; render();
+  });
+  document.getElementById('f-save')?.addEventListener('click',()=>{
+    grab();
+    const d=state.draft;
+    if(!d.address.trim()){ toast('An address is required','warn'); return; }
+    if(!d.jobs.length){ toast('Pick at least one job type','warn'); return; }
+    state.orders.unshift({
+      id:uid('WO'), address:d.address.trim(), createdAt:d.createdAt, date:d.date,
+      jobs:d.jobs, gear:d.gear, dropWire:d.dropWire, notes:d.notes.trim(),
+      photos:d.photos, sketch:d.sketch,
+      status:d.crew?'assigned':'pending', crew:d.crew||null,
+    });
+    persist(); state.modal=null; state.draft=null; state.view='orders'; render();
+    toast('Work order created');
+  });
+
+  /* --- Formulario de cuadrilla --- */
+  const grabCrew=()=>{
+    const d=state.crewDraft; if(!d) return;
+    d.leader=document.getElementById('c-leader')?.value ?? d.leader;
+    d.name=document.getElementById('c-name')?.value ?? d.name;
+    d.email=document.getElementById('c-email')?.value ?? d.email;
+    d.gear=document.getElementById('c-gear')?.value ?? d.gear;
+    d.members=Number(document.getElementById('c-members')?.value ?? d.members);
+  };
+  document.querySelectorAll('[data-cskill]').forEach(b=>{
+    b.onclick=()=>{
+      grabCrew();
+      const k=b.dataset.cskill, ss=state.crewDraft.skills;
+      state.crewDraft.skills = ss.includes(k) ? ss.filter(x=>x!==k) : [...ss,k];
+      render();
+    };
+  });
+  document.getElementById('c-save')?.addEventListener('click',()=>{
+    grabCrew();
+    const d=state.crewDraft;
+    if(!d.leader.trim()){ toast('The crew leader name is required','warn'); return; }
+    if(!/^\S+@\S+\.\S+$/.test(d.email.trim())){ toast('A valid email is required — it is their app login','warn'); return; }
+    if(state.crews.some(c=>c.email.toLowerCase()===d.email.trim().toLowerCase())){
+      toast('That email already belongs to another crew','warn'); return;
+    }
+    state.crews.push({
+      id:uid('c'), name:d.name.trim() || `${d.leader.trim().split(/\s+/)[0]}'s Crew`,
+      leader:d.leader.trim(), email:d.email.trim().toLowerCase(),
+      gear:d.gear, members:Math.max(1,Math.min(12,d.members||1)),
+      skills:d.skills,
+      x:15+Math.round(Math.random()*70), y:20+Math.round(Math.random()*60),
+    });
+    persist(); state.modal=null; state.crewDraft=null; render();
+    toast('Crew created');
+  });
+
   document.querySelectorAll('[data-pick]').forEach(b=>{
     b.onclick=()=>{
       const c=crewById(state.modal.id);
       c.skills.push(b.dataset.pick);
       persist(); state.modal=null; render();
-      toast(`${SKILLS[b.dataset.pick]} added to ${c.name}`,'green');
+      toast(`${SKILLS[b.dataset.pick]} added to ${c.name}`);
     };
   });
-  document.addEventListener('keydown',function esc(e){
-    if(e.key==='Escape'){ state.modal=null; render(); document.removeEventListener('keydown',esc); }
+  document.addEventListener('keydown',function onEsc(e){
+    if(e.key==='Escape'){ state.modal=null; render(); document.removeEventListener('keydown',onEsc); }
   });
 }
 

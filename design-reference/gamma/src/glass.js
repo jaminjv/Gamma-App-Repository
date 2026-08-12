@@ -168,8 +168,37 @@ function load(key, fallback){
     return raw ? JSON.parse(raw) : fallback;
   }catch{ return fallback; }
 }
+// Devuelve false si no pudo guardar (cuota llena), para que quien llama
+// avise en vez de perder los datos en silencio.
 function save(key, value){
-  try{ localStorage.setItem(STORE_PREFIX + key, JSON.stringify(value)); }catch{}
+  try{ localStorage.setItem(STORE_PREFIX + key, JSON.stringify(value)); return true; }
+  catch{ return false; }
+}
+
+/* --- Lectura de imágenes ----------------------------------------------
+   Una foto de teléfono ronda los 4 MB; en base64 sube a ~5.5 MB y por sí
+   sola agota la cuota de localStorage. Se reescala en un canvas antes de
+   guardarla, que además hace la interfaz mucho más ágil. */
+function readImage(file, maxPx = 1200, quality = .78){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width  = Math.round(img.width  * scale);
+        c.height = Math.round(img.height * scale);
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 function clearStore(){
   try{

@@ -447,6 +447,26 @@ button.chip:active{transform:scale(.94);}
 .divider span{font-weight:600;font-size:var(--t-xs);text-transform:uppercase;
   letter-spacing:.14em;color:var(--text-faint);white-space:nowrap;}
 .divider::after{content:'';flex:1;height:1px;background:var(--glass-brd);}
+
+.map-link{display:inline-flex;align-items:center;gap:5px;color:var(--green);font-weight:600;
+  text-decoration:none;border-bottom:1px solid rgba(6,64,43,.28);transition:all .25s var(--ease);}
+.map-link:hover{color:var(--green-lit);}
+.map-link svg{width:13px;height:13px;flex:none;}
+.map-btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:10px;
+  margin-top:10px;border-radius:var(--r-sm);background:rgba(6,64,43,.05);
+  box-shadow:inset 0 0 0 1px var(--glass-brd);color:var(--green);font-size:var(--t-sm);
+  font-weight:600;text-decoration:none;transition:all .25s var(--ease);}
+.map-btn:hover{background:rgba(6,64,43,.09);}
+.map-btn svg{width:15px;height:15px;}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+.tag{padding:3px 9px;border-radius:999px;font-size:10px;font-weight:600;
+  background:var(--green-tint);color:var(--green);box-shadow:inset 0 0 0 1px rgba(6,64,43,.14);}
+.tag-wire{background:rgba(184,92,16,.13);color:#A2510C;box-shadow:inset 0 0 0 1px rgba(184,92,16,.28);
+  display:inline-flex;align-items:center;gap:4px;}
+.tag-wire svg{width:11px;height:11px;}
+.photo-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.photo-row img{width:88px;height:66px;object-fit:cover;border-radius:9px;
+  box-shadow:inset 0 0 0 1px var(--glass-brd);}
 </style>
 
 <canvas id="ambient"></canvas>
@@ -623,8 +643,37 @@ function load(key, fallback){
     return raw ? JSON.parse(raw) : fallback;
   }catch{ return fallback; }
 }
+// Devuelve false si no pudo guardar (cuota llena), para que quien llama
+// avise en vez de perder los datos en silencio.
 function save(key, value){
-  try{ localStorage.setItem(STORE_PREFIX + key, JSON.stringify(value)); }catch{}
+  try{ localStorage.setItem(STORE_PREFIX + key, JSON.stringify(value)); return true; }
+  catch{ return false; }
+}
+
+/* --- Lectura de imágenes ----------------------------------------------
+   Una foto de teléfono ronda los 4 MB; en base64 sube a ~5.5 MB y por sí
+   sola agota la cuota de localStorage. Se reescala en un canvas antes de
+   guardarla, que además hace la interfaz mucho más ágil. */
+function readImage(file, maxPx = 1200, quality = .78){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width  = Math.round(img.width  * scale);
+        c.height = Math.round(img.height * scale);
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 function clearStore(){
   try{
@@ -655,6 +704,8 @@ const ICONS = {
   play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg>',
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
   flag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></svg>',
+  pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  bolt:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>',
 };
 
 /* ---------- Traducciones ---------- */
@@ -696,9 +747,11 @@ const TR = {
     catFuel:'Combustible', catParts:'Repuestos', catOther:'Otro',
     stPending:'Pendiente', stAssigned:'Asignado', stProgress:'En progreso',
     stDone:'Terminado', stFlag:'Reasignar',
-    jRemoval:'Remoción', jTrim:'Poda / trim', jAerial:'Poda en altura', jStorm:'Daño por tormenta',
+    jRemoval:'Remoción', jTrimming:'Poda', jStump:'Tocón', jStorm:'Daño por tormenta',
+    jCatchlogs:'Recoger troncos', jBrush:'Maleza',
     gBucket:'Bucket truck', gClimbing:'Climbing', gBoth:'Bucket + Climbing',
-    instructions:'Instrucciones',
+    instructions:'Instrucciones', openMaps:'Abrir en Google Maps',
+    dropWire:'Retiro de cable requerido', jobPhotos:'Fotos del trabajo',
   },
   en:{
     signIn:'Sign in', email:'Email', pass:'Password',
@@ -737,9 +790,11 @@ const TR = {
     catFuel:'Fuel', catParts:'Parts', catOther:'Other',
     stPending:'Pending', stAssigned:'Assigned', stProgress:'In progress',
     stDone:'Done', stFlag:'Flagged',
-    jRemoval:'Removal', jTrim:'Trim', jAerial:'Aerial pruning', jStorm:'Storm damage',
+    jRemoval:'Removal', jTrimming:'Trimming', jStump:'Stump', jStorm:'Storm Damage',
+    jCatchlogs:'Catch Logs', jBrush:'Brush',
     gBucket:'Bucket truck', gClimbing:'Climbing', gBoth:'Bucket + Climbing',
-    instructions:'Instructions',
+    instructions:'Instructions', openMaps:'Open in Google Maps',
+    dropWire:'Drop wire required', jobPhotos:'Job photos',
   },
 };
 const t = () => TR[state.lang];
@@ -747,7 +802,10 @@ const t = () => TR[state.lang];
 const CATS = ['rope','tool','ppe','fuel','parts','other'];
 const CAT_KEY = {rope:'catRope',tool:'catTool',ppe:'catPpe',fuel:'catFuel',parts:'catParts',other:'catOther'};
 const ST_KEY = {pending:'stPending',assigned:'stAssigned',progress:'stProgress',done:'stDone',flag:'stFlag'};
-const JOB_KEY = {removal:'jRemoval',trim:'jTrim',aerial:'jAerial',storm:'jStorm'};
+const JOB_KEY = {removal:'jRemoval',trimming:'jTrimming',stump:'jStump',
+                 storm:'jStorm',catchlogs:'jCatchlogs',brush:'jBrush'};
+const mapsUrl = (a) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(a);
+const jobNames = (l) => (l||[]).map(j=>t()[JOB_KEY[j]]).filter(Boolean).join(' · ') || '—';
 const GEAR_KEY = {bucket:'gBucket',climbing:'gClimbing',both:'gBoth'};
 
 /* ---------- Cuentas de líder ---------- */
@@ -791,15 +849,16 @@ function sampleSketch(){
 
 /* ---------- Datos semilla ---------- */
 function seedJobs(){
+  const H=3600000, mk=(o)=>({photos:[],sketch:null,dropWire:false,...o});
   return [
-    {id:'WO-a', crew:'c1', address:'22 Fossil Ridge Dr, Swansea, IL',   date:iso(0), job:'aerial',  gear:'climbing', notes:'High canopy pruning, power line nearby — coordinate with Ameren.', status:'assigned', sketch:sampleSketch()},
-    {id:'WO-b', crew:'c1', address:'560 Carlyle Ave, Belleville, IL',   date:iso(0), job:'trim',    gear:'climbing', notes:'Decorative pruning, backyard.',            status:'assigned', sketch:null},
-    {id:'WO-c', crew:'c1', address:'901 N 4th St, Millstadt, IL',       date:iso(-1),job:'aerial',  gear:'climbing', notes:'High pruning near a phone line.',          status:'done',     sketch:null},
-    {id:'WO-d', crew:'c2', address:'412 Frank Scott Pkwy, Belleville, IL',date:iso(0),job:'removal',gear:'bucket',   notes:'Remove dead oak next to the garage. Client wants the wood stacked.', status:'progress', sketch:null},
-    {id:'WO-e', crew:'c2', address:'890 S Illinois St, Belleville, IL', date:iso(0), job:'trim',    gear:'bucket',   notes:'Trim branches overhanging the roof.',      status:'assigned', sketch:null},
-    {id:'WO-f', crew:'c3', address:'77 Green Mount Rd, Shiloh, IL',     date:iso(0), job:'removal', gear:'bucket',   notes:'Remove 2 dead pines by the driveway.',     status:'assigned', sketch:null},
-    {id:'WO-g', crew:'c4', address:'340 Longacre Dr, O’Fallon, IL',date:iso(0), job:'removal', gear:'bucket',   notes:'Stump close to the gas line — check before cutting.', status:'assigned', sketch:null},
-    {id:'WO-h', crew:'c5', address:'1345 Main St, O’Fallon, IL',   date:iso(0), job:'storm',   gear:'both',     notes:'Tree down on fence after storm. High priority.', status:'assigned', sketch:null},
+    mk({id:'WO-a', crew:'c1', address:'22 Fossil Ridge Dr, Swansea, IL',    createdAt:Date.now()-26*H, date:iso(0), jobs:['trimming'],          gear:'climbing', notes:'High canopy pruning, power line nearby — coordinate with Ameren.', status:'assigned', sketch:sampleSketch(), dropWire:true}),
+    mk({id:'WO-b', crew:'c1', address:'560 Carlyle Ave, Belleville, IL',    createdAt:Date.now()-52*H, date:iso(0), jobs:['trimming','brush'],  gear:'climbing', notes:'Decorative pruning, backyard.',            status:'assigned'}),
+    mk({id:'WO-c', crew:'c1', address:'901 N 4th St, Millstadt, IL',        createdAt:Date.now()-70*H, date:iso(-1),jobs:['brush','stump'],     gear:'climbing', notes:'High pruning near a phone line.',          status:'done'}),
+    mk({id:'WO-d', crew:'c2', address:'412 Frank Scott Pkwy, Belleville, IL',createdAt:Date.now()-30*H,date:iso(0), jobs:['removal','catchlogs'],gear:'bucket',  notes:'Remove dead oak next to the garage. Client wants the wood stacked.', status:'progress'}),
+    mk({id:'WO-e', crew:'c2', address:'890 S Illinois St, Belleville, IL',  createdAt:Date.now()-20*H, date:iso(0), jobs:['trimming','brush'],  gear:'bucket',   notes:'Trim branches overhanging the roof.',      status:'assigned'}),
+    mk({id:'WO-f', crew:'c3', address:'77 Green Mount Rd, Shiloh, IL',      createdAt:Date.now()-12*H, date:iso(0), jobs:['removal'],           gear:'bucket',   notes:'Remove 2 dead pines by the driveway.',     status:'assigned'}),
+    mk({id:'WO-g', crew:'c4', address:'340 Longacre Dr, O\u2019Fallon, IL',  createdAt:Date.now()-44*H, date:iso(0), jobs:['removal','stump'],   gear:'bucket',   notes:'Stump grinding next to the meter — check clearances first.', status:'assigned'}),
+    mk({id:'WO-h', crew:'c5', address:'1345 Main St, O\u2019Fallon, IL',     createdAt:Date.now()-8*H,  date:iso(0), jobs:['storm','catchlogs'], gear:'both',     notes:'Tree down on fence after storm. High priority.', status:'assigned', dropWire:true}),
   ];
 }
 
@@ -971,11 +1030,17 @@ function jobCard(j,i){
       <span class="pill pill-${j.status}">${T[ST_KEY[j.status]]}</span>
     </div>
     <div class="meta">
-      <span>${T[JOB_KEY[j.job]]}</span><span class="dot">·</span>
       <span>${T[GEAR_KEY[j.gear]]}</span><span class="dot">·</span>
       <span>${fmtDate(j.date)}</span>
     </div>
+    <div class="tag-row">
+      ${(j.jobs||[]).map(k=>`<span class="tag">${T[JOB_KEY[k]]}</span>`).join('')}
+      ${j.dropWire?`<span class="tag tag-wire">${ICONS.bolt}${T.dropWire}</span>`:''}
+    </div>
+    <a class="map-btn" href="${mapsUrl(j.address)}" target="_blank" rel="noopener noreferrer">
+      ${ICONS.pin}<span>${T.openMaps}</span></a>
     ${j.notes?`<div class="note-box" style="margin-top:12px"><b>${T.instructions}</b><br>${esc(j.notes)}</div>`:''}
+    ${(j.photos||[]).length?`<div class="photo-row">${j.photos.map(p=>`<img src="${p}" alt="">`).join('')}</div>`:''}
     ${j.sketch?`<button class="sketch-btn" data-sketch="${j.id}" style="margin-top:11px">
         <img src="${j.sketch}" alt=""><span>${T.viewSketch}</span></button>`:''}
     ${j.photo?`<img class="sketch" src="${j.photo}" alt="">`:''}

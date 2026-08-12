@@ -9,6 +9,7 @@ const fonts = fs.readFileSync(path.join(D, 'brand-fonts.css'), 'utf8');
 const logo  = fs.readFileSync(path.join(D, 'brand-logo.txt'), 'utf8');
 const css   = fs.readFileSync(path.join(D, 'src/glass.css'), 'utf8');
 const js    = fs.readFileSync(path.join(D, 'src/glass.js'), 'utf8');
+const esen  = fs.readFileSync(path.join(D, 'src/es-en.js'), 'utf8');
 
 const builds = [
   { src: 'src/dashboard.html', out: 'artifacts/operations-dashboard.html' },
@@ -24,6 +25,7 @@ for (const b of builds) {
   page = page.replace('/*__FONTS__*/',     () => fonts);
   page = page.replace('/*__GLASS_CSS__*/', () => css);
   page = page.replace('/*__GLASS_JS__*/',  () => js);
+  page = page.replace('/*__ES_EN__*/',     () => esen);
   page = page.replace(/__LOGO__/g,         () => logo);
 
   const outPath = path.join(D, b.out);
