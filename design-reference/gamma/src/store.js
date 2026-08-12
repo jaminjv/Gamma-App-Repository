@@ -149,6 +149,30 @@ function urlProblem(raw){
   return null;
 }
 
+/* --- Repintado seguro ------------------------------------------------
+   Volver a dibujar la pantalla cada 8 segundos tiene dos efectos que nadie
+   pidió: borra lo que la persona está escribiendo en un formulario que no
+   es modal, y reproduce otra vez todas las animaciones de entrada, de modo
+   que la aplicación parece recargarse sola aunque no haya cambiado nada. */
+
+// ¿El cursor está dentro de un campo? Entonces no se toca la pantalla.
+function isTyping(){
+  const el = document.activeElement;
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' ||
+                  el.tagName === 'SELECT' || el.isContentEditable);
+}
+
+// Firma barata de lo que vino del servidor: si no cambió, no se repinta.
+function snapshotSig(st){
+  return JSON.stringify([
+    (st.orders   || []).map(o => [o.id, o.status, o.date, o.crew, o.dropWire]),
+    (st.jobs     || []).map(j => [j.id, j.status, j.date]),
+    (st.dumps    || []).map(d => d.id),
+    (st.requests || []).map(r => [r.id, r.status]),
+    (st.crews    || []).map(c => [c.id, c.members, c.gear, (c.skills || []).join()]),
+  ]);
+}
+
 /* Diagnóstico de conexión.
    Un fallo de red y una URL mal escrita se ven igual desde JavaScript, pero
    el remedio es opuesto: decirle a alguien "revisa la URL" cuando lo que

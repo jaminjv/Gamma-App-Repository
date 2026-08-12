@@ -550,8 +550,12 @@ function startPolling(){
   // Sondeo y no websocket: es lo que sobrevive a proxies y a la pestaña
   // en segundo plano sin reconexiones raras.
   pollTimer = setInterval(async ()=>{
-    if(state.modal || state.busy) return;   // no interrumpir lo que se edita
-    await refresh(); render();
+    // No interrumpir una ventana abierta, una escritura en curso ni a
+    // alguien tecleando o con un desplegable abierto.
+    if(state.modal || state.busy || isTyping()) return;
+    const antes = snapshotSig(state);
+    await refresh();
+    if(snapshotSig(state) !== antes) render();   // solo si de verdad cambió
   }, 8000);
 }
 
@@ -1303,7 +1307,14 @@ function modalNewCrew(){
    ============================================================ */
 function bindShell(){
   document.querySelectorAll('[data-nav]').forEach(b=>{
-    b.onclick=()=>{ state.view=b.dataset.nav; state.filter='all'; render(); };
+    // Se pinta al instante para que el cambio de sección se sienta inmediato,
+    // y en paralelo se piden datos frescos: entrar a una sección es
+    // justamente cuando uno quiere ver lo último, no lo que quedó en memoria.
+    b.onclick=async()=>{
+      state.view=b.dataset.nav; state.filter='all'; render();
+      if(online()){ const antes=snapshotSig(state); await refresh();
+        if(snapshotSig(state)!==antes) render(); }
+    };
   });
   document.getElementById('logout').onclick=async()=>{
     clearInterval(pollTimer);

@@ -848,6 +848,30 @@ function urlProblem(raw){
   return null;
 }
 
+/* --- Repintado seguro ------------------------------------------------
+   Volver a dibujar la pantalla cada 8 segundos tiene dos efectos que nadie
+   pidió: borra lo que la persona está escribiendo en un formulario que no
+   es modal, y reproduce otra vez todas las animaciones de entrada, de modo
+   que la aplicación parece recargarse sola aunque no haya cambiado nada. */
+
+// ¿El cursor está dentro de un campo? Entonces no se toca la pantalla.
+function isTyping(){
+  const el = document.activeElement;
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' ||
+                  el.tagName === 'SELECT' || el.isContentEditable);
+}
+
+// Firma barata de lo que vino del servidor: si no cambió, no se repinta.
+function snapshotSig(st){
+  return JSON.stringify([
+    (st.orders   || []).map(o => [o.id, o.status, o.date, o.crew, o.dropWire]),
+    (st.jobs     || []).map(j => [j.id, j.status, j.date]),
+    (st.dumps    || []).map(d => d.id),
+    (st.requests || []).map(r => [r.id, r.status]),
+    (st.crews    || []).map(c => [c.id, c.members, c.gear, (c.skills || []).join()]),
+  ]);
+}
+
 /* Diagnóstico de conexión.
    Un fallo de red y una URL mal escrita se ven igual desde JavaScript, pero
    el remedio es opuesto: decirle a alguien "revisa la URL" cuando lo que
@@ -1151,6 +1175,9 @@ const state = {
   lang: load('lang','es'),
   me: null,
   loginEmail: null,
+  // Lo tecleado vive en el estado: así sobrevive a cualquier repintado.
+  dumpDraft: {where:'', notes:''},
+  reqDraft: {note:''},
   tab: 'jobs',
   modal: null,
   photo: null,
@@ -1186,8 +1213,12 @@ function startPolling(){
   clearInterval(pollTimer);
   if(!online()) return;
   pollTimer = setInterval(async ()=>{
-    if(state.modal || state.busy) return;
-    await refresh(); render();
+    // No interrumpir una ventana abierta, una escritura en curso ni a
+    // alguien tecleando en un formulario.
+    if(state.modal || state.busy || isTyping()) return;
+    const antes = snapshotSig(state);
+    await refresh();
+    if(snapshotSig(state) !== antes) render();   // solo si de verdad cambió
   }, 8000);
 }
 
@@ -1429,7 +1460,7 @@ function tabDump(){
   <div class="glass glass-tile reveal">
     <div class="field">
       <label for="d-where">${T.dumpWhere}</label>
-      <input id="d-where" class="input" placeholder="${T.dumpWherePh}">
+      <input id="d-where" class="input" placeholder="${T.dumpWherePh}" value="${esc(state.dumpDraft.where)}">
     </div>
     <div class="field">
       <label>${T.dumpType}</label>
@@ -1440,7 +1471,7 @@ function tabDump(){
     </div>
     <div class="field">
       <label for="d-notes">${T.dumpNotes}</label>
-      <textarea id="d-notes" class="input" placeholder="${T.dumpNotesPh}"></textarea>
+      <textarea id="d-notes" class="input" placeholder="${T.dumpNotesPh}">${esc(state.dumpDraft.notes)}</textarea>
     </div>
     <button class="btn btn-primary" id="d-send" style="width:100%">${T.dumpSend}</button>
   </div>
@@ -1484,7 +1515,7 @@ function tabReqs(){
     </div>
     <div class="field">
       <label for="r-note">${T.reqNote}</label>
-      <textarea id="r-note" class="input" placeholder="${T.reqNotePh}"></textarea>
+      <textarea id="r-note" class="input" placeholder="${T.reqNotePh}">${esc(state.reqDraft.note)}</textarea>
     </div>
     <button class="btn btn-primary" id="r-send" style="width:100%">${T.reqSend}</button>
   </div>
@@ -1572,7 +1603,11 @@ function bindApp(){
     b.onclick=()=>{ state.lang=b.dataset.lang; save('lang',state.lang); render(); };
   });
   document.querySelectorAll('[data-tab]').forEach(b=>{
-    b.onclick=()=>{ state.tab=b.dataset.tab; render(); };
+    b.onclick=async()=>{
+      state.tab=b.dataset.tab; render();
+      if(online()){ const antes=snapshotSig(state); await refresh();
+        if(snapshotSig(state)!==antes) render(); }
+    };
   });
   document.getElementById('logout').onclick=async()=>{
     clearInterval(pollTimer);
@@ -1606,11 +1641,16 @@ function bindApp(){
       b.classList.add('is-on');
     };
   });
+  const dw=document.getElementById('d-where'); if(dw) dw.oninput=(e)=>{ state.dumpDraft.where=e.target.value; };
+  const dn=document.getElementById('d-notes'); if(dn) dn.oninput=(e)=>{ state.dumpDraft.notes=e.target.value; };
+  const rn=document.getElementById('r-note');  if(rn) rn.oninput=(e)=>{ state.reqDraft.note=e.target.value; };
+
   document.getElementById('d-send')?.addEventListener('click',()=>{
     const where=document.getElementById('d-where').value.trim();
     if(!where){ toast(T.needWhere,'warn'); return; }
     const d={ id:uid('DR'), crew:state.me.crew, location:where, type:state.dumpType,
               notes:document.getElementById('d-notes').value.trim(), at:Date.now() };
+    state.dumpDraft={where:'',notes:''};
     toast(T.dumpDone);
     if(!online()){ state.dumps.unshift(d); persist(); render(); return; }
     commit(()=>Gamma.insert('dump_reports', Map2.dumpToRow(d)));
@@ -1636,6 +1676,7 @@ function bindApp(){
     if(!note){ toast(T.needNote,'warn'); return; }
     const r={ id:uid('RQ'), crew:state.me.crew, cat:state.reqCat,
               urgency:state.reqUrg, note, at:Date.now(), status:'new' };
+    state.reqDraft={note:''};
     toast(T.reqDone);
     if(!online()){ state.requests.unshift(r); persist(); render(); return; }
     commit(()=>Gamma.insert('equipment_requests', Map2.reqToRow(r)));
