@@ -6,10 +6,11 @@ const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Geck
 const LOGO = '/root/.claude/uploads/14bb484a-9ea6-5921-a466-202f6621f9d2/ec91bc28-IMG_0145.png';
 
 // Fraunces y Archivo son variables: un solo archivo cubre todo el rango de peso.
+// Una sola familia para todo: Google Sans Flex, variable, con el eje de
+// grosor completo (100..1000). Los distintos roles se diferencian por peso
+// y espaciado, no por familia.
 const CSS_URL = 'https://fonts.googleapis.com/css2'
-  + '?family=Fraunces:opsz,wght@9..144,400..700'
-  + '&family=Archivo:wght@400..700'
-  + '&family=IBM+Plex+Mono:wght@400;500;600'
+  + '?family=Google+Sans+Flex:wght@100..1000'
   + '&display=swap';
 
 (async () => {

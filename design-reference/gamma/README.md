@@ -44,20 +44,24 @@ publicación.
 
 Sacada directamente del logo:
 
-| Token | Valor | De dónde sale |
+| Token | Valor | Papel |
 |---|---|---|
-| `--burgundy` | `#811428` | el escudo |
-| `--gold` | `#A89030` | los cuadrantes |
-| `--cream` | `#DACFA1` | la cinta "SINCE 1954" |
-| `--forest` | `#2D6F4A` | el follaje y la hoja |
+| `--green` | `#06402B` | dominante: navegación, acciones, títulos |
+| `--wine` | `#811428` | secundario: urgencia, avisos, "no terminado" |
+| `--gold` | `#A89030` | terciario, del logo: estados intermedios |
+| `--paper` | `#F1F5F2` | suelo, gris sesgado al verde |
 
-Tipografías: **Fraunces** para títulos (serif con aire patrimonial, a tono
-con el wordmark grabado), **Archivo** para interfaz y **IBM Plex Mono**
-para datos y etiquetas.
+Tipografía: **Google Sans Flex** para todo, variable con el eje de grosor
+completo (100–1000). Los roles se distinguen por peso y espaciado, no por
+familia: 700 en títulos, 600 en etiquetas, 500 en interfaz.
 
-El diseño se compromete deliberadamente con un único mundo visual oscuro:
-el vidrio necesita un fondo rico que refractar, así que no hay variante
-clara y todos los fondos se pintan de forma explícita.
+El color significa siempre lo mismo: verde para avanzar y confirmar, vino
+tinto para lo que necesita atención. Por eso "No terminado" y los avisos de
+validación son vino, y todo lo demás es verde.
+
+El diseño se compromete deliberadamente con un único mundo visual claro: no
+hay variante oscura y todos los fondos se pintan de forma explícita para no
+heredar el del visor.
 
 ## Cuentas de prueba
 

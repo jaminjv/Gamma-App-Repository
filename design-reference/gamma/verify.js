@@ -60,15 +60,24 @@ function check(cond, label){
 
   const fonts = await p.evaluate(async () => {
     await document.fonts.ready;
+    const h = document.querySelector('h1');
+    const bg = getComputedStyle(document.body).backgroundColor;
+    const [r,g,b] = bg.match(/\d+/g).map(Number);
     return {
-      fraunces: document.fonts.check("600 16px 'Fraunces'"),
-      archivo:  document.fonts.check("500 16px 'Archivo'"),
-      mono:     document.fonts.check("400 16px 'IBM Plex Mono'"),
-      bodyBg:   getComputedStyle(document.body).backgroundColor,
+      // La familia es una sola: se comprueba en varios grosores del eje.
+      w300: document.fonts.check("300 16px 'Google Sans Flex'"),
+      w500: document.fonts.check("500 16px 'Google Sans Flex'"),
+      w700: document.fonts.check("700 16px 'Google Sans Flex'"),
+      headFont: h ? getComputedStyle(h).fontFamily.split(',')[0].replace(/["']/g,'') : '—',
+      bodyBg: bg,
+      luma: Math.round(.2126*r + .7152*g + .0722*b),
     };
   });
-  check(fonts.fraunces && fonts.archivo && fonts.mono, `las 3 fuentes cargan (${JSON.stringify(fonts)})`);
+  check(fonts.w300 && fonts.w500 && fonts.w700,
+    `Google Sans Flex carga en 300/500/700 (${fonts.w300}/${fonts.w500}/${fonts.w700})`);
+  check(fonts.headFont === 'Google Sans Flex', `los títulos usan la familia (${fonts.headFont})`);
   check(fonts.bodyBg !== 'rgba(0, 0, 0, 0)', 'el body tiene fondo opaco');
+  check(fonts.luma > 200, `el fondo es claro (luminancia ${fonts.luma}/255, ${fonts.bodyBg})`);
   check(await p.locator('.login-card img').count() === 1, 'el logo aparece en el acceso');
   check((await p.locator('#lg-email').inputValue()) === 'paul@gammatree.com', 'correo del admin precargado');
   await shot(p, 'gm-dash-login');
