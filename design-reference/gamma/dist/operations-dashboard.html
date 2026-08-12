@@ -1085,6 +1085,8 @@ function connectionHint(err){
 /* ============================================================
    Traducción entre las filas de la base y la forma que usan las apps
    ============================================================ */
+// El tipo de equipo de la CUADRILLA sigue siendo uno solo; el de la ORDEN
+// pasó a ser una lista. Son dos vocabularios distintos a propósito.
 const GEAR_TO_DB   = { bucket:'bucket', climbing:'climbing', both:'ambos' };
 const GEAR_FROM_DB = { bucket:'bucket', climbing:'climbing', ambos:'both' };
 
@@ -1103,7 +1105,9 @@ const Map2 = {
       createdAt: Date.parse(r.created_at),
       date: r.scheduled_date,
       jobs: r.job_types || [],
-      gear: GEAR_FROM_DB[r.equipment_required] || 'bucket',
+      gears: r.gear || [],
+      custName: r.customer_name || '',
+      custPhone: r.customer_phone || '',
       dropWire: !!r.drop_wire,
       notes: r.instructions || '',
       status: r.state,
@@ -1117,7 +1121,9 @@ const Map2 = {
   orderToRow(o){
     return {
       address:o.address, scheduled_date:o.date, job_types:o.jobs,
-      equipment_required: GEAR_TO_DB[o.gear] || 'bucket',
+      gear: o.gears || [],
+      customer_name: o.custName || null,
+      customer_phone: o.custPhone || null,
       drop_wire: !!o.dropWire, instructions:o.notes || null,
       state:o.status, group_id:o.crew || null,
       sketch_image_url:o.sketch || null,
@@ -1310,7 +1316,13 @@ const JOBS = {
   removal:'Removal', trimming:'Trimming', stump:'Stump',
   storm:'Storm Damage', catchlogs:'Catch Logs', brush:'Brush',
 };
-const GEAR = { bucket:'Bucket truck', climbing:'Climbing', both:'Bucket + Climbing' };
+/* Equipo de la orden: varios por trabajo. La antigua opción combinada
+   desaparece — se marcan las dos casillas y significa lo mismo. */
+const GEARS = { bucket:'Bucket truck', climbing:'Climbing',
+                stump_grinder:'Stump Grinder', logs:'Logs' };
+/* Equipo de la cuadrilla: sigue siendo uno solo, es otra cosa. */
+const CREW_GEAR = { bucket:'Bucket truck', climbing:'Climbing', both:'Bucket + Climbing' };
+const gearNames = (l) => (l||[]).map(g=>GEARS[g]).filter(Boolean).join(' · ') || '—';
 const SKILLS = {
   removal:'Removal', trimming:'Trimming', stump:'Stump', storm:'Storm Damage',
   catchlogs:'Catch Logs', brush:'Brush', aerial:'Aerial pruning',
@@ -1390,19 +1402,21 @@ function seed(){
     {id:'c4', name:"Baltazar's Crew",leader:'Baltazar Ortega', email:'baltazar@gammatree.com', gear:'bucket',   members:4, skills:['removal','stump','catchlogs'],          x:74, y:70},
     {id:'c5', name:"Ron's Crew",     leader:'Ron Whitaker',    email:'ron@gammatree.com',      gear:'climbing', members:3, skills:['aerial','trimming','utility'],          x:47, y:79},
   ];
-  const mk = (o) => ({photos:[], sketch:null, dropWire:false, ...o});
+  const mk = (o) => ({photos:[], sketch:null, dropWire:false, gears:['bucket'], custName:'', custPhone:'', ...o});
   const orders = [
-    mk({id:uid('WO'), address:'412 Frank Scott Pkwy, Belleville, IL', createdAt:Date.now()-30*H, date:iso(0), jobs:['removal','catchlogs'], gear:'bucket',   notes:'Remove dead oak next to the garage. Client wants the wood stacked.', status:'progress', crew:'c2'}),
-    mk({id:uid('WO'), address:'22 Fossil Ridge Dr, Swansea, IL',      createdAt:Date.now()-26*H, date:iso(0), jobs:['trimming'],            gear:'climbing', notes:'High canopy pruning, power line nearby — coordinate with Ameren.',    status:'assigned', crew:'c1', sketch:sampleSketch(), dropWire:true}),
-    mk({id:uid('WO'), address:'890 S Illinois St, Belleville, IL',    createdAt:Date.now()-20*H, date:iso(0), jobs:['trimming','brush'],    gear:'bucket',   notes:'Trim branches overhanging the roof.',                                status:'pending',  crew:null}),
-    mk({id:uid('WO'), address:'340 Longacre Dr, O’Fallon, IL',        createdAt:Date.now()-44*H, date:iso(0), jobs:['removal','stump'],     gear:'bucket',   notes:'Stump grinding next to the meter — check clearances first.',         status:'flag',     crew:'c4',
+    mk({id:uid('WO'), address:'412 Frank Scott Pkwy, Belleville, IL', createdAt:Date.now()-30*H, date:iso(0), jobs:['removal','catchlogs'], gears:['bucket'],       notes:'Remove dead oak next to the garage. Client wants the wood stacked.', status:'progress', crew:'c2',
+        custName:'Marge Simpson', custPhone:'618-555-0134'}),
+    mk({id:uid('WO'), address:'22 Fossil Ridge Dr, Swansea, IL',      createdAt:Date.now()-26*H, date:iso(0), jobs:['trimming'],            gears:['climbing'],     notes:'High canopy pruning, power line nearby — coordinate with Ameren.',    status:'assigned', crew:'c1', sketch:sampleSketch(), dropWire:true}),
+    mk({id:uid('WO'), address:'890 S Illinois St, Belleville, IL',    createdAt:Date.now()-20*H, date:iso(0), jobs:['trimming','brush'],    gears:['bucket'],       notes:'Trim branches overhanging the roof.',                                status:'pending',  crew:null}),
+    mk({id:uid('WO'), address:'340 Longacre Dr, O’Fallon, IL',        createdAt:Date.now()-44*H, date:iso(0), jobs:['removal','stump'],     gears:['bucket'],       notes:'Stump grinding next to the meter — check clearances first.',         status:'flag',     crew:'c4',
+        gears:['bucket','stump_grinder'], custName:'Ned Flanders', custPhone:'618-555-0177',
         flagReason:'El tocón está muy cerca de la línea de gas, se necesita otra cuadrilla con permiso de servicios.'}),
-    mk({id:uid('WO'), address:'1345 Main St, O’Fallon, IL',           createdAt:Date.now()-8*H,  date:iso(1), jobs:['storm','catchlogs'],   gear:'both',     notes:'Tree down on fence after storm. High priority.',                     status:'pending',  crew:null, dropWire:true}),
-    mk({id:uid('WO'), address:'77 Green Mount Rd, Shiloh, IL',        createdAt:Date.now()-12*H, date:iso(1), jobs:['removal'],             gear:'bucket',   notes:'Remove 2 dead pines by the driveway.',                               status:'assigned', crew:'c3'}),
-    mk({id:uid('WO'), address:'560 Carlyle Ave, Belleville, IL',      createdAt:Date.now()-52*H, date:iso(2), jobs:['trimming'],            gear:'climbing', notes:'Decorative pruning, backyard.',                                      status:'done',     crew:'c1'}),
-    mk({id:uid('WO'), address:'901 N 4th St, Millstadt, IL',          createdAt:Date.now()-6*H,  date:iso(3), jobs:['brush','stump'],       gear:'climbing', notes:'High pruning near a phone line.',                                    status:'pending',  crew:null}),
-    mk({id:uid('WO'), address:'25 Lebanon Ave, Belleville, IL',       createdAt:Date.now()-70*H, date:iso(-2),jobs:['removal'],             gear:'bucket',   notes:'Large silver maple removal, tight access.',                          status:'done',     crew:'c3'}),
-    mk({id:uid('WO'), address:'610 W Highway 50, O’Fallon, IL',       createdAt:Date.now()-4*H,  date:iso(6), jobs:['catchlogs','brush'],   gear:'both',     notes:'Cleanup after the storm route.',                                     status:'assigned', crew:'c5'}),
+    mk({id:uid('WO'), address:'1345 Main St, O’Fallon, IL',           createdAt:Date.now()-8*H,  date:iso(1), jobs:['storm','catchlogs'],   gears:['bucket','climbing'], notes:'Tree down on fence after storm. High priority.',                     status:'pending',  crew:null, dropWire:true}),
+    mk({id:uid('WO'), address:'77 Green Mount Rd, Shiloh, IL',        createdAt:Date.now()-12*H, date:iso(1), jobs:['removal'],             gears:['bucket'],       notes:'Remove 2 dead pines by the driveway.',                               status:'assigned', crew:'c3'}),
+    mk({id:uid('WO'), address:'560 Carlyle Ave, Belleville, IL',      createdAt:Date.now()-52*H, date:iso(2), jobs:['trimming'],            gears:['climbing'],     notes:'Decorative pruning, backyard.',                                      status:'done',     crew:'c1'}),
+    mk({id:uid('WO'), address:'901 N 4th St, Millstadt, IL',          createdAt:Date.now()-6*H,  date:iso(3), jobs:['brush','stump'],       gears:['climbing'],     notes:'High pruning near a phone line.',                                    status:'pending',  crew:null}),
+    mk({id:uid('WO'), address:'25 Lebanon Ave, Belleville, IL',       createdAt:Date.now()-70*H, date:iso(-2),jobs:['removal'],             gears:['bucket'],       notes:'Large silver maple removal, tight access.',                          status:'done',     crew:'c3'}),
+    mk({id:uid('WO'), address:'610 W Highway 50, O’Fallon, IL',       createdAt:Date.now()-4*H,  date:iso(6), jobs:['catchlogs','brush'],   gears:['bucket','climbing'], notes:'Cleanup after the storm route.',                                     status:'assigned', crew:'c5'}),
   ];
   // Anclados a horas concretas y no a "hace N horas": si no, una corrida
   // de madrugada empuja los de hoy al día anterior y el consolidado sale en cero.
@@ -1770,7 +1784,11 @@ function viewOrders(){
         <div class="meta">
           <span>Opened ${fmtStamp(o.createdAt)}</span><span class="dot">·</span>
           <span>Scheduled ${fmtDate(o.date)}</span><span class="dot">·</span>
-          <span>${GEAR[o.gear]}</span>
+          <span>${gearNames(o.gears)}</span>
+          ${o.custName?`<span class="dot">·</span><span>${esc(o.custName)}</span>`:''}
+          ${o.custPhone?`<span class="dot">·</span>
+            <a class="map-link" href="tel:${esc(o.custPhone.replace(/[^0-9+]/g,''))}"
+               onclick="event.stopPropagation()">${esc(o.custPhone)}</a>`:''}
         </div>
         <div class="tag-row">
           ${(o.jobs||[]).map(j=>`<span class="tag">${JOBS[j]}</span>`).join('')}
@@ -1904,7 +1922,7 @@ function viewCrews(){
         <div class="crew-line" style="border-top:none;padding-top:0">
           <span>Equipment</span>
           <select class="input" data-gear="${c.id}" style="width:auto;padding:7px 34px 7px 11px;font-size:12.5px;">
-            ${Object.entries(GEAR).map(([k,v])=>`<option value="${k}" ${c.gear===k?'selected':''}>${v}</option>`).join('')}
+            ${Object.entries(CREW_GEAR).map(([k,v])=>`<option value="${k}" ${c.gear===k?'selected':''}>${v}</option>`).join('')}
           </select>
         </div>
         <div class="crew-line">
@@ -2165,10 +2183,23 @@ function modalNewOrder(){
       </div>
 
       <div style="display:flex;gap:11px;flex-wrap:wrap">
-        <div class="field" style="flex:1;min-width:160px"><label for="f-date">Scheduled date</label>
-          <input id="f-date" class="input" type="date" value="${d.date}"></div>
-        <div class="field" style="flex:1;min-width:160px"><label for="f-gear">Equipment</label>
-          <select id="f-gear" class="input">${Object.entries(GEAR).map(([k,v])=>`<option value="${k}" ${d.gear===k?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="field" style="flex:1;min-width:170px"><label for="f-name">Customer name</label>
+          <input id="f-name" class="input" placeholder="Marge Simpson" value="${esc(d.custName)}"></div>
+        <div class="field" style="flex:1;min-width:150px"><label for="f-phone">Phone</label>
+          <input id="f-phone" class="input" type="tel" placeholder="618-555-0134" value="${esc(d.custPhone)}"></div>
+      </div>
+
+      <div class="field" style="max-width:220px"><label for="f-date">Scheduled date</label>
+        <input id="f-date" class="input" type="date" value="${d.date}"></div>
+
+      <div class="field">
+        <label>Equipment — pick all that apply</label>
+        <div class="check-grid">
+          ${Object.entries(GEARS).map(([k,v])=>`
+            <button type="button" class="check ${d.gears.includes(k)?'on':''}" data-gearpick="${k}">
+              <span class="box">${ICONS.tick}</span><span>${v}</span>
+            </button>`).join('')}
+        </div>
       </div>
 
       <div class="field">
@@ -2237,8 +2268,12 @@ function modalViewOrder(o){
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
         <span class="pill pill-${o.status}">${STATUS[o.status]}</span>
-        <span class="chip">${GEAR[o.gear]}</span>
+        ${(o.gears||[]).map(g=>`<span class="chip">${GEARS[g]}</span>`).join('')}
       </div>
+      ${(o.custName||o.custPhone)?`<div class="ro-field" style="margin-bottom:11px">
+        <span>Customer</span>
+        <b>${esc(o.custName||'—')}${o.custPhone?` · <a class="map-link" href="tel:${esc(o.custPhone.replace(/[^0-9+]/g,''))}">${esc(o.custPhone)}</a>`:''}</b>
+      </div>`:''}
       <div class="tag-row" style="margin-bottom:14px">
         ${(o.jobs||[]).map(j=>`<span class="tag">${JOBS[j]}</span>`).join('')}
         ${o.dropWire?`<span class="tag tag-wire">${ICONS.bolt}Drop wire required</span>`:''}
@@ -2293,7 +2328,7 @@ function modalNewCrew(){
         <input id="c-email" class="input" type="email" placeholder="eliseo@gammatree.com" value="${esc(d.email)}"></div>
       <div style="display:flex;gap:11px;flex-wrap:wrap">
         <div class="field" style="flex:1;min-width:160px"><label for="c-gear">Equipment</label>
-          <select id="c-gear" class="input">${Object.entries(GEAR).map(([k,v])=>`<option value="${k}" ${d.gear===k?'selected':''}>${v}</option>`).join('')}</select></div>
+          <select id="c-gear" class="input">${Object.entries(CREW_GEAR).map(([k,v])=>`<option value="${k}" ${d.gear===k?'selected':''}>${v}</option>`).join('')}</select></div>
         <div class="field" style="flex:1;min-width:120px"><label for="c-members">Members</label>
           <input id="c-members" class="input" type="number" min="1" max="12" value="${d.members}"></div>
       </div>
@@ -2356,8 +2391,9 @@ function bindShell(){
 
   document.getElementById('new-order')?.addEventListener('click',()=>{
     // La fecha de apertura se fija aquí y ya no se puede tocar.
-    state.draft={createdAt:Date.now(), address:'', date:iso(0), jobs:[], gear:'bucket',
-                 dropWire:false, crew:'', notes:'', photos:[], sketch:null};
+    state.draft={createdAt:Date.now(), address:'', date:iso(0), jobs:[], gears:[],
+                 custName:'', custPhone:'', dropWire:false, crew:'', notes:'',
+                 photos:[], sketch:null};
     state.modal={type:'newOrder'}; render();
   });
   document.getElementById('new-crew')?.addEventListener('click',()=>{
@@ -2437,8 +2473,10 @@ function bindShell(){
       e.stopPropagation();
       const o=state.orders.find(x=>x.id===b.dataset.editorder);
       state.draft={editing:o.id, createdAt:o.createdAt, address:o.address, date:o.date,
-                   jobs:[...(o.jobs||[])], gear:o.gear, dropWire:!!o.dropWire,
-                   crew:o.crew||'', notes:o.notes||'', photos:[...(o.photos||[])], sketch:o.sketch};
+                   jobs:[...(o.jobs||[])], gears:[...(o.gears||[])],
+                   custName:o.custName||'', custPhone:o.custPhone||'',
+                   dropWire:!!o.dropWire, crew:o.crew||'', notes:o.notes||'',
+                   photos:[...(o.photos||[])], sketch:o.sketch};
       state.modal={type:'newOrder'}; render();
     };
   });
@@ -2510,7 +2548,8 @@ function bindModal(){
     const d=state.draft; if(!d) return;
     d.address=document.getElementById('f-addr')?.value ?? d.address;
     d.date=document.getElementById('f-date')?.value ?? d.date;
-    d.gear=document.getElementById('f-gear')?.value ?? d.gear;
+    d.custName=document.getElementById('f-name')?.value ?? d.custName;
+    d.custPhone=document.getElementById('f-phone')?.value ?? d.custPhone;
     d.crew=document.getElementById('f-crew')?.value ?? d.crew;
     d.notes=document.getElementById('f-notes')?.value ?? d.notes;
   };
@@ -2519,6 +2558,14 @@ function bindModal(){
       grab();
       const k=b.dataset.job, js=state.draft.jobs;
       state.draft.jobs = js.includes(k) ? js.filter(x=>x!==k) : [...js,k];
+      render();
+    };
+  });
+  document.querySelectorAll('[data-gearpick]').forEach(b=>{
+    b.onclick=()=>{
+      grab();
+      const k=b.dataset.gearpick, gs=state.draft.gears;
+      state.draft.gears = gs.includes(k) ? gs.filter(x=>x!==k) : [...gs,k];
       render();
     };
   });
@@ -2546,10 +2593,12 @@ function bindModal(){
     const d=state.draft;
     if(!d.address.trim()){ toast('An address is required','warn'); return; }
     if(!d.jobs.length){ toast('Pick at least one job type','warn'); return; }
+    if(!d.gears.length){ toast('Pick at least one piece of equipment','warn'); return; }
     // Editando: se conserva id, fecha de apertura y estado de avance.
     if(d.editing){
       const o=state.orders.find(x=>x.id===d.editing);
-      Object.assign(o,{address:d.address.trim(), date:d.date, jobs:d.jobs, gear:d.gear,
+      Object.assign(o,{address:d.address.trim(), date:d.date, jobs:d.jobs, gears:d.gears,
+        custName:d.custName.trim(), custPhone:d.custPhone.trim(),
         dropWire:d.dropWire, notes:d.notes.trim(), photos:d.photos, sketch:d.sketch,
         crew:d.crew||null});
       if(!o.crew && o.status==='assigned') o.status='pending';
@@ -2570,7 +2619,8 @@ function bindModal(){
 
     const fresh={
       id:uid('WO'), address:d.address.trim(), createdAt:d.createdAt, date:d.date,
-      jobs:d.jobs, gear:d.gear, dropWire:d.dropWire, notes:d.notes.trim(),
+      jobs:d.jobs, gears:d.gears, custName:d.custName.trim(), custPhone:d.custPhone.trim(),
+      dropWire:d.dropWire, notes:d.notes.trim(),
       photos:d.photos, sketch:d.sketch,
       status:d.crew?'assigned':'pending', crew:d.crew||null,
     };

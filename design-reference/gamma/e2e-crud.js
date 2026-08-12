@@ -20,7 +20,7 @@ const JPEG = Buffer.from(
   execSync(`psql -h /tmp/pgs -U postgres -tAc "create database gamma_crud" 2>&1`);
   psql(D+'/00_shim.sql');
   for(const m of ['0001_init.sql','0003_fix_role_escalation.sql','0004_gamma_model.sql',
-                  '0005_client_ready.sql','0006_deletable.sql']) psql(`${M}/${m}`);
+                  '0005_client_ready.sql','0006_deletable.sql','0007_order_contact_and_gear.sql']) psql(`${M}/${m}`);
   psql(D+'/seed-sync.sql');
 
   const api=await mock.start('postgresql://postgres@/gamma_crud?host=/tmp/pgs');
@@ -52,6 +52,42 @@ const JPEG = Buffer.from(
   const office=await device('/dashboard',1340,900,'panel');
   await signIn(office,'paul@gammatree.com');
   await office.click('[data-nav="orders"]'); await office.waitForTimeout(900);
+
+  /* ---------- Contacto y equipo múltiple ---------- */
+  console.log('── Contacto del cliente y equipo múltiple ──');
+  await office.click('#new-order'); await office.waitForTimeout(500);
+  check(await office.locator('#f-name').count()===1 && await office.locator('#f-phone').count()===1,
+    'el formulario trae Name y Phone');
+  const opciones = await office.locator('[data-gearpick]').allTextContents();
+  check(opciones.length===4, `equipo con 4 opciones (${opciones.map(x=>x.trim()).join(', ')})`);
+  check(!/bucket \+ climbing/i.test(opciones.join(' ')), 'sin la opción combinada climbing+bucket');
+  check(/stump grinder/i.test(opciones.join(' ')) && /logs/i.test(opciones.join(' ')),
+    'con Stump Grinder y Logs');
+
+  await office.fill('#f-addr','15 Contacto Ave, Belleville, IL');
+  await office.fill('#f-name','Marge Simpson');
+  await office.fill('#f-phone','618-555-0134');
+  await office.click('[data-job="removal"]'); await office.waitForTimeout(150);
+  await office.click('#f-save'); await office.waitForTimeout(600);
+  check(await office.locator('.scrim').count()===1, 'no deja guardar sin marcar equipo');
+
+  await office.click('[data-gearpick="bucket"]'); await office.waitForTimeout(150);
+  await office.click('[data-gearpick="stump_grinder"]'); await office.waitForTimeout(150);
+  check(await office.locator('[data-gearpick].on').count()===2, 'el equipo admite varias marcas');
+  check(await office.locator('#f-name').inputValue()==='Marge Simpson',
+    'el nombre sobrevive a los re-render');
+  await office.selectOption('#f-crew',{label:"Eliseo's Crew"});
+  await office.click('#f-save'); await office.waitForTimeout(1700);
+
+  const fila=(await api.db.query("select customer_name n, customer_phone p, gear::text g from work_orders where address like '15 Contacto%'")).rows[0];
+  check(fila?.n==='Marge Simpson' && fila?.p==='618-555-0134',
+    `nombre y teléfono llegan a la base (${fila?.n} / ${fila?.p})`);
+  check(fila?.g==='{bucket,stump_grinder}', `y el equipo múltiple también (${fila?.g})`);
+  const enPantalla=await office.locator('main').textContent();
+  check(enPantalla.includes('Marge Simpson') && enPantalla.includes('618-555-0134'),
+    'el panel muestra el contacto en la orden');
+  check(/Bucket truck.*Stump Grinder|Stump Grinder.*Bucket truck/.test(enPantalla),
+    'y los dos equipos');
 
   /* ---------- Editar una orden ---------- */
   console.log('── Editar una orden ──');
@@ -115,6 +151,7 @@ const JPEG = Buffer.from(
   await office.click('#new-order'); await office.waitForTimeout(400);
   await office.fill('#f-addr','77 Cierre Test Rd, Belleville, IL');
   await office.click('[data-job="removal"]'); await office.waitForTimeout(150);
+  await office.click('[data-gearpick="bucket"]'); await office.waitForTimeout(150);
   await office.selectOption('#f-crew',{label:"Ivan's Crew"});
   await office.click('#f-save'); await office.waitForTimeout(1700);
 

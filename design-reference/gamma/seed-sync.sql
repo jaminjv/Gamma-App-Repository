@@ -26,12 +26,15 @@ insert into group_skills (group_id, skill)
 select id, unnest(array['removal','brush']::job_kind[]) from groups where name like 'Ivan%';
 
 -- Órdenes de arranque, una por cuadrilla.
-insert into work_orders (address, scheduled_date, job_types, equipment_required, instructions, state, group_id)
-select '22 Fossil Ridge Dr, Swansea, IL', current_date, array['trimming']::job_kind[], 'climbing',
+insert into work_orders (address, scheduled_date, job_types, gear, customer_name, customer_phone,
+                         instructions, state, group_id)
+select '22 Fossil Ridge Dr, Swansea, IL', current_date, array['trimming']::job_kind[],
+       array['climbing']::gear_kind[], 'Marge Simpson', '618-555-0134',
        'High canopy pruning near the line.', 'assigned', id
 from groups where name like 'Eliseo%';
 
-insert into work_orders (address, scheduled_date, job_types, equipment_required, instructions, state, group_id)
-select '412 Frank Scott Pkwy, Belleville, IL', current_date, array['removal']::job_kind[], 'bucket',
+insert into work_orders (address, scheduled_date, job_types, gear, instructions, state, group_id)
+select '412 Frank Scott Pkwy, Belleville, IL', current_date, array['removal']::job_kind[],
+       array['bucket','stump_grinder']::gear_kind[],
        'Remove dead oak next to the garage.', 'assigned', id
 from groups where name like 'Ivan%';

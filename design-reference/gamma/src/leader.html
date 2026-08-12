@@ -132,6 +132,13 @@
   font-weight:600;text-decoration:none;transition:all .25s var(--ease);}
 .map-btn:hover{background:rgba(6,64,43,.09);}
 .map-btn svg{width:15px;height:15px;}
+.cust{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-top:10px;padding:11px 13px;border-radius:var(--r-sm);
+  background:rgba(6,64,43,.05);box-shadow:inset 0 0 0 1px var(--glass-brd);}
+.cust span{display:block;font-size:9.5px;font-weight:600;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--text-faint);margin-bottom:2px;}
+.cust b{font-size:var(--t-md);font-weight:600;}
+.cust .btn{flex:none;}
 .tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
 .tag{padding:3px 9px;border-radius:999px;font-size:10px;font-weight:600;
   background:var(--green-tint);color:var(--green);box-shadow:inset 0 0 0 1px rgba(6,64,43,.14);}
@@ -175,6 +182,7 @@ const ICONS = {
   flag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></svg>',
   pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
   bolt:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>',
+  phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.1a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>',
 };
 
 /* ---------- Traducciones ---------- */
@@ -218,7 +226,9 @@ const TR = {
     stDone:'Terminado', stFlag:'Reasignar',
     jRemoval:'Remoción', jTrimming:'Poda', jStump:'Tocón', jStorm:'Daño por tormenta',
     jCatchlogs:'Recoger troncos', jBrush:'Maleza',
-    gBucket:'Bucket truck', gClimbing:'Climbing', gBoth:'Bucket + Climbing',
+    gBucket:'Bucket truck', gClimbing:'Climbing',
+    gStump:'Triturador de tocones', gLogs:'Camión de troncos',
+    customer:'Cliente', callCustomer:'Llamar',
     connect:'Conectar con la oficina', settings:'Configuración del servidor',
     connOn:'Conectado', connOff:'Modo demostración',
     syncing:'Sincronizando…', noCrew:'Tu cuenta todavía no está asignada a una cuadrilla.',
@@ -265,7 +275,9 @@ const TR = {
     stDone:'Done', stFlag:'Flagged',
     jRemoval:'Removal', jTrimming:'Trimming', jStump:'Stump', jStorm:'Storm Damage',
     jCatchlogs:'Catch Logs', jBrush:'Brush',
-    gBucket:'Bucket truck', gClimbing:'Climbing', gBoth:'Bucket + Climbing',
+    gBucket:'Bucket truck', gClimbing:'Climbing',
+    gStump:'Stump Grinder', gLogs:'Logs',
+    customer:'Customer', callCustomer:'Call',
     connect:'Connect to the office', settings:'Backend settings',
     connOn:'Connected', connOff:'Demo mode',
     syncing:'Syncing…', noCrew:'Your account is not linked to a crew yet.',
@@ -283,7 +295,9 @@ const JOB_KEY = {removal:'jRemoval',trimming:'jTrimming',stump:'jStump',
                  storm:'jStorm',catchlogs:'jCatchlogs',brush:'jBrush'};
 const mapsUrl = (a) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(a);
 const jobNames = (l) => (l||[]).map(j=>t()[JOB_KEY[j]]).filter(Boolean).join(' · ') || '—';
-const GEAR_KEY = {bucket:'gBucket',climbing:'gClimbing',both:'gBoth'};
+const GEAR_KEY = {bucket:'gBucket',climbing:'gClimbing',
+                  stump_grinder:'gStump',logs:'gLogs'};
+const gearNames = (l) => (l||[]).map(g=>t()[GEAR_KEY[g]]).filter(Boolean).join(' · ') || '—';
 
 /* ---------- Cuentas de líder ---------- */
 const DEMO_PASS = 'gamma1954';
@@ -326,16 +340,17 @@ function sampleSketch(){
 
 /* ---------- Datos semilla ---------- */
 function seedJobs(){
-  const H=3600000, mk=(o)=>({photos:[],sketch:null,dropWire:false,...o});
+  const H=3600000, mk=(o)=>({photos:[],sketch:null,dropWire:false,gears:['bucket'],custName:'',custPhone:'',...o});
   return [
-    mk({id:'WO-a', crew:'c1', address:'22 Fossil Ridge Dr, Swansea, IL',    createdAt:Date.now()-26*H, date:iso(0), jobs:['trimming'],          gear:'climbing', notes:'High canopy pruning, power line nearby — coordinate with Ameren.', status:'assigned', sketch:sampleSketch(), dropWire:true}),
-    mk({id:'WO-b', crew:'c1', address:'560 Carlyle Ave, Belleville, IL',    createdAt:Date.now()-52*H, date:iso(0), jobs:['trimming','brush'],  gear:'climbing', notes:'Decorative pruning, backyard.',            status:'assigned'}),
-    mk({id:'WO-c', crew:'c1', address:'901 N 4th St, Millstadt, IL',        createdAt:Date.now()-70*H, date:iso(-1),jobs:['brush','stump'],     gear:'climbing', notes:'High pruning near a phone line.',          status:'done'}),
-    mk({id:'WO-d', crew:'c2', address:'412 Frank Scott Pkwy, Belleville, IL',createdAt:Date.now()-30*H,date:iso(0), jobs:['removal','catchlogs'],gear:'bucket',  notes:'Remove dead oak next to the garage. Client wants the wood stacked.', status:'progress'}),
-    mk({id:'WO-e', crew:'c2', address:'890 S Illinois St, Belleville, IL',  createdAt:Date.now()-20*H, date:iso(0), jobs:['trimming','brush'],  gear:'bucket',   notes:'Trim branches overhanging the roof.',      status:'assigned'}),
-    mk({id:'WO-f', crew:'c3', address:'77 Green Mount Rd, Shiloh, IL',      createdAt:Date.now()-12*H, date:iso(0), jobs:['removal'],           gear:'bucket',   notes:'Remove 2 dead pines by the driveway.',     status:'assigned'}),
-    mk({id:'WO-g', crew:'c4', address:'340 Longacre Dr, O\u2019Fallon, IL',  createdAt:Date.now()-44*H, date:iso(0), jobs:['removal','stump'],   gear:'bucket',   notes:'Stump grinding next to the meter — check clearances first.', status:'assigned'}),
-    mk({id:'WO-h', crew:'c5', address:'1345 Main St, O\u2019Fallon, IL',     createdAt:Date.now()-8*H,  date:iso(0), jobs:['storm','catchlogs'], gear:'both',     notes:'Tree down on fence after storm. High priority.', status:'assigned', dropWire:true}),
+    mk({id:'WO-a', crew:'c1', address:'22 Fossil Ridge Dr, Swansea, IL',    createdAt:Date.now()-26*H, date:iso(0), jobs:['trimming'],          gears:['climbing'], notes:'High canopy pruning, power line nearby — coordinate with Ameren.', status:'assigned', sketch:sampleSketch(), dropWire:true,
+        custName:'Marge Simpson', custPhone:'618-555-0134'}),
+    mk({id:'WO-b', crew:'c1', address:'560 Carlyle Ave, Belleville, IL',    createdAt:Date.now()-52*H, date:iso(0), jobs:['trimming','brush'],  gears:['climbing'], notes:'Decorative pruning, backyard.',            status:'assigned'}),
+    mk({id:'WO-c', crew:'c1', address:'901 N 4th St, Millstadt, IL',        createdAt:Date.now()-70*H, date:iso(-1),jobs:['brush','stump'],     gears:['climbing'], notes:'High pruning near a phone line.',          status:'done'}),
+    mk({id:'WO-d', crew:'c2', address:'412 Frank Scott Pkwy, Belleville, IL',createdAt:Date.now()-30*H,date:iso(0), jobs:['removal','catchlogs'],gears:['bucket'],   notes:'Remove dead oak next to the garage. Client wants the wood stacked.', status:'progress'}),
+    mk({id:'WO-e', crew:'c2', address:'890 S Illinois St, Belleville, IL',  createdAt:Date.now()-20*H, date:iso(0), jobs:['trimming','brush'],  gears:['bucket'],   notes:'Trim branches overhanging the roof.',      status:'assigned'}),
+    mk({id:'WO-f', crew:'c3', address:'77 Green Mount Rd, Shiloh, IL',      createdAt:Date.now()-12*H, date:iso(0), jobs:['removal'],           gears:['bucket'],   notes:'Remove 2 dead pines by the driveway.',     status:'assigned'}),
+    mk({id:'WO-g', crew:'c4', address:'340 Longacre Dr, O\u2019Fallon, IL',  createdAt:Date.now()-44*H, date:iso(0), jobs:['removal','stump'],   gears:['bucket'],   notes:'Stump grinding next to the meter — check clearances first.', status:'assigned'}),
+    mk({id:'WO-h', crew:'c5', address:'1345 Main St, O\u2019Fallon, IL',     createdAt:Date.now()-8*H,  date:iso(0), jobs:['storm','catchlogs'], gears:['bucket','climbing'], notes:'Tree down on fence after storm. High priority.', status:'assigned', dropWire:true}),
   ];
 }
 
@@ -592,7 +607,7 @@ function jobCard(j,i){
       <span class="pill pill-${j.status}">${T[ST_KEY[j.status]]}</span>
     </div>
     <div class="meta">
-      <span>${T[GEAR_KEY[j.gear]]}</span><span class="dot">·</span>
+      <span>${gearNames(j.gears)}</span><span class="dot">·</span>
       <span>${fmtDate(j.date)}</span>
     </div>
     <div class="tag-row">
@@ -601,6 +616,12 @@ function jobCard(j,i){
     </div>
     <a class="map-btn" href="${mapsUrl(j.address)}" target="_blank" rel="noopener noreferrer">
       ${ICONS.pin}<span>${T.openMaps}</span></a>
+    ${(j.custName||j.custPhone)?`
+      <div class="cust">
+        <div><span>${T.customer}</span><b>${esc(j.custName||'—')}</b></div>
+        ${j.custPhone?`<a class="btn btn-glass btn-sm" href="tel:${esc(j.custPhone.replace(/[^0-9+]/g,''))}">
+          ${ICONS.phone}<span>${esc(j.custPhone)}</span></a>`:''}
+      </div>`:''}
     ${j.notes?`<div class="note-box" style="margin-top:12px"><b>${T.instructions}</b><br>${esc(j.notes)}</div>`:''}
     ${(j.photos||[]).length?`<div class="photo-row">${j.photos.map(p=>`<img src="${p}" alt="">`).join('')}</div>`:''}
     ${j.sketch?`<button class="sketch-btn" data-sketch="${j.id}" style="margin-top:11px">

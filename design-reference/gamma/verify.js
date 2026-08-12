@@ -150,6 +150,9 @@ function check(cond, label){
   await p.click('[data-wire]');
   await p.waitForTimeout(200);
   check(await p.locator('[data-wire].on').count() === 1, 'la casilla Drop Wire queda marcada');
+  await p.click('[data-gearpick="bucket"]');
+  await p.waitForTimeout(200);
+  check(await p.locator('[data-gearpick].on').count() === 1, 'y el equipo queda marcado');
   await p.click('#f-save');
   await p.waitForTimeout(800);
 

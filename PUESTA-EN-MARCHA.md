@@ -40,6 +40,7 @@ En **SQL Editor**, pega y ejecuta **en este orden**:
 3. `supabase/migrations/0004_gamma_model.sql`
 4. `supabase/migrations/0005_client_ready.sql`
 5. `supabase/migrations/0006_deletable.sql`
+6. `supabase/migrations/0007_order_contact_and_gear.sql`
 
 > El `0002_seed.sql` es solo datos de ejemplo del proyecto original. No lo
 > corras si vas a operar de verdad.

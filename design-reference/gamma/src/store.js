@@ -188,6 +188,8 @@ function connectionHint(err){
 /* ============================================================
    Traducción entre las filas de la base y la forma que usan las apps
    ============================================================ */
+// El tipo de equipo de la CUADRILLA sigue siendo uno solo; el de la ORDEN
+// pasó a ser una lista. Son dos vocabularios distintos a propósito.
 const GEAR_TO_DB   = { bucket:'bucket', climbing:'climbing', both:'ambos' };
 const GEAR_FROM_DB = { bucket:'bucket', climbing:'climbing', ambos:'both' };
 
@@ -206,7 +208,9 @@ const Map2 = {
       createdAt: Date.parse(r.created_at),
       date: r.scheduled_date,
       jobs: r.job_types || [],
-      gear: GEAR_FROM_DB[r.equipment_required] || 'bucket',
+      gears: r.gear || [],
+      custName: r.customer_name || '',
+      custPhone: r.customer_phone || '',
       dropWire: !!r.drop_wire,
       notes: r.instructions || '',
       status: r.state,
@@ -220,7 +224,9 @@ const Map2 = {
   orderToRow(o){
     return {
       address:o.address, scheduled_date:o.date, job_types:o.jobs,
-      equipment_required: GEAR_TO_DB[o.gear] || 'bucket',
+      gear: o.gears || [],
+      customer_name: o.custName || null,
+      customer_phone: o.custPhone || null,
       drop_wire: !!o.dropWire, instructions:o.notes || null,
       state:o.status, group_id:o.crew || null,
       sketch_image_url:o.sketch || null,

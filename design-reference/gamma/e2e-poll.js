@@ -14,7 +14,7 @@ const fail=[]; const check=(c,l)=>{console.log(`   ${c?'✓':'✗ FALLA:'} ${l}`
   execSync(`psql -h /tmp/pgs -U postgres -tAc "drop database if exists gamma_poll" 2>&1`);
   execSync(`psql -h /tmp/pgs -U postgres -tAc "create database gamma_poll" 2>&1`);
   psql(D+'/00_shim.sql');
-  for(const m of ['0001_init.sql','0003_fix_role_escalation.sql','0004_gamma_model.sql','0005_client_ready.sql','0006_deletable.sql']) psql(`${M}/${m}`);
+  for(const m of ['0001_init.sql','0003_fix_role_escalation.sql','0004_gamma_model.sql','0005_client_ready.sql','0006_deletable.sql','0007_order_contact_and_gear.sql']) psql(`${M}/${m}`);
   psql(D+'/seed-sync.sql');
 
   const api=await mock.start('postgresql://postgres@/gamma_poll?host=/tmp/pgs');
