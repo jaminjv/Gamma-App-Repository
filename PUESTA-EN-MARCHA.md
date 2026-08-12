@@ -155,3 +155,8 @@ sirven igual para ese paso, así que no se tira nada.
 | Entra pero no ve nada | Falta correr `update profiles set role='admin'` |
 | El líder no ve trabajos | Su cuadrilla no tiene ese correo en *leader email* |
 | Nada sincroniza | Estás en el enlace publicado; sirve los archivos por tu cuenta |
+| «Your database is missing a migration» | Actualizaste los archivos pero no corriste el SQL nuevo. Corre las migraciones que falten, en orden |
+
+> **Al actualizar los archivos, revisa siempre si hay migraciones nuevas.**
+> Si falta alguna, la aplicación te lo dice al guardar, con el nombre de la
+> columna y del archivo, y no pierde lo que hayas escrito.

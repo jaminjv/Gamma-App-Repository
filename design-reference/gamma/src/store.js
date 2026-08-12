@@ -173,6 +173,20 @@ function snapshotSig(st){
   ]);
 }
 
+/* Traduce el fallo de un guardado a algo accionable.
+   El caso más común tras una actualización es que a la base le falte una
+   migración: el cliente manda una columna que allá no existe. PostgREST lo
+   dice como PGRST204 y Postgres como "column ... does not exist". */
+function describeSaveError(err){
+  const m = err?.message || '';
+  const col = /'([a-z_]+)' column|column "([a-z_]+)"/i.exec(m);
+  if(/PGRST204|does not exist|schema cache/i.test(m))
+    return { kind:'MIGRATION', col: col ? (col[1]||col[2]) : null, raw:m };
+  if(/violates row-level security|permission denied/i.test(m))
+    return { kind:'PERMISSION', raw:m };
+  return { kind:'OTHER', raw:m };
+}
+
 /* Diagnóstico de conexión.
    Un fallo de red y una URL mal escrita se ven igual desde JavaScript, pero
    el remedio es opuesto: decirle a alguien "revisa la URL" cuando lo que

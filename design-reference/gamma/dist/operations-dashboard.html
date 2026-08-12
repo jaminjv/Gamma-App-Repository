@@ -1070,6 +1070,20 @@ function snapshotSig(st){
   ]);
 }
 
+/* Traduce el fallo de un guardado a algo accionable.
+   El caso más común tras una actualización es que a la base le falte una
+   migración: el cliente manda una columna que allá no existe. PostgREST lo
+   dice como PGRST204 y Postgres como "column ... does not exist". */
+function describeSaveError(err){
+  const m = err?.message || '';
+  const col = /'([a-z_]+)' column|column "([a-z_]+)"/i.exec(m);
+  if(/PGRST204|does not exist|schema cache/i.test(m))
+    return { kind:'MIGRATION', col: col ? (col[1]||col[2]) : null, raw:m };
+  if(/violates row-level security|permission denied/i.test(m))
+    return { kind:'PERMISSION', raw:m };
+  return { kind:'OTHER', raw:m };
+}
+
 /* Diagnóstico de conexión.
    Un fallo de red y una URL mal escrita se ven igual desde JavaScript, pero
    el remedio es opuesto: decirle a alguien "revisa la URL" cuando lo que
@@ -1452,7 +1466,7 @@ let pollTimer = null;
 
 const state = {
   loggedIn:false, view:'overview', modal:null, filter:'all',
-  loginErr:null, connErr:null, loginEmail:null, busy:false,
+  loginErr:null, connErr:null, loginEmail:null, saveErr:null, busy:false,
   weekStart: mondayOf(new Date()),
   translated: {},          // id de nota -> mostrando inglés
   draft: null,             // formulario de orden en curso
@@ -1486,12 +1500,23 @@ async function refresh(){
    el cambio y vuelve a leer, de modo que la pantalla refleje el servidor y
    no una suposición del cliente. */
 async function commit(cloudFn){
-  if(!online()){ persist(); render(); return; }
+  if(!online()){ persist(); render(); return true; }
   state.busy = true;
-  try{ await cloudFn(); await refresh(); }
-  catch(e){ toast(e.message,'warn'); await refresh(); }
+  let ok = true;
+  try{
+    state.saveErr = null;
+    await cloudFn();
+    await refresh();
+  }catch(e){
+    // Devuelve el fallo en vez de tragárselo: quien llama no debe anunciar
+    // un éxito que no ocurrió.
+    ok = false;
+    state.saveErr = describeSaveError(e);
+    await refresh();
+  }
   state.busy = false;
   render();
+  return ok;
 }
 
 function startPolling(){
@@ -1586,6 +1611,21 @@ function loginMessage(){
     · The user was <b>invited</b> instead of created. An invited user has no
       password yet. Use <b>Add user → Create new user</b>.<br>
     · The email does not exist in this project (<code>${esc(host)}</code>).`;
+}
+
+function saveMessage(){
+  const e = state.saveErr;
+  if(!e) return '';
+  if(e.kind==='MIGRATION') return `<b>Your database is missing a migration.</b><br>
+    ${e.col?`It has no <code>${esc(e.col)}</code> column yet. `:''}Run the pending files from
+    <code>supabase/migrations/</code> in the Supabase SQL Editor — the newest is
+    <code>0007_order_contact_and_gear.sql</code> — then save again. Nothing you typed is lost.<br>
+    <span style="opacity:.75">${esc(e.raw)}</span>`;
+  if(e.kind==='PERMISSION') return `<b>The database refused the write.</b><br>
+    The signed-in account may not be an admin. Run
+    <code>update profiles set role='admin' where email='…';</code><br>
+    <span style="opacity:.75">${esc(e.raw)}</span>`;
+  return `<b>Could not save.</b><br>${esc(e.raw)}`;
 }
 
 function connMessage(){
@@ -2170,6 +2210,8 @@ function modalNewOrder(){
         <button class="icon-btn" data-close aria-label="Close">&times;</button>
       </div>
 
+      ${state.saveErr?`<div class="err" style="margin-bottom:15px;text-align:left">${saveMessage()}</div>`:''}
+
       <div class="field">
         <label>Opened</label>
         <div class="ro-field"><span>${d.editing?'Not editable':'Set automatically'}</span><b>${fmtStamp(d.createdAt)}</b></div>
@@ -2316,6 +2358,7 @@ function modalNewCrew(){
           <h2 style="font-size:var(--t-xl)">${d.editing?'Edit crew':'New crew'}</h2></div>
         <button class="icon-btn" data-close aria-label="Close">&times;</button>
       </div>
+      ${state.saveErr?`<div class="err" style="margin-bottom:15px;text-align:left">${saveMessage()}</div>`:''}
       <div class="field"><label for="c-leader">Crew leader</label>
         <input id="c-leader" class="input" placeholder="Eliseo Marín" value="${esc(d.leader)}"></div>
       <div class="field"><label for="c-name">Crew name</label>
@@ -2391,12 +2434,14 @@ function bindShell(){
 
   document.getElementById('new-order')?.addEventListener('click',()=>{
     // La fecha de apertura se fija aquí y ya no se puede tocar.
+    state.saveErr=null;
     state.draft={createdAt:Date.now(), address:'', date:iso(0), jobs:[], gears:[],
                  custName:'', custPhone:'', dropWire:false, crew:'', notes:'',
                  photos:[], sketch:null};
     state.modal={type:'newOrder'}; render();
   });
   document.getElementById('new-crew')?.addEventListener('click',()=>{
+    state.saveErr=null;
     state.crewDraft={leader:'', name:'', email:'', gear:'bucket', members:3, skills:[]};
     state.modal={type:'newCrew'}; render();
   });
@@ -2472,6 +2517,7 @@ function bindShell(){
     b.onclick=(e)=>{
       e.stopPropagation();
       const o=state.orders.find(x=>x.id===b.dataset.editorder);
+      state.saveErr=null;
       state.draft={editing:o.id, createdAt:o.createdAt, address:o.address, date:o.date,
                    jobs:[...(o.jobs||[])], gears:[...(o.gears||[])],
                    custName:o.custName||'', custPhone:o.custPhone||'',
@@ -2486,6 +2532,7 @@ function bindShell(){
   document.querySelectorAll('[data-editcrew]').forEach(b=>{
     b.onclick=()=>{
       const c=crewById(b.dataset.editcrew);
+      state.saveErr=null;
       state.crewDraft={editing:c.id, leader:c.leader==='—'?'':c.leader, name:c.name,
                        email:c.email, gear:c.gear, members:c.members, skills:[...c.skills]};
       state.modal={type:'newCrew'}; render();
@@ -2603,17 +2650,21 @@ function bindModal(){
         crew:d.crew||null});
       if(!o.crew && o.status==='assigned') o.status='pending';
       else if(o.crew && o.status==='pending') o.status='assigned';
-      state.modal=null; state.draft=null;
-      if(!online()){ persist(); render(); toast('Order updated'); return; }
-      commit(async()=>{
-        const nuevas=o.photos.filter(p=>p.startsWith('data:'));
-        const urls=[];
-        for(const ph of nuevas) urls.push(await Gamma.upload('order-photos','job.jpg',ph));
-        const sketchUrl = o.sketch && o.sketch.startsWith('data:')
-          ? await Gamma.upload('order-sketches','sketch.jpg',o.sketch) : o.sketch;
-        await Gamma.patch('work_orders', o.id, Map2.orderToRow({...o, sketch:sketchUrl}));
-        if(urls.length) await Gamma.insert('work_order_photos', urls.map(u=>({work_order_id:o.id,url:u})));
-      }).then(()=>toast('Order updated'));
+      if(!online()){ state.modal=null; state.draft=null; persist(); render(); toast('Order updated'); return; }
+      (async()=>{
+        const ok = await commit(async()=>{
+          const nuevas=o.photos.filter(p=>p.startsWith('data:'));
+          const urls=[];
+          for(const ph of nuevas) urls.push(await Gamma.upload('order-photos','job.jpg',ph));
+          const sketchUrl = o.sketch && o.sketch.startsWith('data:')
+            ? await Gamma.upload('order-sketches','sketch.jpg',o.sketch) : o.sketch;
+          await Gamma.patch('work_orders', o.id, Map2.orderToRow({...o, sketch:sketchUrl}));
+          if(urls.length) await Gamma.insert('work_order_photos', urls.map(u=>({work_order_id:o.id,url:u})));
+        });
+        if(!ok) return;               // el formulario sigue abierto con el motivo
+        state.modal=null; state.draft=null; render();
+        toast('Order updated');
+      })();
       return;
     }
 
@@ -2624,16 +2675,23 @@ function bindModal(){
       photos:d.photos, sketch:d.sketch,
       status:d.crew?'assigned':'pending', crew:d.crew||null,
     };
-    state.modal=null; state.draft=null; state.view='orders';
-    if(!online()){ state.orders.unshift(fresh); persist(); render(); toast('Work order created'); return; }
-    commit(async()=>{
-      // Las imágenes van primero al bucket; en la fila solo queda su URL.
-      const sketchUrl = fresh.sketch ? await Gamma.upload('order-sketches','sketch.jpg',fresh.sketch) : null;
-      const urls = [];
-      for(const ph of fresh.photos) urls.push(await Gamma.upload('order-photos','job.jpg',ph));
-      const [row] = await Gamma.insert('work_orders', Map2.orderToRow({...fresh, sketch:sketchUrl}));
-      if(urls.length) await Gamma.insert('work_order_photos', urls.map(u=>({work_order_id:row.id, url:u})));
-    }).then(()=>toast('Work order created'));
+    if(!online()){
+      state.orders.unshift(fresh); state.modal=null; state.draft=null; state.view='orders';
+      persist(); render(); toast('Work order created'); return;
+    }
+    (async()=>{
+      const ok = await commit(async()=>{
+        // Las imágenes van primero al bucket; en la fila solo queda su URL.
+        const sketchUrl = fresh.sketch ? await Gamma.upload('order-sketches','sketch.jpg',fresh.sketch) : null;
+        const urls = [];
+        for(const ph of fresh.photos) urls.push(await Gamma.upload('order-photos','job.jpg',ph));
+        const [row] = await Gamma.insert('work_orders', Map2.orderToRow({...fresh, sketch:sketchUrl}));
+        if(urls.length) await Gamma.insert('work_order_photos', urls.map(u=>({work_order_id:row.id, url:u})));
+      });
+      if(!ok) return;
+      state.modal=null; state.draft=null; state.view='orders'; render();
+      toast('Work order created');
+    })();
   });
 
   /* --- Formulario de cuadrilla --- */
@@ -2667,12 +2725,17 @@ function bindModal(){
         leader:d.leader.trim(), email:d.email.trim().toLowerCase(),
         gear:d.gear, members:Math.max(1,Math.min(12,d.members||1))});
       const antes=state.crews.find(x=>x.id===c.id).skills;
-      state.modal=null; state.crewDraft=null;
-      if(!online()){ c.skills=d.skills; persist(); render(); toast('Crew updated'); return; }
-      commit(async()=>{
-        await Gamma.patch('groups', c.id, Map2.crewToRow(c));
-        await saveSkills(c.id, antes, d.skills);
-      }).then(()=>toast('Crew updated'));
+      if(!online()){ c.skills=d.skills; state.modal=null; state.crewDraft=null;
+        persist(); render(); toast('Crew updated'); return; }
+      (async()=>{
+        const ok = await commit(async()=>{
+          await Gamma.patch('groups', c.id, Map2.crewToRow(c));
+          await saveSkills(c.id, antes, d.skills);
+        });
+        if(!ok) return;
+        state.modal=null; state.crewDraft=null; render();
+        toast('Crew updated');
+      })();
       return;
     }
 
@@ -2683,13 +2746,18 @@ function bindModal(){
       skills:d.skills,
       x:15+Math.round(Math.random()*70), y:20+Math.round(Math.random()*60),
     };
-    state.modal=null; state.crewDraft=null;
-    if(!online()){ state.crews.push(crew); persist(); render(); toast('Crew created'); return; }
-    commit(async()=>{
-      const [row] = await Gamma.insert('groups', Map2.crewToRow(crew));
-      if(crew.skills.length)
-        await Gamma.insert('group_skills', crew.skills.map(skill=>({group_id:row.id, skill})));
-    }).then(()=>toast('Crew created'));
+    if(!online()){ state.crews.push(crew); state.modal=null; state.crewDraft=null;
+      persist(); render(); toast('Crew created'); return; }
+    (async()=>{
+      const ok = await commit(async()=>{
+        const [row] = await Gamma.insert('groups', Map2.crewToRow(crew));
+        if(crew.skills.length)
+          await Gamma.insert('group_skills', crew.skills.map(skill=>({group_id:row.id, skill})));
+      });
+      if(!ok) return;
+      state.modal=null; state.crewDraft=null; render();
+      toast('Crew created');
+    })();
   });
 
   document.getElementById('ok-delorder')?.addEventListener('click',()=>{
@@ -2697,7 +2765,7 @@ function bindModal(){
     state.orders=state.orders.filter(o=>o.id!==id);
     state.modal=null;
     if(!online()){ persist(); render(); toast('Order deleted'); return; }
-    commit(()=>Gamma.remove('work_orders', `id=eq.${id}`)).then(()=>toast('Order deleted'));
+    commit(()=>Gamma.remove('work_orders', `id=eq.${id}`)).then(ok=>ok&&toast('Order deleted'));
   });
   document.getElementById('ok-delcrew')?.addEventListener('click',()=>{
     const id=state.modal.id, nombre=crewName(id);
@@ -2707,7 +2775,7 @@ function bindModal(){
     state.crews=state.crews.filter(c=>c.id!==id);
     state.modal=null;
     if(!online()){ persist(); render(); toast(`${nombre} deleted`); return; }
-    commit(()=>Gamma.remove('groups', `id=eq.${id}`)).then(()=>toast(`${nombre} deleted`));
+    commit(()=>Gamma.remove('groups', `id=eq.${id}`)).then(ok=>ok&&toast(`${nombre} deleted`));
   });
 
   document.querySelectorAll('[data-pick]').forEach(b=>{

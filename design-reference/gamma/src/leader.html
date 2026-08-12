@@ -387,12 +387,23 @@ async function refresh(){
 }
 
 async function commit(cloudFn){
-  if(!online()){ persist(); render(); return; }
+  if(!online()){ persist(); render(); return true; }
   state.busy = true;
-  try{ await cloudFn(); await refresh(); }
-  catch(e){ toast(e.message,'warn'); await refresh(); }
+  let ok = true;
+  try{
+    state.saveErr = null;
+    await cloudFn();
+    await refresh();
+  }catch(e){
+    // Devuelve el fallo en vez de tragárselo: quien llama no debe anunciar
+    // un éxito que no ocurrió.
+    ok = false;
+    state.saveErr = describeSaveError(e);
+    await refresh();
+  }
   state.busy = false;
   render();
+  return ok;
 }
 
 function startPolling(){

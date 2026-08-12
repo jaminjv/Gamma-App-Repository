@@ -888,6 +888,20 @@ function snapshotSig(st){
   ]);
 }
 
+/* Traduce el fallo de un guardado a algo accionable.
+   El caso más común tras una actualización es que a la base le falte una
+   migración: el cliente manda una columna que allá no existe. PostgREST lo
+   dice como PGRST204 y Postgres como "column ... does not exist". */
+function describeSaveError(err){
+  const m = err?.message || '';
+  const col = /'([a-z_]+)' column|column "([a-z_]+)"/i.exec(m);
+  if(/PGRST204|does not exist|schema cache/i.test(m))
+    return { kind:'MIGRATION', col: col ? (col[1]||col[2]) : null, raw:m };
+  if(/violates row-level security|permission denied/i.test(m))
+    return { kind:'PERMISSION', raw:m };
+  return { kind:'OTHER', raw:m };
+}
+
 /* Diagnóstico de conexión.
    Un fallo de red y una URL mal escrita se ven igual desde JavaScript, pero
    el remedio es opuesto: decirle a alguien "revisa la URL" cuando lo que
@@ -1072,7 +1086,9 @@ const TR = {
     stDone:'Terminado', stFlag:'Reasignar',
     jRemoval:'Remoción', jTrimming:'Poda', jStump:'Tocón', jStorm:'Daño por tormenta',
     jCatchlogs:'Recoger troncos', jBrush:'Maleza',
-    gBucket:'Bucket truck', gClimbing:'Climbing', gBoth:'Bucket + Climbing',
+    gBucket:'Bucket truck', gClimbing:'Climbing',
+    gStump:'Triturador de tocones', gLogs:'Camión de troncos',
+    customer:'Cliente', callCustomer:'Llamar',
     connect:'Conectar con la oficina', settings:'Configuración del servidor',
     connOn:'Conectado', connOff:'Modo demostración',
     syncing:'Sincronizando…', noCrew:'Tu cuenta todavía no está asignada a una cuadrilla.',
@@ -1119,7 +1135,9 @@ const TR = {
     stDone:'Done', stFlag:'Flagged',
     jRemoval:'Removal', jTrimming:'Trimming', jStump:'Stump', jStorm:'Storm Damage',
     jCatchlogs:'Catch Logs', jBrush:'Brush',
-    gBucket:'Bucket truck', gClimbing:'Climbing', gBoth:'Bucket + Climbing',
+    gBucket:'Bucket truck', gClimbing:'Climbing',
+    gStump:'Stump Grinder', gLogs:'Logs',
+    customer:'Customer', callCustomer:'Call',
     connect:'Connect to the office', settings:'Backend settings',
     connOn:'Connected', connOff:'Demo mode',
     syncing:'Syncing…', noCrew:'Your account is not linked to a crew yet.',
@@ -1229,12 +1247,23 @@ async function refresh(){
 }
 
 async function commit(cloudFn){
-  if(!online()){ persist(); render(); return; }
+  if(!online()){ persist(); render(); return true; }
   state.busy = true;
-  try{ await cloudFn(); await refresh(); }
-  catch(e){ toast(e.message,'warn'); await refresh(); }
+  let ok = true;
+  try{
+    state.saveErr = null;
+    await cloudFn();
+    await refresh();
+  }catch(e){
+    // Devuelve el fallo en vez de tragárselo: quien llama no debe anunciar
+    // un éxito que no ocurrió.
+    ok = false;
+    state.saveErr = describeSaveError(e);
+    await refresh();
+  }
   state.busy = false;
   render();
+  return ok;
 }
 
 function startPolling(){
