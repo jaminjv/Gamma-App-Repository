@@ -1150,6 +1150,7 @@ let pollTimer = null;
 const state = {
   lang: load('lang','es'),
   me: null,
+  loginEmail: null,
   tab: 'jobs',
   modal: null,
   photo: null,
@@ -1248,7 +1249,8 @@ function renderLogin(){
       ${state.error?`<div class="err">${esc(state.error===true?T.badLogin:state.error)}</div>`:''}
       <div class="field">
         <label for="lg-email">${T.email}</label>
-        <input id="lg-email" class="input" type="email" placeholder="eliseo@gammatree.com" autocomplete="username">
+        <input id="lg-email" class="input" type="email" placeholder="eliseo@gammatree.com"
+          autocomplete="username" value="${esc(state.loginEmail||'')}">
       </div>
       <div class="field">
         <label for="lg-pass">${T.pass}</label>
@@ -1276,13 +1278,21 @@ function bindLogin(){
   const go=async()=>{
     const email=document.getElementById('lg-email').value.trim().toLowerCase();
     const pass=document.getElementById('lg-pass').value;
-    state.error=null;
+    state.error=null; state.loginEmail=email;
 
     if(Gamma.online()){
       const btn=document.getElementById('lg-btn');
       btn.disabled=true; btn.textContent=t().syncing;
       try{ await Gamma.signIn(email,pass); }
-      catch(e){ state.error=e.message; render(); return; }
+      catch(e){
+        const es = state.lang==='es';
+        state.error = /invalid login credentials/i.test(e.message||'')
+          ? (es
+              ? 'Supabase rechazó ese correo y esa contraseña. Revisa: la contraseña es la que la oficina puso al crear tu usuario, no la de demostración; y si te "invitaron" en vez de crearte el usuario, todavía no tienes contraseña.'
+              : 'Supabase rejected that email and password. The password is the one set when your user was created — not the demo one. If you were invited rather than created, you have no password yet.')
+          : e.message;
+        render(); return;
+      }
       // Quién es y qué cuadrilla lidera lo dice la base, no una lista local.
       try{
         const groups = await Gamma.get('groups?select=*');   // RLS: solo la suya
@@ -1303,6 +1313,7 @@ function bindLogin(){
   };
   document.getElementById('lg-btn').onclick=go;
   document.getElementById('lg-pass').onkeydown=(e)=>{ if(e.key==='Enter') go(); };
+  document.getElementById('lg-email').oninput=(e)=>{ state.loginEmail=e.target.value; };
   document.getElementById('cfg-btn').onclick=()=>{ state.modal={type:'config'}; render(); };
 }
 

@@ -1401,7 +1401,8 @@ const online = () => Gamma.online() && Gamma.signedIn();
 let pollTimer = null;
 
 const state = {
-  loggedIn:false, view:'overview', modal:null, filter:'all', loginErr:null, connErr:null, busy:false,
+  loggedIn:false, view:'overview', modal:null, filter:'all',
+  loginErr:null, connErr:null, loginEmail:null, busy:false,
   weekStart: mondayOf(new Date()),
   translated: {},          // id de nota -> mostrando inglés
   draft: null,             // formulario de orden en curso
@@ -1491,13 +1492,22 @@ function renderLogin(){
       <div class="sub">Dispatch, crews and field requests<br>for Gamma Tree Experts.</div>
       <div class="field">
         <label for="lg-email">Email</label>
-        <input id="lg-email" class="input" type="email" value="paul@gammatree.com" autocomplete="username">
+        <!-- El correo escrito sobrevive al re-render: si no, un acceso
+             fallido obliga a teclearlo todo otra vez. -->
+        <input id="lg-email" class="input" type="email" autocomplete="username"
+          value="${esc(state.loginEmail ?? (Gamma.online()?'':'paul@gammatree.com'))}"
+          placeholder="${Gamma.online()?'paul@gammatree.com':''}">
       </div>
       <div class="field">
         <label for="lg-pass">Password</label>
-        <input id="lg-pass" class="input" type="password" value="gamma1954" autocomplete="current-password">
+        <!-- Conectado, la contraseña la pone la persona: precargar la de
+             demostración hacía que Supabase rechazara el acceso sin motivo
+             aparente. -->
+        <input id="lg-pass" class="input" type="password" autocomplete="current-password"
+          value="${Gamma.online()?'':'gamma1954'}"
+          placeholder="${Gamma.online()?'Your Supabase password':''}">
       </div>
-      ${state.loginErr?`<div class="err" style="margin-bottom:12px">${esc(state.loginErr)}</div>`:''}
+      ${state.loginErr?`<div class="err" style="margin-bottom:12px;text-align:left">${loginMessage()}</div>`:''}
       ${state.connErr?`<div class="err" style="margin-bottom:12px;text-align:left">${connMessage()}</div>`:''}
       <button class="btn btn-primary" id="lg-btn" style="width:100%;margin-top:6px;">Sign in</button>
       <div style="margin-top:16px;padding-top:15px;border-top:1px solid var(--glass-brd)">
@@ -1512,6 +1522,18 @@ function renderLogin(){
     </div>
   </div>`;
 }
+function loginMessage(){
+  if(state.loginErr!=='BADLOGIN') return esc(state.loginErr);
+  const host = (()=>{ try{ return new URL(Gamma.cfg.url).hostname; }catch{ return Gamma.cfg?.url||''; } })();
+  return `<b>Supabase rejected that email and password.</b><br>
+    Three things cause this, in order of likelihood:<br>
+    · The password is not the demo one — use the one you set when you created
+      the user in <b>Authentication → Users</b>.<br>
+    · The user was <b>invited</b> instead of created. An invited user has no
+      password yet. Use <b>Add user → Create new user</b>.<br>
+    · The email does not exist in this project (<code>${esc(host)}</code>).`;
+}
+
 function connMessage(){
   if(state.connErr==='SANDBOX') return `<b>This published link cannot connect.</b><br>
     It runs inside a sandbox that blocks every outside request, whatever you paste.
@@ -1542,18 +1564,22 @@ function bindLogin(){
   const go = async ()=>{
     const email=document.getElementById('lg-email').value.trim();
     const pass=document.getElementById('lg-pass').value;
-    state.loginErr=null;
+    state.loginErr=null; state.loginEmail=email;
     if(Gamma.online()){
       const btn=document.getElementById('lg-btn');
       btn.disabled=true; btn.textContent='Signing in…';
       try{ await Gamma.signIn(email,pass); }
-      catch(e){ state.loginErr=e.message; render(); return; }
+      catch(e){
+        state.loginErr = /invalid login credentials/i.test(e.message||'') ? 'BADLOGIN' : e.message;
+        render(); return;
+      }
       await refresh();
       startPolling();
     }
     state.loggedIn=true; render();
   };
   document.getElementById('lg-btn').onclick = go;
+  document.getElementById('lg-email').oninput = (e)=>{ state.loginEmail=e.target.value; };
   document.getElementById('lg-pass').onkeydown = (e)=>{ if(e.key==='Enter') go(); };
   document.getElementById('cfg-btn').onclick = ()=>{ state.connErr=null; state.modal={type:'config'}; render(); };
 }
