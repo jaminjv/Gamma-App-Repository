@@ -24,7 +24,7 @@ apply.html          Job application form (pre-selects the role via ?role=)
 thank-you.html      Post-submission confirmation page
 assets/css/styles.css   All styling (design tokens at the top)
 assets/js/main.js       Navigation, scroll reveal, form handling
-assets/img/             Logo mark and social-share image
+assets/img/             Logo lockup (light + dark), wave mark, social-share image
 robots.txt, sitemap.xml SEO
 .nojekyll               Tells GitHub Pages to serve files as-is
 .github/workflows/deploy.yml   Auto-deploy to GitHub Pages on push to main
@@ -57,6 +57,38 @@ The three forms (contact, review, job application) post to
 
 Until that is done the forms fall back to opening the visitor's email client
 addressed to `info@nixoraservices.com`, so the site is still usable on day one.
+
+---
+
+## Brand assets
+
+The palette is taken directly from the Nixora logo, so the site and the logo
+stay in step.
+
+| Token | Value | Where it comes from |
+|---|---|---|
+| `--brand-700` | `#112b53` | The navy of the NIXORA wordmark |
+| `--accent-500` | `#467b59` | The green of SERVICES and the lower wave |
+| `--star` | `#d9922c` | Rating stars only — a semantic colour, not part of the brand |
+
+Everything else in `assets/css/styles.css` derives from those two hues, and the
+neutrals are tinted toward the navy. To rebrand, edit the `:root` token block at
+the top of the stylesheet — no other file needs to change.
+
+### Logo files
+
+| File | Use |
+|---|---|
+| `nixora-logo.png` | Full lockup, original inks — light backgrounds |
+| `nixora-logo-dark.png` | Full lockup, lightened inks — dark backgrounds |
+| `nixora-mark.png` | Wave mark only — favicon and touch icon |
+| `nixora-mark-dark.png` | Wave mark, lightened |
+| `og-cover.png` | 1200×630 social share card |
+
+All four logo files have transparent backgrounds. The header and footer ship
+both inks and swap them with the viewer's theme via CSS, so the logo stays
+legible in light and dark mode. If you get vector originals (SVG or EPS), drop
+them in and swap the `<img src>` — the layout will not change.
 
 ---
 
