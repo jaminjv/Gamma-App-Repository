@@ -1,22 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Thank You — Nixora Services LLC</title>
-<meta name="description" content="Thank you for contacting Nixora Services LLC. We will be in touch within one business day.">
-<meta name="robots" content="noindex">
-<meta name="theme-color" content="#012d54">
-<link rel="icon" href="assets/img/nixora-mark.svg" type="image/svg+xml">
-<link rel="alternate icon" href="assets/img/nixora-mark.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/styles.css">
-</head>
-<body>
-
-<svg class="brand-sprite" aria-hidden="true" focusable="false" width="0" height="0">
+<?xml version="1.0" encoding="UTF-8"?>
+<svg color="#012d54" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="153.50 153.70 293.00 292.60" width="293.00" height="292.60" role="img">
+<title>Nixora Services LLC</title>
 <defs>
 <clipPath id="nxv-clip-0">
 <path clip-rule="nonzero" d="M 303 156 L 400 156 L 400 262 L 303 262 Z M 303 156 "/>
@@ -175,7 +159,6 @@
 <stop offset="1" stop-color="#2f9b5d" stop-opacity="1"/>
 </linearGradient>
 </defs>
-<symbol id="nixora-lockup-v" viewBox="153.50 153.70 293.00 292.60">
 <g clip-path="url(#nxv-clip-0)">
 <g clip-path="url(#nxv-clip-1)">
 <path fill-rule="nonzero" fill="url(#nxv-linear-pattern-0)" d="M 303.4296 261.5625 L 399.0742 261.5625 L 399.0742 156.6718 L 303.4296 156.6718 Z M 303.4296 261.5625 "/>
@@ -220,27 +203,4 @@
 <path fill-rule="nonzero" fill="#29a155" fill-opacity="1" d="M 355.6796 443.3281 C 351.4140 443.3281 347.8476 441.8945 344.9843 439.0273 C 342.125 436.1601 340.6953 432.5703 340.6953 428.2617 C 340.6953 423.9375 342.1289 420.3671 345.0078 417.5429 C 347.8789 414.7226 351.4296 413.3125 355.6601 413.3125 C 357.0468 413.3125 358.3828 413.4921 359.6601 413.8476 C 360.9375 414.2031 362.1015 414.7109 363.1445 415.3632 C 364.1875 416.0156 365.2968 416.9765 366.4687 418.2421 L 363.4765 421.1523 C 362.4687 420.0859 361.6132 419.3359 360.9140 418.8984 C 360.2148 418.4609 359.4335 418.1210 358.5820 417.8789 C 357.7265 417.6367 356.7695 417.5156 355.7226 417.5156 C 352.7460 417.5156 350.2460 418.5 348.2265 420.4726 C 346.2070 422.4453 345.1953 425.0351 345.1953 428.2421 C 345.1953 431.4335 346.1992 434.0429 348.1992 436.0703 C 350.1992 438.0937 352.6992 439.1093 355.6992 439.1093 C 356.7773 439.1093 357.8007 438.9609 358.7617 438.6640 C 359.7226 438.3671 360.6171 437.9453 361.4375 437.4023 C 362.2578 436.8554 363.1289 436.0625 364.0429 435.0273 L 367.1562 437.9960 C 365.8476 439.4648 364.6328 440.5429 363.5078 441.2304 C 362.3828 441.9140 361.1679 442.4375 359.8632 442.7968 C 358.5546 443.1523 357.1640 443.3281 355.6796 443.3281 "/>
 <path fill-rule="nonzero" fill="#29a155" fill-opacity="1" d="M 389.4531 426.3632 L 402.7070 426.3632 L 402.7070 430.1601 L 389.4531 430.1601 Z M 386.8085 442.7851 L 386.8085 413.8593 L 403.5546 413.8593 L 403.5546 417.8984 L 391.2304 417.8984 L 391.2304 438.7656 L 403.7578 438.7656 L 403.7578 442.7851 Z M 386.8085 442.7851 "/>
 <path fill-rule="nonzero" fill="#29a155" fill-opacity="1" d="M 433.3281 443.3281 C 430.7851 443.3281 428.6289 442.7226 426.8671 441.5117 C 425.1015 440.3007 423.7187 438.375 422.7226 435.7343 L 426.6640 434.2617 C 427.3906 436.0625 428.3046 437.3828 429.4101 438.2070 C 430.5156 439.0390 431.8554 439.4531 433.4296 439.4531 C 435.0585 439.4531 436.3593 439.0546 437.3281 438.2578 C 438.2968 437.4648 438.7812 436.3867 438.7812 435.0273 C 438.7812 433.8437 438.3242 432.8437 437.3984 432.0273 C 436.4765 431.2148 434.75 430.3828 432.2187 429.5351 C 429.0664 428.4843 426.8710 427.3125 425.6328 426.0195 C 424.3945 424.7265 423.7734 423.1367 423.7734 421.25 C 423.7734 418.9609 424.6601 417.0664 426.4296 415.5664 C 428.1992 414.0625 430.4218 413.3125 433.0859 413.3125 C 435.2265 413.3125 437.0742 413.8085 438.6289 414.7968 C 440.1875 415.7890 441.4414 417.3242 442.3984 419.4140 L 438.6406 420.9492 C 437.9960 419.6015 437.2304 418.625 436.3476 418.0195 C 435.4687 417.4140 434.3437 417.1093 432.9843 417.1093 C 431.6523 417.1093 430.5117 417.4882 429.5625 418.2421 C 428.6093 418.9960 428.1367 419.9257 428.1367 421.0273 C 428.1367 421.9882 428.5195 422.8085 429.2890 423.5039 C 430.0546 424.1992 431.9414 425.0351 434.9453 426.0195 C 437.9218 426.9882 440.0390 428.1875 441.2968 429.625 C 442.5546 431.0585 443.1875 432.8203 443.1875 434.9062 C 443.1875 437.4921 442.2187 439.5429 440.2890 441.0585 C 438.3554 442.5742 436.0351 443.3281 433.3281 443.3281 "/>
-</symbol>
 </svg>
-
-<main id="main">
-  <section class="section" style="min-height:100dvh;display:grid;place-items:center">
-    <div class="container" style="max-width:620px;text-align:center">
-      <a class="brand" href="index.html" style="justify-content:center;margin-bottom:2rem">
-        <svg class="brand__logo brand__logo--stacked" viewBox="0 0 293.00 292.60" width="293.00" height="292.60" role="img" aria-label="Nixora Services LLC"><use href="#nixora-lockup-v"></use></svg>
-      </a>
-      <h1 style="font-size:clamp(2rem,4vw,2.8rem)">Thank you — we got it.</h1>
-      <p class="muted" style="font-size:1.06rem">
-        Your message has been sent to the Nixora Services team. We respond to staffing
-        requests and applications within one business day.
-      </p>
-      <div class="btn-row" style="justify-content:center;margin-top:1.8rem">
-        <a class="btn btn--primary" href="index.html">Back to Home</a>
-        <a class="btn btn--ghost" href="index.html#services">Explore Services</a>
-      </div>
-    </div>
-  </section>
-</main>
-<script src="assets/js/main.js" defer></script>
-</body>
-</html>

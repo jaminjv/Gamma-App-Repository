@@ -8,20 +8,20 @@
    -------------------------------------------------------------------------- */
 :root {
   /* Brand */
-  --brand-900: #061225;
-  --brand-800: #0b1e3c;
-  --brand-700: #112b53;
-  --brand-600: #17396b;
-  --brand-500: #205088;
-  --brand-400: #3a72b0;
-  --brand-300: #7ba5d6;
-  --brand-200: #b6cde9;
-  --brand-100: #e6eef8;
+  --brand-900: #010f1d;
+  --brand-800: #011c34;
+  --brand-700: #012d54;
+  --brand-600: #01406f;
+  --brand-500: #0a5892;
+  --brand-400: #1e79bd;
+  --brand-300: #6aa8db;
+  --brand-200: #adcce9;
+  --brand-100: #e3edf7;
 
   /* Accent (waste-sorting / green team) */
-  --accent-600: #35634a;
-  --accent-500: #467b59;
-  --accent-400: #5f9873;
+  --accent-600: #1e7a40;
+  --accent-500: #29a155;
+  --accent-400: #45b970;
 
   /* Neutrals */
   --ink: #0e1626;
@@ -34,7 +34,9 @@
   --bg: #fbfcfe;
 
   /* Semantic */
-  --focus: #205088;
+  --on-tint: #01406f;
+  --on-tint-hover: #0a5892;
+  --focus: #0a5892;
   --danger: #b3261e;
   --star: #d9922c;
 
@@ -65,8 +67,10 @@
     --surface-2: #161f33;
     --surface-3: #1d2942;
     --bg: #0b1220;
-    --brand-100: #13233d;
-    --brand-200: #1e3a63;
+    --brand-100: #0b1f36;
+    --brand-200: #16375c;
+    --on-tint: #8ec2ea;
+    --on-tint-hover: #b6d7f2;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
     --shadow: 0 4px 12px rgba(0, 0, 0, .45), 0 16px 40px rgba(0, 0, 0, .35);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, .5), 0 32px 80px rgba(0, 0, 0, .45);
@@ -82,8 +86,10 @@
   --surface-2: #161f33;
   --surface-3: #1d2942;
   --bg: #0b1220;
-  --brand-100: #13233d;
-  --brand-200: #1e3a63;
+  --brand-100: #0b1f36;
+  --brand-200: #16375c;
+  --on-tint: #8ec2ea;
+  --on-tint-hover: #b6d7f2;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
   --shadow: 0 4px 12px rgba(0, 0, 0, .45), 0 16px 40px rgba(0, 0, 0, .35);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, .5), 0 32px 80px rgba(0, 0, 0, .45);
@@ -135,8 +141,8 @@ h4 { font-size: 1.02rem; }
 p  { margin: 0 0 1.1rem; }
 p:last-child { margin-bottom: 0; }
 
-a { color: var(--brand-600); text-decoration-thickness: 1px; text-underline-offset: 3px; }
-a:hover { color: var(--brand-500); }
+a { color: var(--on-tint); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--on-tint-hover); }
 
 img, svg, video { max-width: 100%; height: auto; display: block; }
 ul, ol { margin: 0 0 1.1rem; padding-left: 1.2rem; }
@@ -148,7 +154,7 @@ li { margin-bottom: .4rem; }
   border-radius: 4px;
 }
 
-::selection { background: var(--brand-200); color: var(--brand-900); }
+::selection { background: var(--brand-200); color: var(--ink); }
 
 .skip-link {
   position: absolute;
@@ -190,7 +196,7 @@ li { margin-bottom: .4rem; }
   font-weight: 700;
   letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--brand-600);
+  color: var(--on-tint);
   background: var(--brand-100);
   border: 1px solid color-mix(in srgb, var(--brand-400) 28%, transparent);
   padding: .38rem .78rem;
@@ -244,7 +250,7 @@ li { margin-bottom: .4rem; }
   color: var(--ink);
   border-color: var(--line);
 }
-.btn--ghost:hover { border-color: var(--brand-400); color: var(--brand-600); background: var(--surface); }
+.btn--ghost:hover { border-color: var(--brand-400); color: var(--on-tint); background: var(--surface); }
 
 .btn--light {
   background: #fff;
@@ -298,24 +304,31 @@ li { margin-bottom: .4rem; }
 }
 .brand__logo {
   display: block;
-  width: 172px;
+  width: 176px;
   height: auto;
+  /* Only the NIXORA wordmark rides on currentColor; the wave and SERVICES
+     keep their own inks in both themes. */
+  color: var(--brand-700);
 }
-.brand__logo--dark { display: none; }
 
-/* The logo ships in two inks; swap them with the theme, same three states
-   as the color tokens above. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .brand__logo--light { display: none; }
-  :root:not([data-theme="light"]) .brand__logo--dark { display: block; }
+  :root:not([data-theme="light"]) .brand__logo { color: #fff; }
 }
-:root[data-theme="dark"] .brand__logo--light { display: none; }
-:root[data-theme="dark"] .brand__logo--dark { display: block; }
+:root[data-theme="dark"] .brand__logo { color: #fff; }
 
-.footer__about .brand__logo { width: 208px; }
+/* The sprite holding the logo geometry; referenced by <use>. */
+.brand-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.footer__about .brand__logo { width: 212px; }
+.brand__logo--stacked { width: 200px; }
 
 @media (max-width: 420px) {
-  .brand__logo { width: 148px; }
+  .brand__logo { width: 150px; }
 }
 
 .nav__links {
@@ -473,7 +486,7 @@ li { margin-bottom: .4rem; }
   font-size: .95rem;
   color: var(--ink-soft);
 }
-.checklist svg { flex: none; margin-top: .18rem; color: var(--brand-500); }
+.checklist svg { flex: none; margin-top: .18rem; color: var(--on-tint); }
 
 /* Stats strip */
 .stats {
@@ -492,7 +505,7 @@ li { margin-bottom: .4rem; }
   font-size: clamp(1.7rem, 3vw, 2.25rem);
   font-weight: 800;
   letter-spacing: -.03em;
-  color: var(--brand-600);
+  color: var(--on-tint);
   line-height: 1;
   margin-bottom: .4rem;
 }
@@ -523,7 +536,7 @@ li { margin-bottom: .4rem; }
   place-items: center;
   border-radius: 15px;
   background: var(--brand-100);
-  color: var(--brand-600);
+  color: var(--on-tint);
   margin-bottom: 1.1rem;
 }
 .card__icon--accent {
@@ -564,7 +577,7 @@ li { margin-bottom: .4rem; }
   background: linear-gradient(135deg, var(--brand-700), var(--brand-500));
   color: #fff;
 }
-.job__top--accent { background: linear-gradient(135deg, #244633, var(--accent-500)); }
+.job__top--accent { background: linear-gradient(135deg, #0f5c31, var(--accent-500)); }
 .job__badge {
   display: inline-block;
   font-size: .7rem;
@@ -647,7 +660,7 @@ li { margin-bottom: .4rem; }
   place-items: center;
   border-radius: 10px;
   background: var(--brand-100);
-  color: var(--brand-700);
+  color: var(--on-tint);
   font-family: var(--font-display);
   font-weight: 800;
   font-size: .92rem;
@@ -830,7 +843,7 @@ li { margin-bottom: .4rem; }
   font-size: .9rem;
 }
 .form-status.is-visible { display: block; }
-.form-status--ok { background: var(--brand-100); color: var(--brand-800); border: 1px solid var(--brand-200); }
+.form-status--ok { background: var(--brand-100); color: var(--on-tint); border: 1px solid var(--brand-200); }
 .form-status--err { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); }
 
 /* --------------------------------------------------------------------------
@@ -845,11 +858,11 @@ li { margin-bottom: .4rem; }
   place-items: center;
   border-radius: 12px;
   background: var(--brand-100);
-  color: var(--brand-600);
+  color: var(--on-tint);
 }
 .contact-list strong { display: block; font-family: var(--font-display); font-size: .93rem; }
 .contact-list a, .contact-list span { font-size: .95rem; color: var(--muted); text-decoration: none; }
-.contact-list a:hover { color: var(--brand-600); text-decoration: underline; }
+.contact-list a:hover { color: var(--on-tint); text-decoration: underline; }
 
 /* --------------------------------------------------------------------------
    14. CTA band
@@ -925,7 +938,7 @@ li { margin-bottom: .4rem; }
 }
 .footer__list { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
 .footer__list a { font-size: .93rem; color: var(--ink-soft); text-decoration: none; }
-.footer__list a:hover { color: var(--brand-600); text-decoration: underline; }
+.footer__list a:hover { color: var(--on-tint); text-decoration: underline; }
 
 .footer__bottom {
   border-top: 1px solid var(--line);
@@ -940,7 +953,7 @@ li { margin-bottom: .4rem; }
 }
 .footer__bottom nav { display: flex; flex-wrap: wrap; gap: 1.2rem; }
 .footer__bottom a { color: var(--muted); text-decoration: none; }
-.footer__bottom a:hover { color: var(--brand-600); text-decoration: underline; }
+.footer__bottom a:hover { color: var(--on-tint); text-decoration: underline; }
 
 /* --------------------------------------------------------------------------
    17. Reveal animation

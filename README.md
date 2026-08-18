@@ -67,28 +67,59 @@ stay in step.
 
 | Token | Value | Where it comes from |
 |---|---|---|
-| `--brand-700` | `#112b53` | The navy of the NIXORA wordmark |
-| `--accent-500` | `#467b59` | The green of SERVICES and the lower wave |
+| `--brand-700` | `#012d54` | The navy of the NIXORA wordmark |
+| `--accent-500` | `#29a155` | The green of SERVICES and the lower wave |
+| `--on-tint` | `#01406f` / `#8ec2ea` | Foreground for links, icons and eyebrows — light / dark |
 | `--star` | `#d9922c` | Rating stars only — a semantic colour, not part of the brand |
 
-Everything else in `assets/css/styles.css` derives from those two hues, and the
-neutrals are tinted toward the navy. To rebrand, edit the `:root` token block at
-the top of the stylesheet — no other file needs to change.
+Both brand values are sampled straight out of the vector artwork, so the site
+and the logo match exactly. Everything else in `assets/css/styles.css` derives
+from those two hues, and the neutrals are tinted toward the navy.
+
+`--brand-600` is dark enough to carry white button text, which makes it
+unreadable as a *foreground* on a dark background. `--on-tint` is the separate
+token for text and icons, and it flips light in dark mode. To rebrand, edit the
+`:root` token block at the top of the stylesheet — no other file needs to
+change.
 
 ### Logo files
 
+All vector, extracted from the supplied artwork.
+
 | File | Use |
 |---|---|
-| `nixora-logo.png` | Full lockup, original inks — light backgrounds |
-| `nixora-logo-dark.png` | Full lockup, lightened inks — dark backgrounds |
-| `nixora-mark.png` | Wave mark only — favicon and touch icon |
-| `nixora-mark-dark.png` | Wave mark, lightened |
+| `nixora-logo.svg` | Horizontal lockup — header and footer |
+| `nixora-logo-vertical.svg` | Stacked lockup — thank-you page, print, social profiles |
+| `nixora-mark.svg` | Wave mark only — favicon |
+| `nixora-mark.png` | 256px raster fallback for clients that reject SVG favicons |
 | `og-cover.png` | 1200×630 social share card |
 
-All four logo files have transparent backgrounds. The header and footer ship
-both inks and swap them with the viewer's theme via CSS, so the logo stays
-legible in light and dark mode. If you get vector originals (SVG or EPS), drop
-them in and swap the `<img src>` — the layout will not change.
+### How the logo handles dark mode
+
+On dark backgrounds **only the word NIXORA turns white**; the wave and the word
+SERVICES keep their original colours.
+
+That rule is enforced without a second file. The NIXORA letterforms are filled
+with `currentColor`, so the wordmark follows the CSS `color` of whatever
+contains it, while every other path keeps its own fill:
+
+```css
+.brand__logo { color: var(--brand-700); }   /* navy */
+:root[data-theme="dark"] .brand__logo { color: #fff; }
+```
+
+The pages inline the geometry once as an SVG `<symbol>` (`.brand-sprite`, just
+after `<body>`) and reference it with `<use>`, so a page with the logo in both
+the header and the footer carries the paths only once.
+
+The standalone `.svg` files in this folder set `color="#012d54"` on the root
+element, so they render correctly on their own — dropped into an email
+signature, a document, or Squarespace. Use those, not the inline copies.
+
+One note on the source artwork: it contained two red hairline slivers, roughly
+1.8 × 1.7 units, tucked into the seam where the crescent meets the wave. They
+are not a brand colour and read as a rendering defect at large sizes, so they
+are omitted from these files. Everything else is untouched.
 
 ---
 
