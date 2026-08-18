@@ -50,6 +50,34 @@
   }
 
   /* ----------------------------------------------------------------------
+     Theme switch
+
+     The stored choice wins over the operating system, and an inline script
+     in <head> stamps data-theme before first paint so the page never flashes
+     the wrong theme. This only keeps the control in sync and persists.
+     ---------------------------------------------------------------------- */
+  var THEME_KEY = 'nixora-theme';
+  var themeToggle = document.getElementById('themeToggle');
+
+  var setTheme = function (theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (themeToggle) {
+      themeToggle.setAttribute('aria-checked', String(theme === 'dark'));
+      themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    }
+  };
+
+  if (themeToggle) {
+    setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+
+    themeToggle.addEventListener('click', function () {
+      var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      setTheme(next);
+      try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* private mode */ }
+    });
+  }
+
+  /* ----------------------------------------------------------------------
      Sticky header shadow
      ---------------------------------------------------------------------- */
   var header = document.getElementById('siteHeader');

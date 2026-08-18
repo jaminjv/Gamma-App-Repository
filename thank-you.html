@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,11 +7,23 @@
 <meta name="description" content="Thank you for contacting Nixora Services LLC. We will be in touch within one business day.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#012d54">
-<link rel="icon" href="assets/img/nixora-mark.svg" type="image/svg+xml">
-<link rel="alternate icon" href="assets/img/nixora-mark.png">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="assets/img/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<script>
+(function () {
+  var r = document.documentElement;
+  r.className = r.className.replace(/\bno-js\b/, '');
+  try {
+    r.setAttribute('data-theme', localStorage.getItem('nixora-theme') === 'dark' ? 'dark' : 'light');
+  } catch (e) {
+    r.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>

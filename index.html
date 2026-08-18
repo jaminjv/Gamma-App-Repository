@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,16 +17,27 @@
 <meta property="og:image" content="https://www.nixoraservices.com/assets/img/og-cover.png">
 <meta name="twitter:card" content="summary_large_image">
 
-<!-- Favicon (inline SVG, no extra request) -->
-<link rel="icon" href="assets/img/nixora-mark.svg" type="image/svg+xml">
-<link rel="alternate icon" href="assets/img/nixora-mark.png">
-<link rel="apple-touch-icon" href="assets/img/nixora-mark.png">
+<!-- Favicon: the wave mark from the logo, squared for the tab -->
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="assets/img/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 
+<script>
+(function () {
+  var r = document.documentElement;
+  r.className = r.className.replace(/\bno-js\b/, '');
+  try {
+    r.setAttribute('data-theme', localStorage.getItem('nixora-theme') === 'dark' ? 'dark' : 'light');
+  } catch (e) {
+    r.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
 <link rel="stylesheet" href="assets/css/styles.css">
 
 <!-- Structured data for search engines -->
@@ -281,9 +292,6 @@
         <svg class="brand__logo" viewBox="0 0 508.20 156.30" width="508.20" height="156.30" role="img" aria-label="Nixora Services LLC"><use href="#nixora-lockup"></use></svg>
       </a>
 
-      <button class="nav__toggle" id="navToggle" aria-expanded="false" aria-controls="navMenu" aria-label="Open menu">
-        <span></span>
-      </button>
 
       <div class="nav__menu" id="navMenu">
         <ul class="nav__links">
@@ -297,6 +305,18 @@
         <div class="nav__actions">
           <a class="btn btn--primary btn--sm" href="apply.html">Apply Now</a>
         </div>
+      </div>
+      <div class="nav__end">
+        <button class="theme-toggle" id="themeToggle" type="button" role="switch"
+                aria-checked="false" aria-label="Dark mode" title="Switch between light and dark">
+          <span class="theme-toggle__knob">
+            <svg class="theme-toggle__sun" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+            <svg class="theme-toggle__moon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"/></svg>
+          </span>
+        </button>
+        <button class="nav__toggle" id="navToggle" aria-expanded="false" aria-controls="navMenu" aria-label="Open menu">
+        <span></span>
+      </button>
       </div>
     </nav>
   </div>

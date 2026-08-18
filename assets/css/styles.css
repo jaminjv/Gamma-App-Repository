@@ -354,6 +354,62 @@ li { margin-bottom: .4rem; }
 
 .nav__actions { display: flex; align-items: center; gap: .55rem; }
 
+/* Sits outside .nav__menu so the theme switch stays reachable on mobile
+   without opening the menu. */
+.nav__end {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex: none;
+}
+
+/* --------------------------------------------------------------------------
+   5b. Theme switch
+   -------------------------------------------------------------------------- */
+.theme-toggle {
+  position: relative;
+  flex: none;
+  width: 58px;
+  height: 31px;
+  padding: 0;
+  border: 1.5px solid var(--line);
+  border-radius: 100px;
+  background: var(--surface-3);
+  cursor: pointer;
+  transition: background-color .2s ease, border-color .2s ease;
+}
+.theme-toggle:hover { border-color: var(--brand-400); }
+
+.theme-toggle__knob {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  margin-top: -12px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--star);
+  box-shadow: 0 1px 3px rgba(1, 15, 29, .28);
+  transition: transform .26s cubic-bezier(.34, 1.35, .64, 1),
+              background-color .2s ease, color .2s ease;
+}
+.theme-toggle__moon { display: none; }
+
+:root[data-theme="dark"] .theme-toggle { background: var(--surface-3); }
+:root[data-theme="dark"] .theme-toggle__knob {
+  transform: translateX(27px);
+  background: var(--brand-500);
+  color: #fff;
+}
+:root[data-theme="dark"] .theme-toggle__sun { display: none; }
+:root[data-theme="dark"] .theme-toggle__moon { display: block; }
+
+/* No JS: the switch cannot do anything, so do not advertise it. */
+.no-js .theme-toggle { display: none; }
+
 .nav__toggle {
   display: none;
   width: 44px; height: 44px;
@@ -391,6 +447,7 @@ li { margin-bottom: .4rem; }
 
 @media (max-width: 960px) {
   .nav__toggle { display: inline-flex; }
+  .nav__end { margin-left: auto; }
   .nav__menu {
     position: fixed;
     inset: 72px 0 auto;
@@ -412,7 +469,7 @@ li { margin-bottom: .4rem; }
 }
 
 @media (min-width: 961px) {
-  .nav__menu { display: flex; align-items: center; gap: 1.2rem; }
+  .nav__menu { display: flex; align-items: center; gap: 1.2rem; margin-left: auto; }
 }
 
 /* --------------------------------------------------------------------------

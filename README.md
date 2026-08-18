@@ -81,6 +81,31 @@ token for text and icons, and it flips light in dark mode. To rebrand, edit the
 `:root` token block at the top of the stylesheet — no other file needs to
 change.
 
+### Theme
+
+The site opens **light** for every first-time visitor, whatever the operating
+system is set to, and a switch in the header flips it to dark. The choice is
+saved in `localStorage` under `nixora-theme` and applies across all pages.
+
+An inline script in each `<head>` stamps `data-theme` on `<html>` before the
+stylesheet paints, so the page never flashes the wrong theme. With JavaScript
+off, no stamp is written and the CSS falls back to the operating system
+preference — and the switch hides itself, since it could not do anything.
+
+To follow the operating system instead of defaulting to light, change the
+fallback in that inline script from `'light'` to reading
+`matchMedia('(prefers-color-scheme: dark)')`.
+
+### Favicon
+
+`favicon.svg` is the wave mark on a navy plate, cropped to a **square**
+viewBox. The square matters: browsers letterbox or squash a non-square favicon,
+which is why the earlier wide version rendered badly in the tab. The plate gives
+the icon a solid silhouette at 16 px, where the wave alone dissolves.
+
+`favicon-32.png` covers browsers that reject SVG favicons, and
+`apple-touch-icon.png` (180 px) is the iOS home-screen icon.
+
 ### Logo files
 
 All vector, extracted from the supplied artwork.
@@ -89,8 +114,10 @@ All vector, extracted from the supplied artwork.
 |---|---|
 | `nixora-logo.svg` | Horizontal lockup — header and footer |
 | `nixora-logo-vertical.svg` | Stacked lockup — thank-you page, print, social profiles |
-| `nixora-mark.svg` | Wave mark only — favicon |
-| `nixora-mark.png` | 256px raster fallback for clients that reject SVG favicons |
+| `nixora-mark.svg` | Wave mark only, transparent — general use |
+| `favicon.svg` | Wave on a navy plate, square — browser tab |
+| `favicon-32.png` | 32px raster fallback |
+| `apple-touch-icon.png` | 180px iOS home-screen icon |
 | `og-cover.png` | 1200×630 social share card |
 
 ### How the logo handles dark mode
