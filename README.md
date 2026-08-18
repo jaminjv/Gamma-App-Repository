@@ -43,7 +43,7 @@ These are placeholders. Search for them and swap in the real values.
 | `YOUR_FORM_ID` | the three `<form action="…">` tags | Your Formspree form ID (see below) |
 | `facebook.com/nixoraservices` etc. | `index.html` (contact + footer) | Real Facebook / Instagram / LinkedIn URLs |
 | CEO photo | `index.html`, `.ceo__portrait` block | `<img src="assets/img/ceo-junior.jpg" alt="Junior, CEO">` |
-| Review quotes | `index.html`, `#feedback` | Real customer reviews |
+| Review quotes | `index.html`, `#feedback` | Real customer reviews. The three on the page are marked **Sample** and sit under a `.sample-note` banner. When real ones arrive, replace the quotes and delete the banner, every `tag--sample` badge, and the `.sample-note` / `.tag--sample` CSS block. |
 
 ### Making the forms actually send email
 

@@ -708,24 +708,42 @@ li { margin-bottom: .4rem; }
 .review__by strong { display: block; font-size: .93rem; }
 .review__by span { display: block; font-size: .83rem; color: var(--muted); }
 
-.rating-summary {
+/* Placeholder-content marker. Delete this block, the .sample-note element
+   and every .tag--sample badge once real reviews replace the examples. */
+.sample-note {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1rem 1.6rem;
-  padding: 1.2rem 1.5rem;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  gap: 1rem 1.5rem;
+  padding: 1.15rem 1.5rem;
   margin-bottom: 2rem;
+  background: var(--surface-2);
+  border: 1px dashed color-mix(in srgb, var(--muted) 48%, transparent);
+  border-radius: var(--radius-lg);
 }
-.rating-summary__score {
-  font-family: var(--font-display);
-  font-size: 2.6rem;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -.04em;
-  color: var(--ink);
+.sample-note p {
+  margin: 0;
+  max-width: 58ch;
+  font-size: .93rem;
+  color: var(--muted);
+}
+.sample-note strong { color: var(--ink); }
+.sample-note .btn { margin-left: auto; }
+
+.review__head {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.review__head .stars { margin-right: auto; }
+
+.tag--sample {
+  background: transparent;
+  border-style: dashed;
+  color: var(--muted);
+  font-size: .68rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
 }
 
 /* --------------------------------------------------------------------------
