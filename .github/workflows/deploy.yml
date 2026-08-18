@@ -26,6 +26,10 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          # Turns Pages on for the repo if it is not already enabled, so the
+          # first deploy does not need a trip through repository settings.
+          enablement: true
 
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
