@@ -38,7 +38,6 @@ These are placeholders. Search for them and swap in the real values.
 
 | Placeholder | Where | Replace with |
 |---|---|---|
-| `www.nixoraservices.com` | `index.html`, `apply.html`, `robots.txt`, `sitemap.xml` | Your real domain |
 | `info@nixoraservices.com` | `index.html`, `assets/js/main.js` | Real company email |
 | `+1 (000) 000-0000` / `tel:+10000000000` | `index.html` | Real phone number |
 | `YOUR_FORM_ID` | the three `<form action="…">` tags | Your Formspree form ID (see below) |
@@ -131,17 +130,23 @@ and point the DNS records at GitHub.**
 
 ### Step 1 — Enable GitHub Pages
 
-1. Repository → **Settings** → **Pages**.
-2. **Source**: `GitHub Actions`.
-3. Push to `main`. The included workflow publishes the site automatically.
-4. Confirm it works at `https://<user>.github.io/<repo>/` before touching DNS.
+1. The repository must be **public**, unless the account has GitHub Pro.
+   Pages is not available on private repositories on the free plan.
+2. Repository → **Settings** → **Pages**.
+3. **Source**: `GitHub Actions`. The workflow token cannot set this itself —
+   the API returns `Resource not accessible by integration` — so it has to be
+   done once by hand.
+4. Push to `main`. The included workflow publishes the site automatically.
+5. Confirm it works at `https://<user>.github.io/<repo>/` before touching DNS.
 
 ### Step 2 — Add the custom domain in GitHub
 
-1. Settings → **Pages** → **Custom domain** → enter `www.yourdomain.com` → **Save**.
-   GitHub commits a `CNAME` file to the repo for you.
-2. Leave **Enforce HTTPS** unchecked for now — enable it after DNS resolves
-   (the certificate can take up to 24 hours to issue).
+The repository already contains a `CNAME` file holding `www.nixoraservices.com`,
+so Pages picks the domain up on deploy. Confirm it under Settings → **Pages** →
+**Custom domain**.
+
+Leave **Enforce HTTPS** unchecked until DNS resolves — the certificate can take
+up to 24 hours to issue — then turn it on.
 
 ### Step 3 — Update DNS in Squarespace
 
@@ -151,7 +156,9 @@ Squarespace panel → **Domains** → select your domain → **DNS** → **DNS S
 Remove the default Squarespace `A` records for `@` and the `www` `CNAME` that
 points to `ext-cust.squarespace.com`, then add:
 
-**Apex domain (`yourdomain.com`) — four A records**
+**Apex domain (`nixoraservices.com`) — four A records**
+
+These make the bare domain redirect to `www`.
 
 | Host | Type | Value |
 |---|---|---|
@@ -173,7 +180,7 @@ points to `ext-cust.squarespace.com`, then add:
 
 | Host | Type | Value |
 |---|---|---|
-| `www` | CNAME | `<your-github-username>.github.io` |
+| `www` | CNAME | `jaminjv.github.io` |
 
 > Do **not** add a trailing dot or the repository name to the CNAME value.
 
@@ -183,8 +190,8 @@ DNS propagation usually takes 15 minutes to a few hours (up to 48 in the worst
 case). Check with:
 
 ```bash
-dig +short www.yourdomain.com
-dig +short yourdomain.com
+dig +short www.nixoraservices.com
+dig +short nixoraservices.com
 ```
 
 When the GitHub IPs come back, return to Settings → Pages and tick
