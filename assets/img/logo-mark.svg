@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Nixora Services">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0a4d3f"/><stop offset="1" stop-color="#19a882"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#g)"/>
+  <path d="M18 46V18h7l14 18V18h7v28h-7L25 28v18z" fill="#fff"/>
+</svg>
