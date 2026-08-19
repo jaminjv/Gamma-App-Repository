@@ -15,6 +15,7 @@ dependencies — so it can be hosted anywhere and edited by anyone.
 | Feedback | `#feedback` | Client and crew reviews + a "leave a review" form |
 | CEO | `#leadership` | Junior Cabrera, Chief Executive Officer |
 | Contact Us | `#contact` | Contact details, social links, enquiry form |
+| Team Access | `team.html` | Staff shortcuts into Google Workspace — linked discreetly from the footer |
 
 ## Files
 
@@ -22,6 +23,7 @@ dependencies — so it can be hosted anywhere and edited by anyone.
 index.html          Home page (all sections)
 apply.html          Job application form (pre-selects the role via ?role=)
 thank-you.html      Post-submission confirmation page
+team.html           Staff-only shortcuts into Google Workspace (noindex)
 assets/css/styles.css   All styling (design tokens at the top)
 assets/js/main.js       Navigation, scroll reveal, form handling
 assets/img/             Logo lockup (light + dark), wave mark, social-share image
@@ -54,6 +56,26 @@ The three forms (contact, review, job application) post to
 
 Until that is done the forms fall back to opening the visitor's email client
 addressed to `info@nixoraservices.com`, so the site is still usable on day one.
+
+---
+
+## Team Access
+
+`team.html` holds shortcuts into the company's Google Workspace, linked from the
+footer rather than the navigation since it is for staff, not visitors. It is
+marked `noindex, nofollow` and left out of `sitemap.xml`.
+
+The tiles point at the domain-scoped Workspace URLs —
+`mail.google.com/a/nixoraservices.com` and the same pattern for Drive and
+Calendar — which land on the sign-in for that domain rather than a personal
+Google account.
+
+**The page never collects a password.** Gmail cannot be embedded in any case:
+Google serves `X-Frame-Options` and a `frame-ancestors` policy that block the
+inbox from loading in a third-party frame. But the more important reason is
+that a login form on a marketing site is shaped exactly like a phishing page
+and teaches staff the wrong habit. Every tile hands off to Google, and the page
+carries a standing note saying so.
 
 ---
 
