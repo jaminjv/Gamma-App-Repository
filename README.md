@@ -88,14 +88,17 @@ The arch crown sits about 2% from the photo's top edge, so
 `object-position: 50% 0` anchors the image to the top — any vertical crop from
 the centre decapitates the monument.
 
-The band runs two different treatments rather than one responsive scrim.
-Under 821px the copy sits on the photo behind a light vertical gradient. From
-821px up the photo stops being veiled at all: it occupies the right side at
-full contrast and the copy gets clean navy on the left, the two meeting
-through a CSS mask that fades the photo's left edge into the background. An
-overall scrim was tried first and read as a dull blue rectangle — this
-photograph is an overcast sky and a grey monument, so it has little contrast
-to spare.
+There is deliberately **no gradient and no mask** anywhere in this band. The
+ground is flat `#011c34` and the photograph sits over it at a constant 32%
+opacity, so the image works as texture and the copy sits on a background that
+never changes tone.
+
+Two gradient versions were tried and both failed the same way: any directional
+fade — an overall scrim, or a mask splitting copy from photo — reads as a
+visible seam running through the band. A single even layer has no edge to
+notice. Measured contrast of the body text against the lightest point of the
+background behind it is 5.9:1, against the 4.5:1 that AA asks for, so the
+opacity has some room to move if the image should read stronger.
 
 ### Theme
 
