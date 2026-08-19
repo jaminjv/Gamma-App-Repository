@@ -84,13 +84,18 @@ change.
 The section under the hero is a full-bleed photograph of the Gateway Arch over
 the downtown skyline, served at two widths through `srcset`.
 
-Two details keep it working. The arch crown sits about 2% from the photo's top
-edge, so `object-position: 50% 0` anchors the image to the top — any vertical
-crop from the centre decapitates the monument. And the scrim over it changes
-axis with the viewport: a left-weighted horizontal gradient on wide screens,
-where the copy sits beside the skyline, and a lighter top-to-bottom one under
-820px, where the copy sits over the photo and a heavy scrim would hide the
-arch entirely.
+The arch crown sits about 2% from the photo's top edge, so
+`object-position: 50% 0` anchors the image to the top — any vertical crop from
+the centre decapitates the monument.
+
+The band runs two different treatments rather than one responsive scrim.
+Under 821px the copy sits on the photo behind a light vertical gradient. From
+821px up the photo stops being veiled at all: it occupies the right side at
+full contrast and the copy gets clean navy on the left, the two meeting
+through a CSS mask that fades the photo's left edge into the background. An
+overall scrim was tried first and read as a dull blue rectangle — this
+photograph is an overcast sky and a grey monument, so it has little contrast
+to spare.
 
 ### Theme
 
