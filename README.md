@@ -9,7 +9,7 @@ dependencies — so it can be hosted anywhere and edited by anyone.
 | Section | Anchor | What it covers |
 |---|---|---|
 | Hero | `#top` | Positioning, primary calls to action, key stats |
-| About Us | `#about` | Company overview, 5 recruiting channels, the 9-step vetting process |
+| About Us | `#about` | Company overview, mission and vision, 5 recruiting channels, the 9-step vetting process |
 | Apply | `#careers` → `apply.html` | Two open positions: **House Keeping** and **Green Team Associate** |
 | Services | `#services` | Pressure Washing, Green Team (waste classification), House Keeping, Event & Industrial Staffing |
 | Feedback | `#feedback` | Client and crew reviews + a "leave a review" form |
@@ -69,6 +69,7 @@ stay in step.
 | `--accent-600` | `#57741b` | Darkened lime, for text and icons |
 | `--accent-700` | `#60801e` | Darkened lime, for backgrounds under white text |
 | `--on-tint` | `#054a8b` / `#86c2f5` | Foreground for links, icons and eyebrows — light / dark |
+| `--on-accent` | `#57741b` / `#b7dc63` | Foreground for lime accents — light / dark |
 | `--star` | `#d9922c` | Rating stars only — a semantic colour, not part of the brand |
 
 Both brand values are sampled straight out of the vector artwork, so the site
@@ -84,7 +85,9 @@ card header.
 
 `--brand-600` is dark enough to carry white button text, which makes it
 unreadable as a *foreground* on a dark background. `--on-tint` is the separate
-token for text and icons, and it flips light in dark mode. To rebrand, edit the
+token for text and icons, and it flips light in dark mode. `--on-accent` does
+the same job for the lime, which has the mirrored problem: `--accent-600` is
+dark enough for a light tint and invisible on a dark one. To rebrand, edit the
 `:root` token block at the top of the stylesheet — no other file needs to
 change.
 

@@ -37,6 +37,7 @@
   /* Semantic */
   --on-tint: #054a8b;
   --on-tint-hover: #0660b4;
+  --on-accent: #57741b;
   --focus: #0660b4;
   --danger: #b3261e;
   --star: #d9922c;
@@ -72,6 +73,7 @@
     --brand-200: #12406e;
     --on-tint: #86c2f5;
     --on-tint-hover: #b4d9fa;
+    --on-accent: #b7dc63;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
     --shadow: 0 4px 12px rgba(0, 0, 0, .45), 0 16px 40px rgba(0, 0, 0, .35);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, .5), 0 32px 80px rgba(0, 0, 0, .45);
@@ -91,6 +93,7 @@
   --brand-200: #12406e;
   --on-tint: #86c2f5;
   --on-tint-hover: #b4d9fa;
+  --on-accent: #b7dc63;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
   --shadow: 0 4px 12px rgba(0, 0, 0, .45), 0 16px 40px rgba(0, 0, 0, .35);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, .5), 0 32px 80px rgba(0, 0, 0, .45);
@@ -669,7 +672,7 @@ li { margin-bottom: .4rem; }
 }
 .card__icon--accent {
   background: color-mix(in srgb, var(--accent-400) 22%, transparent);
-  color: var(--accent-600);
+  color: var(--on-accent);
 }
 
 .tag-row { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1.1rem; }
@@ -683,6 +686,65 @@ li { margin-bottom: .4rem; }
   background: var(--surface-3);
   color: var(--ink-soft);
   border: 1px solid var(--line);
+}
+
+/* --------------------------------------------------------------------------
+   7b. Mission and vision
+   -------------------------------------------------------------------------- */
+.purpose {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: clamp(1rem, 2vw, 1.6rem);
+  margin-bottom: clamp(2.5rem, 5vw, 3.5rem);
+}
+
+.purpose__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+  padding: clamp(1.5rem, 2.6vw, 2.1rem);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* A rule in the brand blue for the mission, the lime for the vision. */
+.purpose__item::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--brand-600);
+}
+.purpose__item--vision::before { background: var(--accent-500); }
+
+.purpose__label {
+  font-family: var(--font-display);
+  font-size: .74rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--on-tint);
+}
+.purpose__item--vision .purpose__label { color: var(--on-accent); }
+
+.purpose__lead {
+  font-family: var(--font-display);
+  font-size: clamp(1.12rem, 1.7vw, 1.32rem);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -.015em;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
+}
+.purpose__item p:last-child {
+  margin: 0;
+  font-size: .95rem;
+  color: var(--muted);
 }
 
 /* --------------------------------------------------------------------------
