@@ -39,10 +39,8 @@ These are placeholders. Search for them and swap in the real values.
 | Placeholder | Where | Replace with |
 |---|---|---|
 | `info@nixoraservices.com` | `index.html`, `assets/js/main.js` | Real company email |
-| `+1 (000) 000-0000` / `tel:+10000000000` | `index.html` | Real phone number |
 | `YOUR_FORM_ID` | the three `<form action="…">` tags | Your Formspree form ID (see below) |
 | `facebook.com/nixoraservices` etc. | `index.html` (contact + footer) | Real Facebook / Instagram / LinkedIn URLs |
-| CEO photo | `index.html`, `.ceo__portrait` block | `<img src="assets/img/ceo-junior.jpg" alt="Junior, CEO">` |
 | Review quotes | `index.html`, `#feedback` | Real customer reviews. The three on the page are marked **Sample** and sit under a `.sample-note` banner. When real ones arrive, replace the quotes and delete the banner, every `tag--sample` badge, and the `.sample-note` / `.tag--sample` CSS block. |
 
 ### Making the forms actually send email
@@ -80,6 +78,14 @@ unreadable as a *foreground* on a dark background. `--on-tint` is the separate
 token for text and icons, and it flips light in dark mode. To rebrand, edit the
 `:root` token block at the top of the stylesheet — no other file needs to
 change.
+
+### The St. Louis band
+
+The section under the hero draws the Gateway Arch from its published weighted
+catenary — `y = 693.8597 − 68.7672·cosh(3.0022x / 299.2239)` in feet — with the
+leg cross-section tapering from 54 ft at the base to 17 ft at the crown, so the
+silhouette is the real monument rather than a freehand curve. The path is inline
+SVG in `index.html`; regenerate it only if the proportions need to change.
 
 ### Theme
 
