@@ -81,11 +81,16 @@ change.
 
 ### The St. Louis band
 
-The section under the hero draws the Gateway Arch from its published weighted
-catenary — `y = 693.8597 − 68.7672·cosh(3.0022x / 299.2239)` in feet — with the
-leg cross-section tapering from 54 ft at the base to 17 ft at the crown, so the
-silhouette is the real monument rather than a freehand curve. The path is inline
-SVG in `index.html`; regenerate it only if the proportions need to change.
+The section under the hero is a full-bleed photograph of the Gateway Arch over
+the downtown skyline, served at two widths through `srcset`.
+
+Two details keep it working. The arch crown sits about 2% from the photo's top
+edge, so `object-position: 50% 0` anchors the image to the top — any vertical
+crop from the centre decapitates the monument. And the scrim over it changes
+axis with the viewport: a left-weighted horizontal gradient on wide screens,
+where the copy sits beside the skyline, and a lighter top-to-bottom one under
+820px, where the copy sits over the photo and a heavy scrim would hide the
+arch entirely.
 
 ### Theme
 
