@@ -134,8 +134,17 @@ viewBox. The square matters: browsers letterbox or squash a non-square favicon.
 The plate gives the icon a solid silhouette at 16 px and keeps the lime legible,
 which it would not be on a light tab bar on its own.
 
-`favicon-32.png` covers browsers that reject SVG favicons, and
+`favicon.ico` sits at the **site root**, not in `assets/`, and that location
+matters: browsers request `/favicon.ico` on their own whatever the `<link>`
+tags say, and when the request 404s many of them keep showing whichever icon
+they already had cached. It carries 16, 32, 48 and 64 px so bookmarks, tabs
+and the OS each get a size they can use.
+
 `apple-touch-icon.png` (180 px) is the iOS home-screen icon.
+
+The SVG and touch-icon links carry a `?v=` query. A cached favicon survives a
+hard reload — the browser does not treat it like a page asset — but it cannot
+survive a changed URL. Bump that number whenever the icon changes.
 
 ### Logo files
 
@@ -146,7 +155,7 @@ All vector, extracted from the supplied artwork.
 | `nixora-logo.svg` | The lockup — header, footer and thank-you page |
 | `nixora-mark.svg` | The green wave alone, transparent |
 | `favicon.svg` | The green wave on a blue plate, square — browser tab |
-| `favicon-32.png` | 32px raster fallback |
+| `../favicon.ico` | Multi-resolution 16/32/48/64 icon at the **site root** |
 | `apple-touch-icon.png` | 180px iOS home-screen icon |
 | `og-cover.png` | 1200×630 social share card |
 
