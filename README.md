@@ -64,14 +64,23 @@ stay in step.
 
 | Token | Value | Where it comes from |
 |---|---|---|
-| `--brand-700` | `#012d54` | The navy of the NIXORA wordmark |
-| `--accent-500` | `#29a155` | The green of SERVICES and the lower wave |
-| `--on-tint` | `#01406f` / `#8ec2ea` | Foreground for links, icons and eyebrows — light / dark |
+| `--brand-600` | `#054a8b` | The blue of the Nixora wordmark |
+| `--accent-500` | `#90c02d` | The lime of the wave above the "o" |
+| `--accent-600` | `#57741b` | Darkened lime, for text and icons |
+| `--accent-700` | `#60801e` | Darkened lime, for backgrounds under white text |
+| `--on-tint` | `#054a8b` / `#86c2f5` | Foreground for links, icons and eyebrows — light / dark |
 | `--star` | `#d9922c` | Rating stars only — a semantic colour, not part of the brand |
 
 Both brand values are sampled straight out of the vector artwork, so the site
 and the logo match exactly. Everything else in `assets/css/styles.css` derives
 from those two hues, and the neutrals are tinted toward the navy.
+
+The lime is the brand's accent but cannot be used directly: white text on
+`#90c02d` measures 2.2:1 and the lime on its own tint is 3.8:1, so both fail
+AA. `--accent-500` is therefore decorative only — the logo and small fills —
+while `--accent-600` (4.7:1 on the lime tint) carries text and icons and
+`--accent-700` (4.6:1 under white) carries backgrounds such as the Green Team
+card header.
 
 `--brand-600` is dark enough to carry white button text, which makes it
 unreadable as a *foreground* on a dark background. `--on-tint` is the separate
@@ -117,10 +126,10 @@ fallback in that inline script from `'light'` to reading
 
 ### Favicon
 
-`favicon.svg` is the wave mark on a navy plate, cropped to a **square**
-viewBox. The square matters: browsers letterbox or squash a non-square favicon,
-which is why the earlier wide version rendered badly in the tab. The plate gives
-the icon a solid silhouette at 16 px, where the wave alone dissolves.
+`favicon.svg` is the logo's green wave on a blue plate, in a **square**
+viewBox. The square matters: browsers letterbox or squash a non-square favicon.
+The plate gives the icon a solid silhouette at 16 px and keeps the lime legible,
+which it would not be on a light tab bar on its own.
 
 `favicon-32.png` covers browsers that reject SVG favicons, and
 `apple-touch-icon.png` (180 px) is the iOS home-screen icon.
@@ -131,26 +140,27 @@ All vector, extracted from the supplied artwork.
 
 | File | Use |
 |---|---|
-| `nixora-logo.svg` | Horizontal lockup — header and footer |
-| `nixora-logo-vertical.svg` | Stacked lockup — thank-you page, print, social profiles |
-| `nixora-mark.svg` | Wave mark only, transparent — general use |
-| `favicon.svg` | Wave on a navy plate, square — browser tab |
+| `nixora-logo.svg` | The lockup — header, footer and thank-you page |
+| `nixora-mark.svg` | The green wave alone, transparent |
+| `favicon.svg` | The green wave on a blue plate, square — browser tab |
 | `favicon-32.png` | 32px raster fallback |
 | `apple-touch-icon.png` | 180px iOS home-screen icon |
 | `og-cover.png` | 1200×630 social share card |
 
 ### How the logo handles dark mode
 
-On dark backgrounds **only the word NIXORA turns white**; the wave and the word
-SERVICES keep their original colours.
+On dark backgrounds the word **Nixora** turns white and **SERVICES** lightens
+to `#b9c2cc`, because its `#6d6d6d` grey goes muddy against the dark ground.
+The green wave never changes.
 
-That rule is enforced without a second file. The NIXORA letterforms are filled
-with `currentColor`, so the wordmark follows the CSS `color` of whatever
-contains it, while every other path keeps its own fill:
+Two parts recolour independently, which `currentColor` alone cannot do. Custom
+properties can: they inherit into the shadow tree that `<use>` creates, so the
+paths reference `var(--logo-word)` and `var(--logo-sub)` and the theme sets
+both on the host element:
 
 ```css
-.brand__logo { color: var(--brand-700); }   /* navy */
-:root[data-theme="dark"] .brand__logo { color: #fff; }
+.brand__logo { --logo-word: #054a8b; --logo-sub: #6d6d6d; }
+:root[data-theme="dark"] .brand__logo { --logo-word: #fff; --logo-sub: #b9c2cc; }
 ```
 
 The pages inline the geometry once as an SVG `<symbol>` (`.brand-sprite`, just
