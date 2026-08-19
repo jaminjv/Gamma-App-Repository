@@ -138,7 +138,7 @@ h1, h2, h3, h4 {
   font-weight: 700;
 }
 
-h1 { font-size: clamp(2.35rem, 5.4vw, 4.05rem); letter-spacing: -.035em; }
+h1 { font-size: clamp(2.05rem, 4.6vw, 3.4rem); letter-spacing: -.032em; }
 h2 { font-size: clamp(1.85rem, 3.6vw, 2.85rem); letter-spacing: -.03em; }
 h3 { font-size: clamp(1.15rem, 1.8vw, 1.4rem); }
 h4 { font-size: 1.02rem; }
@@ -690,6 +690,10 @@ li { margin-bottom: .4rem; }
 
 /* --------------------------------------------------------------------------
    7b. Mission and vision
+
+   Same shape as the job cards in Join The Team: a coloured header carrying
+   the title, then a plain body. On a phone the two stack as clearly separate
+   blocks rather than running together as one column of text.
    -------------------------------------------------------------------------- */
 .purpose {
   display: grid;
@@ -699,49 +703,41 @@ li { margin-bottom: .4rem; }
 }
 
 .purpose__item {
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: .9rem;
-  padding: clamp(1.5rem, 2.6vw, 2.1rem);
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform .22s ease, box-shadow .22s ease;
 }
+.purpose__item:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
 
-/* A rule in the brand blue for the mission, the lime for the vision. */
-.purpose__item::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  background: var(--brand-600);
+.purpose__top {
+  padding: 1.6rem clamp(1.3rem, 2.4vw, 1.9rem) 1.4rem;
+  background: linear-gradient(135deg, var(--brand-700), var(--brand-500));
+  color: #fff;
 }
-.purpose__item--vision::before { background: var(--accent-500); }
+.purpose__top--vision { background: linear-gradient(135deg, #3d5410, var(--accent-700)); }
 
-.purpose__label {
-  font-family: var(--font-display);
-  font-size: .74rem;
-  font-weight: 700;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: var(--on-tint);
+.purpose__top h3 {
+  color: #fff;
+  margin-bottom: .55rem;
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
 }
-.purpose__item--vision .purpose__label { color: var(--on-accent); }
-
-.purpose__lead {
-  font-family: var(--font-display);
-  font-size: clamp(1.12rem, 1.7vw, 1.32rem);
-  font-weight: 600;
-  line-height: 1.4;
-  letter-spacing: -.015em;
-  color: var(--ink);
+.purpose__top p {
   margin: 0;
-  text-wrap: balance;
+  color: rgba(255, 255, 255, .93);
+  font-size: clamp(.98rem, 1.4vw, 1.05rem);
+  line-height: 1.55;
 }
-.purpose__item p:last-child {
+
+.purpose__body {
+  padding: clamp(1.3rem, 2.4vw, 1.8rem);
+  flex: 1;
+}
+.purpose__body p {
   margin: 0;
   font-size: .95rem;
   color: var(--muted);

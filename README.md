@@ -13,7 +13,7 @@ dependencies — so it can be hosted anywhere and edited by anyone.
 | Apply | `#careers` → `apply.html` | Two open positions: **House Keeping** and **Green Team Associate** |
 | Services | `#services` | Pressure Washing, Green Team (waste classification), House Keeping, Event & Industrial Staffing |
 | Feedback | `#feedback` | Client and crew reviews + a "leave a review" form |
-| CEO | `#leadership` | Junior, Chief Executive Officer |
+| CEO | `#leadership` | Junior Cabrera, Chief Executive Officer |
 | Contact Us | `#contact` | Contact details, social links, enquiry form |
 
 ## Files
