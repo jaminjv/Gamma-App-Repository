@@ -189,6 +189,7 @@ li { margin-bottom: .4rem; }
 
 .section-head { max-width: 44rem; margin-bottom: clamp(2.2rem, 4vw, 3.4rem); }
 .section-head--center { margin-inline: auto; text-align: center; }
+.section-head:last-child { margin-bottom: 0; }
 .section-head p { color: var(--muted); font-size: 1.06rem; }
 
 .eyebrow {

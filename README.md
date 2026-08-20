@@ -9,10 +9,11 @@ dependencies — so it can be hosted anywhere and edited by anyone.
 | Section | Anchor | What it covers |
 |---|---|---|
 | Hero | `#top` | Positioning, primary calls to action, key stats |
-| Home city | `#locale` | The Gateway Arch band — the company is based in St. Louis |
-| About Us | `#about` | Company overview, 5 recruiting channels, the 9-step vetting process |
+| About Us | `#about` | Who the company is — the overview, and nothing else |
 | CEO | `#leadership` | Junior Cabrera, Chief Executive Officer |
 | Mission and Vision | `#purpose` | What the company is for, and where it is going |
+| Home city | `#locale` | The Gateway Arch band — the company is based in St. Louis |
+| How We Staff | `#process` | The 5 recruiting channels and the 9-step vetting process |
 | Apply | `#careers` → `apply.html` | Two open positions: **House Keeping** and **Green Team Associate** |
 | Services | `#services` | Pressure Washing, Green Team (waste classification), House Keeping, Event & Industrial Staffing |
 | Feedback | `#feedback` | Client and crew reviews + a "leave a review" form |
