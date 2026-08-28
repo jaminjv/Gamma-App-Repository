@@ -378,16 +378,15 @@
           </fieldset>
 
           <div class="field">
-            <label for="signature-pad">Signature <span class="req" aria-hidden="true">*</span></label>
-            <span class="hint">Sign with your finger, stylus or mouse.</span>
-            <div class="sigpad" data-sigpad>
-              <canvas id="signature-pad" class="sigpad__canvas" aria-label="Signature area"></canvas>
-              <span class="sigpad__placeholder" data-sigpad-hint>Sign here</span>
-              <button type="button" class="sigpad__clear" data-sigpad-clear>Clear</button>
-            </div>
-            <input type="hidden" name="Signature Image" data-sigpad-value>
-            <p class="form-status sigpad__error" role="status" aria-live="polite"></p>
+            <label for="a-signature">Electronic signature <span class="req" aria-hidden="true">*</span></label>
+            <span class="hint">
+              Type your full legal name. Under the federal E-SIGN Act this carries the same
+              effect as signing by hand, and it is recorded with today's date.
+            </span>
+            <input id="a-signature" name="Electronic Signature" type="text" required
+                   autocomplete="off" placeholder="Your full legal name">
           </div>
+          <input type="hidden" name="Signed On" data-signed-date>
 
           <button class="btn btn--primary btn--block" type="submit">Submit Application</button>
           <p class="form-status" role="status" aria-live="polite"></p>

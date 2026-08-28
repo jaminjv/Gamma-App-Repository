@@ -179,100 +179,6 @@
   });
 
   /* ----------------------------------------------------------------------
-     Signature pad
-
-     Pointer events cover finger, stylus and mouse in one path. The canvas
-     is sized in device pixels so the stroke is not blurry on a phone, and
-     the drawn image is written into a hidden field on submit.
-     ---------------------------------------------------------------------- */
-  var sigpad = document.querySelector('[data-sigpad]');
-
-  if (sigpad && sigpad.querySelector('canvas').getContext) {
-    var canvas = sigpad.querySelector('canvas');
-    var ctx = canvas.getContext('2d');
-    var valueField = document.querySelector('[data-sigpad-value]');
-    var clearBtn = sigpad.querySelector('[data-sigpad-clear]');
-    var drawing = false;
-    var hasInk = false;
-    var last = null;
-
-    var resize = function () {
-      var ratio = Math.max(window.devicePixelRatio || 1, 1);
-      var rect = canvas.getBoundingClientRect();
-      // Resizing clears the canvas, so keep what was already drawn.
-      var previous = hasInk ? canvas.toDataURL() : null;
-
-      canvas.width = Math.round(rect.width * ratio);
-      canvas.height = Math.round(rect.height * ratio);
-      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-      ctx.lineWidth = 2.2;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = getComputedStyle(canvas).getPropertyValue('color') || '#0e1626';
-
-      if (previous) {
-        var img = new Image();
-        img.onload = function () { ctx.drawImage(img, 0, 0, rect.width, rect.height); };
-        img.src = previous;
-      }
-    };
-
-    var point = function (e) {
-      var rect = canvas.getBoundingClientRect();
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    };
-
-    var start = function (e) {
-      drawing = true;
-      last = point(e);
-      canvas.setPointerCapture(e.pointerId);
-      e.preventDefault();
-    };
-
-    var move = function (e) {
-      if (!drawing) return;
-      var p = point(e);
-      ctx.beginPath();
-      ctx.moveTo(last.x, last.y);
-      ctx.lineTo(p.x, p.y);
-      ctx.stroke();
-      last = p;
-      if (!hasInk) {
-        hasInk = true;
-        sigpad.classList.add('is-signed');
-      }
-      e.preventDefault();
-    };
-
-    var end = function () { drawing = false; last = null; };
-
-    canvas.addEventListener('pointerdown', start);
-    canvas.addEventListener('pointermove', move);
-    canvas.addEventListener('pointerup', end);
-    canvas.addEventListener('pointercancel', end);
-    canvas.addEventListener('pointerleave', end);
-
-    clearBtn.addEventListener('click', function () {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      hasInk = false;
-      sigpad.classList.remove('is-signed');
-      if (valueField) valueField.value = '';
-    });
-
-    window.addEventListener('resize', resize);
-    resize();
-
-    window.nixoraSignature = {
-      isSigned: function () { return hasInk; },
-      commit: function () {
-        if (valueField) valueField.value = hasInk ? canvas.toDataURL('image/png') : '';
-        return hasInk;
-      },
-      element: sigpad
-    };
-  }
-
-  /* ----------------------------------------------------------------------
      Forms
      ---------------------------------------------------------------------- */
   var showStatus = function (form, type, message) {
@@ -319,20 +225,9 @@
         return;
       }
 
-      // A signature pad is not a form control, so checkValidity cannot see it.
-      var sig = window.nixoraSignature;
-      if (sig && form.contains(sig.element)) {
-        var sigError = sig.element.parentNode.querySelector('.sigpad__error');
-        if (!sig.commit()) {
-          if (sigError) {
-            sigError.textContent = 'Please sign in the box above before submitting.';
-            sigError.classList.add('is-visible', 'form-status--err');
-          }
-          sig.element.scrollIntoView({ block: 'center' });
-          return;
-        }
-        if (sigError) sigError.classList.remove('is-visible', 'form-status--err');
-      }
+      // Stamp when the signature was given, not when the page loaded.
+      var signedAt = form.querySelector('[data-signed-date]');
+      if (signedAt) signedAt.value = new Date().toISOString().slice(0, 10);
 
       // Honeypot: silently accept and drop obvious bots.
       var honey = form.querySelector('input[name="_gotcha"]');
@@ -363,9 +258,6 @@
         .then(function (response) {
           if (!response.ok) throw new Error('Request failed with status ' + response.status);
           form.reset();
-          if (sig && form.contains(sig.element)) {
-            sig.element.querySelector('[data-sigpad-clear]').click();
-          }
           showStatus(form, 'ok', 'Thank you — your message has been sent. We will be in touch within one business day.');
         })
         .catch(function () {

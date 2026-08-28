@@ -80,15 +80,15 @@ the visitor's mail client instead of posting into nothing.
 
 ## The application form
 
-The form collects a signature drawn on a canvas. `checkValidity()` cannot see a
-canvas, so the submit handler checks it separately, blocks the send, and points
-the applicant at the pad. The drawing goes out as a base64 PNG in a hidden
-`signature` field — roughly 10 KB.
+The application is signed by typing a full legal name, stamped with the date
+the form was submitted rather than the date the page loaded.
 
-The canvas sets `touch-action: none`, without which a phone scrolls the page
-instead of drawing, and it is sized in device pixels so the stroke is not
-blurry on a high-density screen. Resizing the window re-creates the canvas, so
-the existing drawing is captured and redrawn rather than lost.
+It was a drawn canvas signature first. That works, but Formspree's free tier
+sends every field as plain text, so the drawing arrived as roughly 8 KB of
+base64 in the middle of the notification. A typed name carries the same weight
+under the federal E-SIGN Act — intent plus an unambiguous act of signing — and
+it keeps the email readable. A drawn or wet signature belongs at onboarding,
+alongside the I-9 and W-4, not on a public application form.
 
 **Two fields were asked for and deliberately left out: Social Security number
 and a work-permit photo upload.** Both would have gone to Formspree and landed
