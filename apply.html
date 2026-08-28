@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Apply — Nixora Services LLC</title>
-<meta name="description" content="Apply to join Nixora Services LLC. Open positions: House Keeping and Green Team Associate. Training provided, flexible shifts.">
+<meta name="description" content="Apply to join Nixora Services LLC. Open positions: Regular Cleaning and Green Team Associate (Waste Room). Training provided, flexible shifts.">
 <meta name="theme-color" content="#054a8b">
 <link rel="canonical" href="https://www.nixoraservices.com/apply.html">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Apply — Nixora Services LLC">
-<meta property="og:description" content="Open positions: House Keeping and Green Team Associate. Training provided.">
+<meta property="og:description" content="Open positions: Regular Cleaning and Green Team Associate (Waste Room). Training provided.">
 <meta property="og:url" content="https://www.nixoraservices.com/apply.html">
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="assets/img/favicon.svg?v=2" type="image/svg+xml">
@@ -74,7 +74,8 @@
           <li><a href="index.html#contact">Contact Us</a></li>
         </ul>
         <div class="nav__actions">
-          <a class="btn btn--primary btn--sm" href="#application">Application Form</a>
+          <a class="btn btn--accent btn--sm" href="team.html">Team Access</a>
+          <a class="btn btn--primary btn--sm" href="#application">Apply Now</a>
         </div>
       </div>
       <div class="nav__end">
@@ -110,10 +111,11 @@
     <div class="container">
       <div class="grid grid--2" style="margin-bottom:clamp(2.5rem,5vw,3.5rem)">
         <article class="job reveal">
+          <img class="job__media" src="assets/img/job-regular-cleaning.jpg" srcset="assets/img/job-regular-cleaning-480.jpg 480w, assets/img/job-regular-cleaning.jpg 800w" sizes="(max-width: 820px) 100vw, 46vw" width="800" height="533" loading="lazy" decoding="async" alt="A Nixora crew cleaning an office workspace">
           <div class="job__top">
             <span class="job__badge">Position 1</span>
-            <h3>House Keeping</h3>
-            <p>Guest rooms, common areas and facility upkeep</p>
+            <h3>Regular Cleaning</h3>
+            <p>Offices, common areas and daily facility upkeep</p>
           </div>
           <div class="job__body">
             <ul class="job__meta">
@@ -123,19 +125,20 @@
               <li>Clean and sanitize assigned areas to Nixora quality standards</li>
               <li>Restock supplies and report maintenance issues</li>
               <li>Follow chemical handling and PPE safety procedures</li>
-              <li>Prior housekeeping or janitorial experience is a plus, not a requirement</li>
+              <li>Prior cleaning or janitorial experience is a plus, not a requirement</li>
             </ul>
             <div class="job__cta">
-              <a class="btn btn--ghost btn--block" href="#application" data-select-role="House Keeping">Select this position</a>
+              <a class="btn btn--ghost btn--block" href="#application" data-select-role="Regular Cleaning">Select this position</a>
             </div>
           </div>
         </article>
 
         <article class="job reveal">
+          <img class="job__media" src="assets/img/job-green-team.jpg" srcset="assets/img/job-green-team-480.jpg 480w, assets/img/job-green-team.jpg 800w" sizes="(max-width: 820px) 100vw, 46vw" width="800" height="533" loading="lazy" decoding="async" alt="Green Team members sorting recyclables into a bin">
           <div class="job__top job__top--accent">
             <span class="job__badge">Position 2</span>
-            <h3>Green Team Associate</h3>
-            <p>Waste sorting, recycling and diversion at events</p>
+            <h3>Green Team Associate (Waste Room)</h3>
+            <p>Waste room sorting, recycling and diversion</p>
           </div>
           <div class="job__body">
             <ul class="job__meta">
@@ -148,7 +151,7 @@
               <li>Comfortable working on your feet in a fast-paced environment</li>
             </ul>
             <div class="job__cta">
-              <a class="btn btn--ghost btn--block" href="#application" data-select-role="Green Team Associate">Select this position</a>
+              <a class="btn btn--ghost btn--block" href="#application" data-select-role="Green Team Associate (Waste Room)">Select this position</a>
             </div>
           </div>
         </article>
@@ -180,21 +183,15 @@
           <div class="field">
             <label for="a-position">Position applying for <span class="req" aria-hidden="true">*</span></label>
             <select id="a-position" name="position" required>
-              <option value="House Keeping">House Keeping</option>
-              <option value="Green Team Associate">Green Team Associate</option>
+              <option value="Regular Cleaning">Regular Cleaning</option>
+              <option value="Green Team Associate (Waste Room)">Green Team Associate (Waste Room)</option>
               <option value="Either / General application">Either — place me where I fit best</option>
             </select>
           </div>
 
-          <div class="field-row">
-            <div class="field">
-              <label for="a-first">First name <span class="req" aria-hidden="true">*</span></label>
-              <input id="a-first" name="first_name" type="text" autocomplete="given-name" required placeholder="First name">
-            </div>
-            <div class="field">
-              <label for="a-last">Last name <span class="req" aria-hidden="true">*</span></label>
-              <input id="a-last" name="last_name" type="text" autocomplete="family-name" required placeholder="Last name">
-            </div>
+          <div class="field">
+            <label for="a-name">Full name <span class="req" aria-hidden="true">*</span></label>
+            <input id="a-name" name="full_name" type="text" autocomplete="name" required placeholder="As it appears on your ID">
           </div>
 
           <div class="field-row">
@@ -209,9 +206,101 @@
           </div>
 
           <div class="field">
-            <label for="a-city">City / Area <span class="req" aria-hidden="true">*</span></label>
-            <input id="a-city" name="city" type="text" autocomplete="address-level2" required placeholder="City and state">
+            <label for="a-dob">Date of birth <span class="req" aria-hidden="true">*</span></label>
+            <input id="a-dob" name="date_of_birth" type="date" autocomplete="bday" required>
           </div>
+
+          <div class="field">
+            <label for="a-address">Street address <span class="req" aria-hidden="true">*</span></label>
+            <input id="a-address" name="address" type="text" autocomplete="street-address" required placeholder="Number and street">
+          </div>
+
+          <div class="field-row field-row--3">
+            <div class="field">
+              <label for="a-city">City <span class="req" aria-hidden="true">*</span></label>
+              <input id="a-city" name="city" type="text" autocomplete="address-level2" required placeholder="City">
+            </div>
+            <div class="field">
+              <label for="a-state">State <span class="req" aria-hidden="true">*</span></label>
+              <select id="a-state" name="state" autocomplete="address-level1" required>
+                <option value="" selected disabled>Select</option>
+                <option>AL</option>
+                <option>AK</option>
+                <option>AZ</option>
+                <option>AR</option>
+                <option>CA</option>
+                <option>CO</option>
+                <option>CT</option>
+                <option>DE</option>
+                <option>DC</option>
+                <option>FL</option>
+                <option>GA</option>
+                <option>HI</option>
+                <option>ID</option>
+                <option>IL</option>
+                <option>IN</option>
+                <option>IA</option>
+                <option>KS</option>
+                <option>KY</option>
+                <option>LA</option>
+                <option>ME</option>
+                <option>MD</option>
+                <option>MA</option>
+                <option>MI</option>
+                <option>MN</option>
+                <option>MS</option>
+                <option>MO</option>
+                <option>MT</option>
+                <option>NE</option>
+                <option>NV</option>
+                <option>NH</option>
+                <option>NJ</option>
+                <option>NM</option>
+                <option>NY</option>
+                <option>NC</option>
+                <option>ND</option>
+                <option>OH</option>
+                <option>OK</option>
+                <option>OR</option>
+                <option>PA</option>
+                <option>RI</option>
+                <option>SC</option>
+                <option>SD</option>
+                <option>TN</option>
+                <option>TX</option>
+                <option>UT</option>
+                <option>VT</option>
+                <option>VA</option>
+                <option>WA</option>
+                <option>WV</option>
+                <option>WI</option>
+                <option>WY</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="a-zip">ZIP <span class="req" aria-hidden="true">*</span></label>
+              <input id="a-zip" name="zip" type="text" inputmode="numeric" autocomplete="postal-code"
+                     required pattern="[0-9]{5}(-[0-9]{4})?" placeholder="63101">
+            </div>
+          </div>
+
+          <fieldset class="fieldset">
+            <legend>Emergency contact</legend>
+            <div class="field-row">
+              <div class="field">
+                <label for="a-ec-name">Name <span class="req" aria-hidden="true">*</span></label>
+                <input id="a-ec-name" name="emergency_name" type="text" required placeholder="Full name">
+              </div>
+              <div class="field">
+                <label for="a-ec-phone">Phone <span class="req" aria-hidden="true">*</span></label>
+                <input id="a-ec-phone" name="emergency_phone" type="tel" required placeholder="(314) 000-0000">
+              </div>
+            </div>
+            <div class="field">
+              <label for="a-ec-rel">Relationship to you</label>
+              <input id="a-ec-rel" name="emergency_relationship" type="text" placeholder="Spouse, parent, friend…">
+            </div>
+          </fieldset>
 
           <div class="field-row">
             <div class="field">
@@ -257,10 +346,48 @@
             <span class="hint">Have a file instead? Submit the form and reply to our confirmation email with the attachment.</span>
           </div>
 
-          <label class="check">
-            <input type="checkbox" name="consent_screening" value="yes" required>
-            <span>I understand this position requires a background investigation and drug screening, and I consent to be contacted about my application. <span class="req" aria-hidden="true">*</span></span>
-          </label>
+          <fieldset class="fieldset">
+            <legend>Declarations</legend>
+
+            <label class="check">
+              <input type="checkbox" name="consent_accuracy" value="yes" required>
+              <span>I certify that the information in this application is true and complete to the
+                best of my knowledge, and I understand that any false statement may end my
+                application or my employment. <span class="req" aria-hidden="true">*</span></span>
+            </label>
+
+            <label class="check">
+              <input type="checkbox" name="consent_messaging" value="yes">
+              <span>I agree to receive text and WhatsApp messages from Nixora Services about the
+                status of this application and, if hired, about scheduling and work. Message and
+                data rates may apply. I can stop them at any time by replying <strong>STOP</strong>.</span>
+            </label>
+
+            <label class="check">
+              <input type="checkbox" name="consent_data" value="yes" required>
+              <span>I consent to Nixora Services storing and handling the information and documents
+                I submit here in digital form, for hiring and employment purposes.
+                <span class="req" aria-hidden="true">*</span></span>
+            </label>
+
+            <label class="check">
+              <input type="checkbox" name="consent_screening" value="yes" required>
+              <span>I understand this position requires a background investigation and drug
+                screening. <span class="req" aria-hidden="true">*</span></span>
+            </label>
+          </fieldset>
+
+          <div class="field">
+            <label for="signature-pad">Signature <span class="req" aria-hidden="true">*</span></label>
+            <span class="hint">Sign with your finger, stylus or mouse.</span>
+            <div class="sigpad" data-sigpad>
+              <canvas id="signature-pad" class="sigpad__canvas" aria-label="Signature area"></canvas>
+              <span class="sigpad__placeholder" data-sigpad-hint>Sign here</span>
+              <button type="button" class="sigpad__clear" data-sigpad-clear>Clear</button>
+            </div>
+            <input type="hidden" name="signature" data-sigpad-value>
+            <p class="form-status sigpad__error" role="status" aria-live="polite"></p>
+          </div>
 
           <button class="btn btn--primary btn--block" type="submit">Submit Application</button>
           <p class="form-status" role="status" aria-live="polite"></p>

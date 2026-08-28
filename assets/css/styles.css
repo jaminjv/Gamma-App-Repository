@@ -250,6 +250,14 @@ li { margin-bottom: .4rem; }
 }
 .btn--primary:hover { background: var(--brand-500); color: #fff; }
 
+/* accent-700 rather than the raw lime: white text needs 4.5:1. */
+.btn--accent {
+  background: var(--accent-700);
+  color: #fff;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent-700) 34%, transparent);
+}
+.btn--accent:hover { background: var(--accent-600); color: #fff; }
+
 .btn--ghost {
   background: transparent;
   color: var(--ink);
@@ -346,14 +354,15 @@ li { margin-bottom: .4rem; }
 .nav__links {
   display: flex;
   align-items: center;
-  gap: .25rem;
+  gap: .1rem;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .nav__links a {
   display: block;
-  padding: .55rem .8rem;
+  white-space: nowrap;
+  padding: .5rem .62rem;
   border-radius: 100px;
   color: var(--ink-soft);
   font-size: .93rem;
@@ -364,14 +373,14 @@ li { margin-bottom: .4rem; }
 .nav__links a:hover,
 .nav__links a.is-active { background: var(--surface-3); color: var(--ink); }
 
-.nav__actions { display: flex; align-items: center; gap: .55rem; }
+.nav__actions { display: flex; align-items: center; gap: .45rem; }
 
 /* Sits outside .nav__menu so the theme switch stays reachable on mobile
    without opening the menu. */
 .nav__end {
   display: flex;
   align-items: center;
-  gap: .6rem;
+  gap: .5rem;
   flex: none;
 }
 
@@ -457,7 +466,7 @@ li { margin-bottom: .4rem; }
 .nav__toggle[aria-expanded="true"] span::before { top: 0; transform: rotate(45deg); }
 .nav__toggle[aria-expanded="true"] span::after  { top: 0; transform: rotate(-45deg); }
 
-@media (max-width: 960px) {
+@media (max-width: 1150px) {
   .nav__toggle { display: inline-flex; }
   .nav__end { margin-left: auto; }
   .nav__menu {
@@ -480,8 +489,8 @@ li { margin-bottom: .4rem; }
   .nav__actions .btn { width: 100%; }
 }
 
-@media (min-width: 961px) {
-  .nav__menu { display: flex; align-items: center; gap: 1.2rem; margin-left: auto; }
+@media (min-width: 1151px) {
+  .nav__menu { display: flex; align-items: center; gap: .9rem; margin-left: auto; }
 }
 
 /* --------------------------------------------------------------------------
@@ -692,56 +701,37 @@ li { margin-bottom: .4rem; }
 /* --------------------------------------------------------------------------
    7b. Mission and vision
 
-   Same shape as the job cards in Join The Team: a coloured header carrying
-   the title, then a plain body. On a phone the two stack as clearly separate
-   blocks rather than running together as one column of text.
+   Two coloured blocks carrying a heading and one statement each, sitting
+   inside About Us under the introduction.
    -------------------------------------------------------------------------- */
 .purpose {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
   gap: clamp(1rem, 2vw, 1.6rem);
-  margin-bottom: clamp(2.5rem, 5vw, 3.5rem);
+  margin-top: clamp(2.2rem, 4vw, 3rem);
 }
 
 .purpose__item {
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  padding: clamp(1.5rem, 2.6vw, 2rem);
   border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  transition: transform .22s ease, box-shadow .22s ease;
-}
-.purpose__item:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
-
-.purpose__top {
-  padding: 1.6rem clamp(1.3rem, 2.4vw, 1.9rem) 1.4rem;
   background: linear-gradient(135deg, var(--brand-700), var(--brand-500));
   color: #fff;
+  box-shadow: var(--shadow-sm);
 }
-.purpose__top--vision { background: linear-gradient(135deg, #3d5410, var(--accent-700)); }
+.purpose__item--vision {
+  background: linear-gradient(135deg, #3d5410, var(--accent-700));
+}
 
-.purpose__top h3 {
+.purpose__item h3 {
   color: #fff;
-  margin-bottom: .55rem;
+  margin-bottom: .6rem;
   font-size: clamp(1.25rem, 2vw, 1.5rem);
 }
-.purpose__top p {
+.purpose__item p {
   margin: 0;
   color: rgba(255, 255, 255, .93);
   font-size: clamp(.98rem, 1.4vw, 1.05rem);
   line-height: 1.55;
-}
-
-.purpose__body {
-  padding: clamp(1.3rem, 2.4vw, 1.8rem);
-  flex: 1;
-}
-.purpose__body p {
-  margin: 0;
-  font-size: .95rem;
-  color: var(--muted);
 }
 
 /* --------------------------------------------------------------------------
@@ -759,6 +749,13 @@ li { margin-bottom: .4rem; }
   height: 100%;
 }
 .job:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+.job__media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+
 .job__top {
   padding: 1.6rem clamp(1.3rem, 2.4vw, 1.9rem) 1.3rem;
   background: linear-gradient(135deg, var(--brand-700), var(--brand-500));
@@ -1023,6 +1020,77 @@ li { margin-bottom: .4rem; }
 
 .field-row { display: grid; gap: 0 1rem; grid-template-columns: 1fr 1fr; }
 @media (max-width: 620px) { .field-row { grid-template-columns: 1fr; } }
+
+.field-row--3 { grid-template-columns: 2fr 1fr 1fr; }
+@media (max-width: 620px) { .field-row--3 { grid-template-columns: 1fr; } }
+
+.fieldset {
+  margin: 0 0 1.4rem;
+  padding: 1.1rem 1.2rem .4rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.fieldset legend {
+  padding: 0 .45rem;
+  font-family: var(--font-display);
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--on-tint);
+}
+.fieldset .check:last-of-type { margin-bottom: 1rem; }
+
+/* --------------------------------------------------------------------------
+   12b. Signature pad
+   -------------------------------------------------------------------------- */
+.sigpad {
+  position: relative;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  overflow: hidden;
+}
+.sigpad:focus-within { border-color: var(--brand-500); border-style: solid; }
+.sigpad.is-signed { border-style: solid; border-color: var(--brand-400); }
+
+.sigpad__canvas {
+  display: block;
+  width: 100%;
+  height: 170px;
+  /* Without this the browser scrolls the page instead of drawing. */
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.sigpad__placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: .95rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+.sigpad.is-signed .sigpad__placeholder { display: none; }
+
+.sigpad__clear {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  padding: .3rem .7rem;
+  font-family: var(--font-display);
+  font-size: .78rem;
+  font-weight: 650;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  cursor: pointer;
+}
+.sigpad__clear:hover { color: var(--ink); border-color: var(--brand-400); }
 
 .check {
   display: flex;

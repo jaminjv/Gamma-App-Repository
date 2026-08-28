@@ -9,13 +9,12 @@ dependencies — so it can be hosted anywhere and edited by anyone.
 | Section | Anchor | What it covers |
 |---|---|---|
 | Hero | `#top` | Positioning, primary calls to action, key stats |
-| About Us | `#about` | Who the company is — the overview, and nothing else |
+| About Us | `#about` | Company overview, plus the mission and vision |
 | CEO | `#leadership` | Junior Cabrera, Chief Executive Officer |
-| Mission and Vision | `#purpose` | What the company is for, and where it is going |
 | Home city | `#locale` | The Gateway Arch band — the company is based in St. Louis |
 | How We Staff | `#process` | The 5 recruiting channels and the 9-step vetting process |
-| Apply | `#careers` → `apply.html` | Two open positions: **House Keeping** and **Green Team Associate** |
-| Services | `#services` | Pressure Washing, Green Team (waste classification), House Keeping, Event & Industrial Staffing |
+| Apply | `#careers` → `apply.html` | Two open positions: **Regular Cleaning** and **Green Team Associate (Waste Room)** |
+| Services | `#services` | Pressure Washing, Green Team (waste classification), Regular Cleaning, Event & Industrial Staffing |
 | Feedback | `#feedback` | Client and crew reviews + a "leave a review" form |
 | Contact Us | `#contact` | Contact details, social links, enquiry form |
 | Team Access | `team.html` | Staff shortcuts into Google Workspace — linked discreetly from the footer |
@@ -71,6 +70,26 @@ email `info@nixoraservices.com` directly.
 `assets/js/main.js` still keeps a `YOUR_FORM_ID` guard. It is deliberate: if a
 form is ever duplicated without an endpoint, that form falls back to opening
 the visitor's mail client instead of posting into nothing.
+
+---
+
+## The application form
+
+The form collects a signature drawn on a canvas. `checkValidity()` cannot see a
+canvas, so the submit handler checks it separately, blocks the send, and points
+the applicant at the pad. The drawing goes out as a base64 PNG in a hidden
+`signature` field — roughly 10 KB.
+
+The canvas sets `touch-action: none`, without which a phone scrolls the page
+instead of drawing, and it is sized in device pixels so the stroke is not
+blurry on a high-density screen. Resizing the window re-creates the canvas, so
+the existing drawing is captured and redrawn rather than lost.
+
+**Two fields were asked for and deliberately left out: Social Security number
+and a work-permit photo upload.** Both would have gone to Formspree and landed
+in an email inbox in plain text. File uploads are not on Formspree's free tier
+at all, so an upload button would have looked functional and silently dropped
+the document. See the note in the commit history before adding either.
 
 ---
 
