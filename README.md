@@ -44,21 +44,33 @@ These are placeholders. Search for them and swap in the real values.
 | Placeholder | Where | Replace with |
 |---|---|---|
 | `info@nixoraservices.com` | `index.html`, `assets/js/main.js` | Real company email |
-| `YOUR_FORM_ID` | the three `<form action="…">` tags | Your Formspree form ID (see below) |
 | `facebook.com/nixoraservices` etc. | `index.html` (contact + footer) | Real Facebook / Instagram / LinkedIn URLs |
 | Review quotes | `index.html`, `#feedback` | Real customer reviews. The three on the page are marked **Sample** and sit under a `.sample-note` banner. When real ones arrive, replace the quotes and delete the banner, every `tag--sample` badge, and the `.sample-note` / `.tag--sample` CSS block. |
 
-### Making the forms actually send email
+### The forms
 
-The three forms (contact, review, job application) post to
-[Formspree](https://formspree.io) — free tier, works on static hosting.
+All three forms — contact, review and job application — post to the same
+Formspree endpoint, `https://formspree.io/f/xppzzana`. Submissions are told
+apart by a hidden `_subject` field, so one endpoint covers all three:
 
-1. Create an account and a form at formspree.io.
-2. Copy the form endpoint (looks like `https://formspree.io/f/abcdwxyz`).
-3. Replace all occurrences of `https://formspree.io/f/YOUR_FORM_ID`.
+| Form | Subject line |
+|---|---|
+| Contact | `New contact request — Nixora Services` |
+| Review | `New website review — Nixora Services` |
+| Job application | `New job application — Nixora Services` |
 
-Until that is done the forms fall back to opening the visitor's email client
-addressed to `info@nixoraservices.com`, so the site is still usable on day one.
+Filter on those subjects in Gmail to route applications and service requests
+to different labels without paying for separate Formspree forms.
+
+Two behaviours worth knowing. Each form carries a `_gotcha` honeypot, which
+Formspree treats as a spam signal and which the page also checks itself. And
+if Formspree is unreachable the submission is **not** silently lost: the
+message stays in the fields, the button re-enables, and the visitor is told to
+email `info@nixoraservices.com` directly.
+
+`assets/js/main.js` still keeps a `YOUR_FORM_ID` guard. It is deliberate: if a
+form is ever duplicated without an endpoint, that form falls back to opening
+the visitor's mail client instead of posting into nothing.
 
 ---
 
