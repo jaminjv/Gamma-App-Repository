@@ -61,6 +61,11 @@ apart by a hidden `_subject` field, so one endpoint covers all three:
 Filter on those subjects in Gmail to route applications and service requests
 to different labels without paying for separate Formspree forms.
 
+Field `name` attributes are written as readable labels — `Full Name`, not
+`full_name` — because Formspree prints the name attribute as the label in the
+notification email. `email` and `name` keep their lowercase keys: Formspree
+special-cases those two for the reply-to address and the sender name.
+
 Two behaviours worth knowing. Each form carries a `_gotcha` honeypot, which
 Formspree treats as a spam signal and which the page also checks itself. And
 if Formspree is unreachable the submission is **not** silently lost: the
