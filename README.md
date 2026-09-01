@@ -52,14 +52,23 @@ All three forms — contact, review and job application — post to the same
 Formspree endpoint, `https://formspree.io/f/xppzzana`. Submissions are told
 apart by a hidden `_subject` field, so one endpoint covers all three:
 
+Each `_subject` field carries a `data-subject-template`, and the submit handler
+fills it from the form's own values so the inbox shows who wrote in rather than
+which form they used:
+
 | Form | Subject line |
 |---|---|
-| Contact | `New contact request — Nixora Services` |
-| Review | `New website review — Nixora Services` |
-| Job application | `New job application — Nixora Services` |
+| Contact | `Laura Gomez — new service request` |
+| Review | `Carlos Ruiz left a 4-star review` |
+| Job application | `Pepito Perez applied — Green Team Associate (Waste Room)` |
 
-Filter on those subjects in Gmail to route applications and service requests
-to different labels without paying for separate Formspree forms.
+Placeholders name form fields: `{Full Name} applied — {Position Applied For}`.
+If any placeholder resolves empty the static `value` is sent instead, so a
+missing name never produces a subject that opens with a dash. Edit the wording
+in the HTML; the script needs no changes.
+
+For Gmail filters, match on the wording that does not vary — `applied —` for
+applications, `new service request` for enquiries — since the name now leads.
 
 Field `name` attributes are written as readable labels — `Full Name`, not
 `full_name` — because Formspree prints the name attribute as the label in the

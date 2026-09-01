@@ -229,6 +229,22 @@
       var signedAt = form.querySelector('[data-signed-date]');
       if (signedAt) signedAt.value = new Date().toISOString().slice(0, 10);
 
+      // Build the subject line from the form's own values, so the inbox shows
+      // who wrote in rather than which form they used. Falls back to the
+      // static subject if any placeholder comes back empty.
+      var subjectField = form.querySelector('input[name="_subject"][data-subject-template]');
+      if (subjectField) {
+        var complete = true;
+        var built = subjectField.getAttribute('data-subject-template')
+          .replace(/\{([^}]+)\}/g, function (match, key) {
+            var field = form.elements[key];
+            var value = field && field.value ? String(field.value).trim() : '';
+            if (!value) complete = false;
+            return value;
+          });
+        if (complete) subjectField.value = built;
+      }
+
       // Honeypot: silently accept and drop obvious bots.
       var honey = form.querySelector('input[name="_gotcha"]');
       if (honey && honey.value) return;
