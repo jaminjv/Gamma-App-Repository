@@ -1,0 +1,17 @@
+{
+  "name": "nixora-forms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Form endpoint for the Nixora Services site: renders the branded notification email and sends it through Resend.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "preview": "node scripts/preview.js",
+    "test": "node scripts/test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

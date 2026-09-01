@@ -1,0 +1,28 @@
+# Cloudflare Worker that receives the Nixora Services site forms and sends the
+# notification email through Resend. See worker/README.md for the deployment
+# steps. The Resend API key is NOT stored here — it is a secret:
+#   npx wrangler secret put RESEND_API_KEY
+
+name = "nixora-forms"
+main = "src/index.js"
+compatibility_date = "2025-05-05"
+
+[vars]
+# Where the site lives. Used for the logo URL, the links inside the email and
+# the redirect after a submission made without JavaScript.
+SITE_URL = "https://www.nixoraservices.com"
+
+# The sending identity. The domain must be verified in Resend first.
+FROM_EMAIL = "Nixora Services <notifications@nixoraservices.com>"
+
+# Default inbox for every form.
+TO_EMAIL = "info@nixoraservices.com"
+
+# Optional per-form inboxes. Delete a line to route that form to TO_EMAIL.
+TO_APPLICATIONS = "info@nixoraservices.com"
+TO_CONTACT = "info@nixoraservices.com"
+TO_REVIEWS = "info@nixoraservices.com"
+
+# Only these origins may post. A request from anywhere else is refused, which
+# stops other sites from using this endpoint as a free mailer.
+ALLOWED_ORIGINS = "https://www.nixoraservices.com,https://nixoraservices.com,https://jaminjv.github.io"

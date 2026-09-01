@@ -32,6 +32,7 @@ assets/img/             Logo lockup (light + dark), wave mark, social-share imag
 robots.txt, sitemap.xml SEO
 .nojekyll               Tells GitHub Pages to serve files as-is
 .github/workflows/deploy.yml   Auto-deploy to GitHub Pages on push to main
+worker/             Cloudflare Worker that emails the form submissions (see worker/README.md)
 ```
 
 ---
@@ -84,6 +85,20 @@ email `info@nixoraservices.com` directly.
 `assets/js/main.js` still keeps a `YOUR_FORM_ID` guard. It is deliberate: if a
 form is ever duplicated without an endpoint, that form falls back to opening
 the visitor's mail client instead of posting into nothing.
+
+### Replacing Formspree — `worker/`
+
+Formspree's free tier caps out at 50 submissions a month, cannot lay the
+notification out in Nixora's own design, and sends from its own servers.
+`worker/` is a Cloudflare Worker that does all three: it receives the same
+three forms, renders the branded email in `worker/src/email.js` and sends it
+through Resend from `notifications@nixoraservices.com`.
+
+It is written and tested but **not yet live** — the forms still post to
+Formspree. Switching over is two steps, both in `worker/README.md`: deploy the
+Worker, then replace the `action` on the three forms with the endpoint it
+prints. Nothing in `assets/js/main.js` changes; the Worker accepts the same
+POST the page already makes, and answers the same way.
 
 ---
 
@@ -357,4 +372,5 @@ python3 -m http.server 8000
 
 The same files deploy as-is to Netlify, Vercel or Cloudflare Pages — drag the
 folder in or connect the repo. Netlify and Cloudflare also provide built-in form
-handling, which would replace the Formspree step above.
+handling, which would replace the Formspree step above — as does the Worker in
+`worker/`, which runs on Cloudflare regardless of where the pages are served.
