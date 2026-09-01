@@ -49,13 +49,13 @@ These are placeholders. Search for them and swap in the real values.
 
 ### The forms
 
-All three forms — contact, review and job application — post to the same
-Formspree endpoint, `https://formspree.io/f/xppzzana`. Submissions are told
-apart by a hidden `_subject` field, so one endpoint covers all three:
+All three forms — contact, review and job application — post to the Cloudflare
+Worker in `worker/`, which renders the branded notification and sends it
+through Resend. A hidden `_form` field names which form each submission came
+from.
 
-Each `_subject` field carries a `data-subject-template`, and the submit handler
-fills it from the form's own values so the inbox shows who wrote in rather than
-which form they used:
+The Worker builds the subject from the submitted values, so the inbox shows
+who wrote in rather than which form they used:
 
 | Form | Subject line |
 |---|---|
@@ -63,22 +63,21 @@ which form they used:
 | Review | `Carlos Ruiz left a 4-star review` |
 | Job application | `Pepito Perez applied — Green Team Associate (Waste Room)` |
 
-Placeholders name form fields: `{Full Name} applied — {Position Applied For}`.
-If any placeholder resolves empty the static `value` is sent instead, so a
-missing name never produces a subject that opens with a dash. Edit the wording
-in the HTML; the script needs no changes.
+The wording lives in `worker/src/forms.js`. The pages also carry a
+`data-subject-template` on their `_subject` field, which the submit handler
+fills in the same way; the Worker ignores it, but it still supplies the subject
+for the mail-client fallback below.
 
 For Gmail filters, match on the wording that does not vary — `applied —` for
 applications, `new service request` for enquiries — since the name now leads.
 
-Field `name` attributes are written as readable labels — `Full Name`, not
-`full_name` — because Formspree prints the name attribute as the label in the
-notification email. `email` and `name` keep their lowercase keys: Formspree
-special-cases those two for the reply-to address and the sender name.
+Field `name` attributes are readable labels — `Full Name`, not `full_name`.
+They are the keys `worker/src/forms.js` reads, listed at the top of that file,
+so renaming one on a page means renaming it there too.
 
-Two behaviours worth knowing. Each form carries a `_gotcha` honeypot, which
-Formspree treats as a spam signal and which the page also checks itself. And
-if Formspree is unreachable the submission is **not** silently lost: the
+Two behaviours worth knowing. Each form carries a `_gotcha` honeypot, which the
+Worker answers with a `200` and drops, and which the page also checks itself.
+And if the Worker is unreachable the submission is **not** silently lost: the
 message stays in the fields, the button re-enables, and the visitor is told to
 email `info@nixoraservices.com` directly.
 
@@ -86,19 +85,17 @@ email `info@nixoraservices.com` directly.
 form is ever duplicated without an endpoint, that form falls back to opening
 the visitor's mail client instead of posting into nothing.
 
-### Replacing Formspree — `worker/`
+### Why not Formspree — `worker/`
 
-Formspree's free tier caps out at 50 submissions a month, cannot lay the
-notification out in Nixora's own design, and sends from its own servers.
-`worker/` is a Cloudflare Worker that does all three: it receives the same
-three forms, renders the branded email in `worker/src/email.js` and sends it
-through Resend from `notifications@nixoraservices.com`.
+The forms posted to Formspree until this Worker replaced it. Its free tier caps
+out at 50 submissions a month, prints the raw field names as the email body,
+and sends from its own servers. `worker/` fixes all three: it renders the
+branded email in `worker/src/email.js` and sends it through Resend from
+`notifications@nixoraservices.com`, with no monthly cap worth worrying about.
 
-It is written and tested but **not yet live** — the forms still post to
-Formspree. Switching over is two steps, both in `worker/README.md`: deploy the
-Worker, then replace the `action` on the three forms with the endpoint it
-prints. Nothing in `assets/js/main.js` changes; the Worker accepts the same
-POST the page already makes, and answers the same way.
+The endpoint is the `action` on the three forms. To move it — a new Cloudflare
+account, say — deploy the Worker again and change that URL; nothing in
+`assets/js/main.js` depends on where it points. See `worker/README.md`.
 
 ---
 
@@ -115,10 +112,13 @@ it keeps the email readable. A drawn or wet signature belongs at onboarding,
 alongside the I-9 and W-4, not on a public application form.
 
 **Two fields were asked for and deliberately left out: Social Security number
-and a work-permit photo upload.** Both would have gone to Formspree and landed
-in an email inbox in plain text. File uploads are not on Formspree's free tier
-at all, so an upload button would have looked functional and silently dropped
-the document. See the note in the commit history before adding either.
+and a work-permit photo upload.** The Worker could carry both now, which is
+exactly why the reason has to be restated rather than assumed settled: an SSN
+emailed in plain text sits unencrypted in an inbox and in the sending logs, and
+identity documents belong behind a login, not in a mailbox. Both are post-offer
+paperwork — they are collected with the I-9 and W-4, from someone who has
+already been hired, not from every stranger who fills in a public form. See the
+note in the commit history before adding either.
 
 ---
 
@@ -371,6 +371,6 @@ python3 -m http.server 8000
 ## Alternative hosts
 
 The same files deploy as-is to Netlify, Vercel or Cloudflare Pages — drag the
-folder in or connect the repo. Netlify and Cloudflare also provide built-in form
-handling, which would replace the Formspree step above — as does the Worker in
-`worker/`, which runs on Cloudflare regardless of where the pages are served.
+folder in or connect the repo. The Worker in `worker/` runs on Cloudflare
+regardless of where the pages themselves are served, so the forms keep working
+through a host change without being touched.
