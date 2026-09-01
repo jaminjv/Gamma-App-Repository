@@ -5,6 +5,7 @@
   "description": "Form endpoint for the Nixora Services site: renders the branded notification email and sends it through Resend.",
   "type": "module",
   "scripts": {
+    "bundle": "node scripts/bundle.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",

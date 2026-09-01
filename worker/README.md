@@ -48,11 +48,18 @@ node worker/scripts/test.js
 
 Runs the Worker against a stubbed Resend: routing, subjects, reply-to, the
 honeypot, the origin allowlist, the no-script fallback and the failure paths.
-Needs no API key and sends nothing.
+Needs no API key and sends nothing. Pass a path to check the bundled build
+behaves identically:
+
+```sh
+node worker/scripts/test.js ../dist/nixora-forms.js
+```
 
 ## Deploying
 
 Everything below happens in Junior's own Cloudflare and Resend accounts.
+There are two routes: the browser, which needs nothing installed, and the
+command line. Both deploy the same thing.
 
 ### 1. Verify the domain in Resend
 
@@ -71,7 +78,32 @@ Everything below happens in Junior's own Cloudflare and Resend accounts.
 5. Under **API Keys**, create a key with *Sending access* and copy it. It is
    shown once.
 
-### 2. Deploy the Worker
+### 2a. Deploy from the browser
+
+No terminal, nothing to install. `dist/nixora-forms.js` is the whole Worker
+flattened into one file for exactly this.
+
+1. At [dash.cloudflare.com](https://dash.cloudflare.com), open **Compute
+   (Workers) → Create → Start from Hello World! → Deploy**. Name it
+   `nixora-forms`.
+2. Open **Edit code**, select everything in the editor, and paste the contents
+   of `dist/nixora-forms.js` over it. **Deploy**.
+3. Under **Settings → Variables and Secrets**, add the settings from the table
+   below as plaintext variables, and `RESEND_API_KEY` as a **Secret**. Deploy
+   again so they take effect.
+
+The Worker's URL is on its overview page, of the form
+`https://nixora-forms.<your-subdomain>.workers.dev`.
+
+Rebuild the single file after changing anything under `src/`:
+
+```sh
+node worker/scripts/bundle.js
+```
+
+### 2b. Deploy from the command line
+
+Needs [Node.js](https://nodejs.org) installed.
 
 ```sh
 cd worker
@@ -81,8 +113,8 @@ npx wrangler secret put RESEND_API_KEY   # paste the key from step 1
 npx wrangler deploy
 ```
 
-`wrangler deploy` prints the endpoint, of the form
-`https://nixora-forms.<your-subdomain>.workers.dev`.
+`wrangler deploy` reads `wrangler.toml`, so the settings are applied for you.
+It prints the endpoint when it finishes.
 
 ### 3. Point the site at it
 
@@ -105,9 +137,11 @@ with `fetch` and shows the existing success and error states.
 | `TO_EMAIL` | Default inbox |
 | `TO_APPLICATIONS`, `TO_CONTACT`, `TO_REVIEWS` | Optional per-form inboxes. Remove one to fall back to `TO_EMAIL` |
 | `ALLOWED_ORIGINS` | Comma-separated list of sites allowed to post. Anything else is refused, so the endpoint cannot be used as a free mailer |
-| `RESEND_API_KEY` | **Secret**, never in this file. Set with `wrangler secret put` |
+| `RESEND_API_KEY` | **Secret**, never in this file. Set with `wrangler secret put`, or as a Secret under Settings → Variables and Secrets |
 
-After changing `wrangler.toml`, run `npx wrangler deploy` again.
+After changing `wrangler.toml`, run `npx wrangler deploy` again. On the browser
+route the same settings are entered in the dashboard instead, and
+`wrangler.toml` is only the reference for what they should be.
 
 ## Spam handling
 
@@ -138,6 +172,8 @@ worker/
   src/email.js          the HTML and plain-text template
   scripts/preview.js    renders samples locally, sends nothing
   scripts/test.js       exercises the Worker with the Resend call stubbed
+  scripts/bundle.js     flattens src/ into dist/ for the browser route
+  dist/nixora-forms.js  generated single file — edit src/, not this
   wrangler.toml         settings
 ```
 

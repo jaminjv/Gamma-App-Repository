@@ -4,7 +4,10 @@
    Covers the three forms, the honeypot, the origin allowlist, the no-script
    fallback, and what happens when Resend refuses. */
 
-import worker from '../src/index.js';
+// Defaults to the modules; pass a path to test the bundled build instead:
+//   node worker/scripts/test.js ../dist/nixora-forms.js
+const target = process.argv[2] || '../src/index.js';
+const worker = (await import(target)).default;
 
 const ENV = {
   SITE_URL: 'https://www.nixoraservices.com',
