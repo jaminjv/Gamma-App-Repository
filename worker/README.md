@@ -202,6 +202,21 @@ to be read in the Resend dashboard instead.
 Reach for this before the logs: a rejected send is nearly always one of the
 three things it checks, and this is a URL rather than a log console.
 
+### `/selftest?send=1`
+
+When everything readable is correct and the send still fails, add `?send=1`.
+It posts one real message to `TO_EMAIL` and reports Resend's answer verbatim:
+
+```json
+{"send": {"ok": false, "status": 403, "message": "The nixoraservices.com domain is not verified"},
+ "verdict": "Resend refused the send: The nixoraservices.com domain is not verified"}
+```
+
+The recipient is always the configured one and never comes from the request,
+so this cannot be pointed at anybody else. It is still a public URL that sends
+mail to that inbox, though — worth deleting the `options.send` branch once the
+endpoint is working, if that matters.
+
 ## Watching it run
 
 ```sh

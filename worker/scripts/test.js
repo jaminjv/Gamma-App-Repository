@@ -239,5 +239,42 @@ check('selftest catches a from address on an unverified domain',
 t = await selftest({ ...ENV, RESEND_API_KEY: '' }, okDomains);
 check('selftest reports an empty key', /is empty/.test(t.out.verdict), t.out.verdict);
 
+// 12b — ?send=1 posts one real message and reports what came back
+const sendTest = async (env, reply) => {
+  const previous = globalThis.fetch;
+  let target = null;
+  globalThis.fetch = async (url, init) => {
+    target = String(url);
+    sent = JSON.parse(init.body);
+    return reply();
+  };
+  sent = null;
+  const res = await worker.fetch(
+    new Request('https://nixora-forms.workers.dev/selftest?send=1', { method: 'GET' }), env);
+  const out = await res.json();
+  globalThis.fetch = previous;
+  return { out, target };
+};
+
+let st = await sendTest(ENV, () => new Response('{"id":"abc"}', { status: 200 }));
+check('send test actually sends', sent !== null && st.target.includes('api.resend.com/emails'));
+check('send test goes to the configured recipient only',
+  sent.to[0] === ENV.TO_CONTACT || sent.to[0] === ENV.TO_EMAIL, sent.to);
+check('send test reports success', st.out.send.ok === true && /Sent/.test(st.out.verdict), st.out.verdict);
+
+st = await sendTest(ENV, () => new Response(
+  '{"message":"The nixoraservices.com domain is not verified"}', { status: 403 }));
+check('send test quotes a refusal verbatim',
+  /domain is not verified/.test(st.out.verdict), st.out.verdict);
+check('send test records the status', st.out.send.status === 403, st.out.send.status);
+
+// without ?send=1 nothing is sent
+st = await sendTest(ENV, () => new Response('{"id":"abc"}', { status: 200 }));
+sent = null;
+let plain = await worker.fetch(
+  new Request('https://nixora-forms.workers.dev/selftest', { method: 'GET' }),
+  { ...ENV, RESEND_API_KEY: '' });
+check('selftest without send=1 sends nothing', sent === null);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

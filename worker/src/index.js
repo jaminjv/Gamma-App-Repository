@@ -18,7 +18,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-02.2';
+const BUILD = '2026-09-02.3';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -146,7 +146,33 @@ async function send(env, { to, replyTo, subject, html, text }) {
    It reports what is set, never what it is set to, with one exception: the
    addresses, which are printed on the website anyway. The key is described --
    present, length, plausible prefix -- and never echoed. */
-async function selftest(env) {
+/* Everything the self-test can read is correct and the send still fails, so
+   the only thing left to look at is what Resend says when it is actually asked
+   to send. This performs one real send to the configured recipient -- never to
+   an address from the request -- and reports the answer verbatim. */
+async function trySending(env) {
+  const to = recipient(env, 'contact');
+  try {
+    await send(env, {
+      to,
+      replyTo: '',
+      subject: 'Nixora Services — endpoint test',
+      html: '<p>This is the form endpoint testing itself. Nobody filled in a form.</p>',
+      text: 'This is the form endpoint testing itself. Nobody filled in a form.'
+    });
+    return { attempted: true, ok: true, to, note: 'Resend accepted it. Check ' + to + '.' };
+  } catch (error) {
+    return {
+      attempted: true,
+      ok: false,
+      to,
+      status: error && error.status,
+      message: error && error.detail ? error.detail : String(error && error.message || '')
+    };
+  }
+}
+
+async function selftest(env, options) {
   const key = cleanKey(env.RESEND_API_KEY);
   const report = {
     build: BUILD,
@@ -166,6 +192,15 @@ async function selftest(env) {
 
   if (!key) {
     report.verdict = 'RESEND_API_KEY is empty. Add it as a Secret and deploy again.';
+    return report;
+  }
+
+  if (options && options.send) {
+    report.send = await trySending(env);
+    report.verdict = report.send.ok
+      ? 'Sent. If it does not arrive, the problem is delivery rather than ' +
+        'configuration — look in spam, then at the Resend dashboard.'
+      : 'Resend refused the send: ' + report.send.message;
     return report;
   }
 
@@ -247,8 +282,12 @@ export default {
       return new Response(null, { status: 204, headers: cors });
     }
 
-    if (new URL(request.url).pathname === '/selftest') {
-      return json(await selftest(env), 200, cors);
+    const url = new URL(request.url);
+    if (url.pathname === '/selftest') {
+      // ?send=1 posts one real message to the configured recipient. The
+      // recipient never comes from the request, so this cannot be pointed at
+      // anyone else.
+      return json(await selftest(env, { send: url.searchParams.get('send') === '1' }), 200, cors);
     }
 
     if (request.method !== 'POST') {
