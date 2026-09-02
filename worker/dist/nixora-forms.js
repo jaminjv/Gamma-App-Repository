@@ -553,6 +553,17 @@ async function readForm(request) {
   return request.formData();
 }
 
+/* Keys get pasted with a stray space, a newline, wrapping quotes, or the word
+   Bearer already in front. Every one of those reaches Resend as an invalid key
+   and comes back as a validation error that says nothing about whitespace, so
+   they are stripped here rather than diagnosed twice. */
+const cleanKey = (value) =>
+  String(value || '')
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/^Bearer\s+/i, '')
+    .trim();
+
 async function send(env, { to, replyTo, subject, html, text }) {
   const payload = {
     from: env.FROM_EMAIL,
@@ -566,7 +577,7 @@ async function send(env, { to, replyTo, subject, html, text }) {
   const response = await fetch(RESEND_ENDPOINT, {
     method: 'POST',
     headers: {
-      authorization: 'Bearer ' + env.RESEND_API_KEY,
+      authorization: 'Bearer ' + cleanKey(env.RESEND_API_KEY),
       'content-type': 'application/json'
     },
     body: JSON.stringify(payload)
@@ -639,7 +650,7 @@ export default {
 
     const type = detectFormType(form);
     const to = recipient(env, type);
-    if (!to || !env.FROM_EMAIL || !env.RESEND_API_KEY) {
+    if (!to || !env.FROM_EMAIL || !cleanKey(env.RESEND_API_KEY)) {
       console.error('Worker is missing TO_EMAIL, FROM_EMAIL or RESEND_API_KEY.');
       return json({ ok: false, error: 'The form endpoint is not configured.' }, 500, cors);
     }

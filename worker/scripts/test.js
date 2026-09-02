@@ -153,6 +153,22 @@ failNext = false;
 // 10 — misconfiguration
 r = await worker.fetch(post(CONTACT), { ...ENV, RESEND_API_KEY: '' });
 check('missing key returns 500', r.status === 500);
+r = await worker.fetch(post(CONTACT), { ...ENV, RESEND_API_KEY: '   ' });
+check('whitespace-only key returns 500', r.status === 500);
+
+// 10b — a key pasted with the usual stray characters still authenticates
+for (const [label, value] of [
+  ['padded with spaces', '  re_test_key  '],
+  ['wrapped in quotes', '"re_test_key"'],
+  ['carrying a newline', 're_test_key\n'],
+  ['prefixed with Bearer', 'Bearer re_test_key']
+]) {
+  sent = null;
+  r = await worker.fetch(post(CONTACT), { ...ENV, RESEND_API_KEY: value });
+  check('key ' + label + ' is cleaned',
+    r.status === 200 && sent.headers.authorization === 'Bearer re_test_key',
+    sent && sent.headers.authorization);
+}
 
 // 11 — XSS in a submitted value
 sent = null;
