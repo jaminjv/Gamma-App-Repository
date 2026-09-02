@@ -18,9 +18,16 @@ const ENV = {
   RESEND_API_KEY: 're_test_key'
 };
 
-let sent = null, failNext = false;
+let sent = null, failNext = false, sheetPost = null, sheetFails = false;
+const SHEET_URL = 'https://script.google.com/macros/s/deadbeef/exec';
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, init) => {
+  if (String(url) === SHEET_URL) {
+    sheetPost = JSON.parse(init.body);
+    return sheetFails
+      ? new Response('<html>Script error</html>', { status: 200 })
+      : new Response('{"ok":true}', { status: 200 });
+  }
   if (String(url).includes('api.resend.com')) {
     sent = { url: String(url), headers: init.headers, body: JSON.parse(init.body) };
     return failNext
@@ -275,6 +282,51 @@ let plain = await worker.fetch(
   new Request('https://nixora-forms.workers.dev/selftest', { method: 'GET' }),
   { ...ENV, RESEND_API_KEY: '' });
 check('selftest without send=1 sends nothing', sent === null);
+
+// 13 — the spreadsheet row
+const SHEET_ENV = { ...ENV, SHEET_WEBHOOK_URL: SHEET_URL, SHEET_TOKEN: 'shared-secret' };
+
+sheetPost = null; sent = null;
+r = await worker.fetch(post(APP), SHEET_ENV);
+check('a submission reaches the sheet', r.status === 200 && sheetPost !== null);
+check('sheet row carries the shared token', sheetPost.token === 'shared-secret');
+check('sheet row goes to the Applications tab', sheetPost.tab === 'Applications', sheetPost.tab);
+check('sheet row starts with when it arrived', sheetPost.columns[0] === 'Received');
+check('sheet columns and values line up',
+  sheetPost.columns.length === sheetPost.values.length, sheetPost.columns.length + '/' + sheetPost.values.length);
+
+const cell = (name) => sheetPost.values[sheetPost.columns.indexOf(name)];
+check('sheet row keeps the applicant', cell('Full Name') === 'Pepito Perez', cell('Full Name'));
+check('sheet row formats the date of birth', cell('Date of Birth') === 'February 2, 1990', cell('Date of Birth'));
+check('sheet row records a ticked declaration as Yes', cell('Certified Accurate') === 'Yes');
+check('sheet row records an unticked one as No',
+  cell('Accepted SMS and WhatsApp') === 'No', cell('Accepted SMS and WhatsApp'));
+check('sheet row keeps empty optional fields as columns',
+  sheetPost.columns.indexOf('Resume Link') !== -1 && cell('Resume Link') === '');
+
+sheetPost = null;
+r = await worker.fetch(post(REVIEW), SHEET_ENV);
+check('reviews go to their own tab', sheetPost.tab === 'Reviews', sheetPost.tab);
+sheetPost = null;
+r = await worker.fetch(post(CONTACT), SHEET_ENV);
+check('contact requests go to their own tab', sheetPost.tab === 'Contact Requests', sheetPost.tab);
+
+// A spreadsheet that missed a row must never cost someone their application.
+sheetFails = true; sent = null; sheetPost = null;
+r = await worker.fetch(post(APP), SHEET_ENV);
+check('a broken sheet does not fail the submission', r.status === 200, r.status);
+check('and the email still went', sent !== null && sent.body.subject.includes('Pepito Perez'));
+sheetFails = false;
+
+// Without the setting there is no sheet call at all.
+sheetPost = null;
+r = await worker.fetch(post(APP), ENV);
+check('no sheet configured means no sheet call', r.status === 200 && sheetPost === null);
+
+t = await selftest(SHEET_ENV, () => new Response(
+  '{"message":"This API key is restricted to only send emails"}', { status: 401 }));
+check('selftest reports the sheet is wired up',
+  t.out.sheet.configured === true && t.out.sheet.tokenSet === true, JSON.stringify(t.out.sheet));
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

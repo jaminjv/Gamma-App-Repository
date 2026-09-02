@@ -239,3 +239,80 @@ export function buildSpec(form, type) {
   }
   return spec;
 }
+
+/* ------------------------------------------------------------------
+   Spreadsheet rows
+
+   A different shape from the email. The email leaves out what the person
+   skipped; a spreadsheet column has to appear on every row or the table
+   stops lining up, so these carry every field whether or not it was filled,
+   in a fixed order.
+   ------------------------------------------------------------------ */
+
+const yesNo = (form, field) => (get(form, field) ? 'Yes' : 'No');
+
+const SHEET_ROWS = {
+  application: (form) => [
+    ['Position', get(form, A.position)],
+    ['Full Name', get(form, A.name)],
+    ['Email', get(form, A.email)],
+    ['Phone', get(form, A.phone)],
+    ['Date of Birth', formatDate(get(form, A.dob))],
+    ['Street Address', get(form, A.street)],
+    ['City', get(form, A.city)],
+    ['State', get(form, A.state)],
+    ['ZIP Code', get(form, A.zip)],
+    ['Emergency Contact', get(form, A.ecName)],
+    ['Emergency Phone', get(form, A.ecPhone)],
+    ['Emergency Relationship', get(form, A.ecRelation)],
+    ['Experience', get(form, A.experience)],
+    ['Availability', get(form, A.availability)],
+    ['Shifts', get(form, A.shifts)],
+    ['Notes', get(form, A.notes)],
+    ['Resume Link', get(form, A.resume)],
+    ['Certified Accurate', yesNo(form, 'Certified Accurate')],
+    ['Accepted SMS and WhatsApp', yesNo(form, 'Accepted SMS and WhatsApp')],
+    ['Accepted Data Handling', yesNo(form, 'Accepted Digital Data Handling')],
+    ['Accepted Background Check', yesNo(form, 'Accepted Background and Drug Screening')],
+    ['Electronic Signature', get(form, A.signature)],
+    ['Signed On', formatDate(get(form, A.signedOn))]
+  ],
+
+  contact: (form) => [
+    ['Name', get(form, 'name')],
+    ['Company', get(form, 'Company')],
+    ['Email', get(form, 'email')],
+    ['Phone', get(form, 'Phone')],
+    ['Service Needed', get(form, 'Service Needed')],
+    ['Message', get(form, 'Message')]
+  ],
+
+  review: (form) => [
+    ['Name', get(form, 'name')],
+    ['Reviewer Type', get(form, 'Reviewer Type')],
+    ['Rating', get(form, 'Rating')],
+    ['Review', get(form, 'Message')],
+    ['May Publish', yesNo(form, 'Consented To Publish')]
+  ]
+};
+
+/* The tab each form writes to. Named for a person reading the file, not for
+   the code. */
+export const SHEET_TABS = {
+  application: 'Applications',
+  contact: 'Contact Requests',
+  review: 'Reviews'
+};
+
+export function sheetRow(form, type) {
+  const build = SHEET_ROWS[type] || SHEET_ROWS.contact;
+  const columns = ['Received'];
+  const values = [new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC'];
+
+  build(form).forEach(([column, value]) => {
+    columns.push(column);
+    values.push(value);
+  });
+
+  return { tab: SHEET_TABS[type] || SHEET_TABS.contact, columns, values };
+}

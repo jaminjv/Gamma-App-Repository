@@ -472,6 +472,83 @@ function buildSpec(form, type) {
   return spec;
 }
 
+/* ------------------------------------------------------------------
+   Spreadsheet rows
+
+   A different shape from the email. The email leaves out what the person
+   skipped; a spreadsheet column has to appear on every row or the table
+   stops lining up, so these carry every field whether or not it was filled,
+   in a fixed order.
+   ------------------------------------------------------------------ */
+
+const yesNo = (form, field) => (get(form, field) ? 'Yes' : 'No');
+
+const SHEET_ROWS = {
+  application: (form) => [
+    ['Position', get(form, A.position)],
+    ['Full Name', get(form, A.name)],
+    ['Email', get(form, A.email)],
+    ['Phone', get(form, A.phone)],
+    ['Date of Birth', formatDate(get(form, A.dob))],
+    ['Street Address', get(form, A.street)],
+    ['City', get(form, A.city)],
+    ['State', get(form, A.state)],
+    ['ZIP Code', get(form, A.zip)],
+    ['Emergency Contact', get(form, A.ecName)],
+    ['Emergency Phone', get(form, A.ecPhone)],
+    ['Emergency Relationship', get(form, A.ecRelation)],
+    ['Experience', get(form, A.experience)],
+    ['Availability', get(form, A.availability)],
+    ['Shifts', get(form, A.shifts)],
+    ['Notes', get(form, A.notes)],
+    ['Resume Link', get(form, A.resume)],
+    ['Certified Accurate', yesNo(form, 'Certified Accurate')],
+    ['Accepted SMS and WhatsApp', yesNo(form, 'Accepted SMS and WhatsApp')],
+    ['Accepted Data Handling', yesNo(form, 'Accepted Digital Data Handling')],
+    ['Accepted Background Check', yesNo(form, 'Accepted Background and Drug Screening')],
+    ['Electronic Signature', get(form, A.signature)],
+    ['Signed On', formatDate(get(form, A.signedOn))]
+  ],
+
+  contact: (form) => [
+    ['Name', get(form, 'name')],
+    ['Company', get(form, 'Company')],
+    ['Email', get(form, 'email')],
+    ['Phone', get(form, 'Phone')],
+    ['Service Needed', get(form, 'Service Needed')],
+    ['Message', get(form, 'Message')]
+  ],
+
+  review: (form) => [
+    ['Name', get(form, 'name')],
+    ['Reviewer Type', get(form, 'Reviewer Type')],
+    ['Rating', get(form, 'Rating')],
+    ['Review', get(form, 'Message')],
+    ['May Publish', yesNo(form, 'Consented To Publish')]
+  ]
+};
+
+/* The tab each form writes to. Named for a person reading the file, not for
+   the code. */
+const SHEET_TABS = {
+  application: 'Applications',
+  contact: 'Contact Requests',
+  review: 'Reviews'
+};
+
+function sheetRow(form, type) {
+  const build = SHEET_ROWS[type] || SHEET_ROWS.contact;
+  const columns = ['Received'];
+  const values = [new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC'];
+
+  build(form).forEach(([column, value]) => {
+    columns.push(column);
+    values.push(value);
+  });
+
+  return { tab: SHEET_TABS[type] || SHEET_TABS.contact, columns, values };
+}
+
 /* ==========================================================================
    Nixora Services LLC — form endpoint.
 
@@ -489,7 +566,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-02.3';
+const BUILD = '2026-09-02.4';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -617,6 +694,31 @@ async function send(env, { to, replyTo, subject, html, text }) {
    It reports what is set, never what it is set to, with one exception: the
    addresses, which are printed on the website anyway. The key is described --
    present, length, plausible prefix -- and never echoed. */
+/* Appends the submission to the Google Sheet, when one is configured.
+
+   This runs after the email has already gone. A spreadsheet that did not get
+   its row is worth knowing about, but it is not worth failing a job
+   application over, so a failure here is logged and reported through the
+   self-test rather than shown to the person who filled in the form. */
+async function appendToSheet(env, form, type) {
+  const endpoint = String(env.SHEET_WEBHOOK_URL || '').trim();
+  if (!endpoint) return { configured: false };
+
+  const row = sheetRow(form, type);
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token: String(env.SHEET_TOKEN || ''), ...row })
+  });
+
+  // Apps Script answers 200 with an HTML error page when the script itself
+  // threw, so the status alone does not settle it.
+  const body = (await response.text()).slice(0, 300);
+  const ok = response.ok && /"ok"\s*:\s*true/.test(body);
+  if (!ok) throw new Error('Sheet responded ' + response.status + ': ' + body);
+  return { configured: true, ok: true, tab: row.tab };
+}
+
 /* Everything the self-test can read is correct and the send still fails, so
    the only thing left to look at is what Resend says when it is actually asked
    to send. This performs one real send to the configured recipient -- never to
@@ -664,6 +766,11 @@ async function selftest(env, options) {
   if (!key) {
     report.verdict = 'RESEND_API_KEY is empty. Add it as a Secret and deploy again.';
     return report;
+  }
+
+  report.sheet = { configured: Boolean(String(env.SHEET_WEBHOOK_URL || '').trim()) };
+  if (report.sheet.configured) {
+    report.sheet.tokenSet = Boolean(String(env.SHEET_TOKEN || '').trim());
   }
 
   if (options && options.send) {
@@ -843,6 +950,13 @@ export default {
         from: env.FROM_EMAIL,
         to: to
       }, 502, cors);
+    }
+
+    // The email is the part that must not fail, and it has already gone.
+    try {
+      await appendToSheet(env, form, type);
+    } catch (error) {
+      console.error('Sheet append failed:', error && error.message);
     }
 
     return wantsJson(request)

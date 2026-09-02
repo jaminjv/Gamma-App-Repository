@@ -10,7 +10,8 @@
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
     "preview": "node scripts/preview.js",
-    "test": "node scripts/test.js"
+    "test": "node scripts/test.js",
+    "test:sheet": "node scripts/test-apps-script.js"
   },
   "devDependencies": {
     "wrangler": "^3.90.0"

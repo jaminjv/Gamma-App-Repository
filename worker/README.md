@@ -126,6 +126,53 @@ Replace the `action` on the three forms with that URL:
 Nothing else on the site changes: `assets/js/main.js` already posts the form
 with `fetch` and shows the existing success and error states.
 
+## Sending every submission to a spreadsheet
+
+Set `SHEET_WEBHOOK_URL` and the Worker posts a copy of each submission to a
+Google Sheet as well as emailing it, so there is a running table to sort,
+filter and export to Excel (`File → Download → Microsoft Excel (.xlsx)`).
+
+Each form gets its own tab — **Applications**, **Contact Requests**,
+**Reviews** — and the header row grows when a new field appears, so adding a
+field to the site later means a new column rather than a broken import.
+
+### Setting it up
+
+1. Create a spreadsheet in the company Google Workspace. Name it something
+   like *Nixora — Form Submissions*.
+2. **Extensions → Apps Script**. Delete what is there and paste
+   `google-apps-script.gs` from this folder.
+3. Replace `PUT-THE-SAME-TOKEN-HERE` with a long random string. Save.
+4. **Deploy → New deployment → Web app**, with *Execute as* **Me** and *Who
+   has access* **Anyone**. Copy the URL it gives you, ending in `/exec`.
+5. On the Worker, add `SHEET_WEBHOOK_URL` (that URL) and `SHEET_TOKEN` (the
+   same random string, as a **Secret**). Deploy.
+
+"Anyone" sounds alarming and is why the token exists: the Web App URL is
+reachable by anyone who has it, and the token is what stops them writing rows
+into the company's hiring records. It is checked before anything is written.
+
+Leaving `SHEET_WEBHOOK_URL` empty turns the spreadsheet off. The email is
+unaffected either way.
+
+### What happens when the sheet is down
+
+The email is sent first, and a failure to append is logged and reported
+through `/selftest` rather than shown to the person who filled in the form. A
+spreadsheet that missed a row is worth knowing about; it is not worth failing
+a job application over.
+
+### Checking it
+
+```sh
+node worker/scripts/test-apps-script.js
+```
+
+Runs the Apps Script against a fake spreadsheet: the token, the header
+growing, an older row keeping its meaning when a column is added, a missing
+field leaving an empty cell rather than shifting the row, and text that would
+otherwise be executed as a formula being pinned to text.
+
 ## Settings
 
 `wrangler.toml` holds everything except the API key.
@@ -137,6 +184,8 @@ with `fetch` and shows the existing success and error states.
 | `TO_EMAIL` | Default inbox |
 | `TO_APPLICATIONS`, `TO_CONTACT`, `TO_REVIEWS` | Optional per-form inboxes. Remove one to fall back to `TO_EMAIL` |
 | `ALLOWED_ORIGINS` | Comma-separated list of sites allowed to post. Anything else is refused, so the endpoint cannot be used as a free mailer |
+| `SHEET_WEBHOOK_URL` | Apps Script Web App URL. Empty turns the spreadsheet off |
+| `SHEET_TOKEN` | **Secret**. Must match `SHARED_TOKEN` in `google-apps-script.gs` |
 | `RESEND_API_KEY` | **Secret**, never in this file. Set with `wrangler secret put`, or as a Secret under Settings → Variables and Secrets |
 
 After changing `wrangler.toml`, run `npx wrangler deploy` again. On the browser
@@ -159,7 +208,7 @@ Open the Worker's URL in a browser. It refuses the GET, and says which build
 answered:
 
 ```json
-{"ok": false, "error": "Send this form with POST.", "build": "2026-09-02.2", …}
+{"ok": false, "error": "Send this form with POST.", "build": "2026-09-02.4", …}
 ```
 
 Compare that against `BUILD` at the top of `src/index.js`. Deploying through
@@ -236,6 +285,8 @@ worker/
   src/email.js          the HTML and plain-text template
   scripts/preview.js    renders samples locally, sends nothing
   scripts/test.js       exercises the Worker with the Resend call stubbed
+  scripts/test-apps-script.js  runs the Apps Script against a fake spreadsheet
+  google-apps-script.gs  paste this into the destination spreadsheet
   scripts/bundle.js     flattens src/ into dist/ for the browser route
   dist/nixora-forms.js  generated single file — edit src/, not this
   wrangler.toml         settings

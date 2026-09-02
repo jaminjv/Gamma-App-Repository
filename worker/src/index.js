@@ -10,7 +10,7 @@
    ========================================================================== */
 
 import { renderEmail, renderText, escapeHtml } from './email.js';
-import { detectFormType, buildSpec } from './forms.js';
+import { detectFormType, buildSpec, sheetRow } from './forms.js';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
@@ -18,7 +18,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-02.3';
+const BUILD = '2026-09-02.4';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -146,6 +146,31 @@ async function send(env, { to, replyTo, subject, html, text }) {
    It reports what is set, never what it is set to, with one exception: the
    addresses, which are printed on the website anyway. The key is described --
    present, length, plausible prefix -- and never echoed. */
+/* Appends the submission to the Google Sheet, when one is configured.
+
+   This runs after the email has already gone. A spreadsheet that did not get
+   its row is worth knowing about, but it is not worth failing a job
+   application over, so a failure here is logged and reported through the
+   self-test rather than shown to the person who filled in the form. */
+async function appendToSheet(env, form, type) {
+  const endpoint = String(env.SHEET_WEBHOOK_URL || '').trim();
+  if (!endpoint) return { configured: false };
+
+  const row = sheetRow(form, type);
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token: String(env.SHEET_TOKEN || ''), ...row })
+  });
+
+  // Apps Script answers 200 with an HTML error page when the script itself
+  // threw, so the status alone does not settle it.
+  const body = (await response.text()).slice(0, 300);
+  const ok = response.ok && /"ok"\s*:\s*true/.test(body);
+  if (!ok) throw new Error('Sheet responded ' + response.status + ': ' + body);
+  return { configured: true, ok: true, tab: row.tab };
+}
+
 /* Everything the self-test can read is correct and the send still fails, so
    the only thing left to look at is what Resend says when it is actually asked
    to send. This performs one real send to the configured recipient -- never to
@@ -193,6 +218,11 @@ async function selftest(env, options) {
   if (!key) {
     report.verdict = 'RESEND_API_KEY is empty. Add it as a Secret and deploy again.';
     return report;
+  }
+
+  report.sheet = { configured: Boolean(String(env.SHEET_WEBHOOK_URL || '').trim()) };
+  if (report.sheet.configured) {
+    report.sheet.tokenSet = Boolean(String(env.SHEET_TOKEN || '').trim());
   }
 
   if (options && options.send) {
@@ -372,6 +402,13 @@ export default {
         from: env.FROM_EMAIL,
         to: to
       }, 502, cors);
+    }
+
+    // The email is the part that must not fail, and it has already gone.
+    try {
+      await appendToSheet(env, form, type);
+    } catch (error) {
+      console.error('Sheet append failed:', error && error.message);
     }
 
     return wantsJson(request)

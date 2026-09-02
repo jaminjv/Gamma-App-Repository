@@ -23,6 +23,12 @@ TO_APPLICATIONS = "info@nixoraservices.com"
 TO_CONTACT = "info@nixoraservices.com"
 TO_REVIEWS = "info@nixoraservices.com"
 
+# Google Sheet that receives a copy of every submission. Leave both blank to
+# turn the spreadsheet off entirely — the email is unaffected either way.
+# SHEET_WEBHOOK_URL is the Apps Script Web App URL; SHEET_TOKEN must match the
+# SHARED_TOKEN inside google-apps-script.gs. Set SHEET_TOKEN as a Secret.
+SHEET_WEBHOOK_URL = ""
+
 # Only these origins may post. A request from anywhere else is refused, which
 # stops other sites from using this endpoint as a free mailer.
 ALLOWED_ORIGINS = "https://www.nixoraservices.com,https://nixoraservices.com,https://jaminjv.github.io"
