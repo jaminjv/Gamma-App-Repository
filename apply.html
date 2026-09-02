@@ -180,7 +180,11 @@
           <input type="hidden" name="_form" value="application">
           <input type="hidden" name="_subject" value="New job application — Nixora Services"
                  data-subject-template="{Full Name} applied — {Position Applied For}">
-          <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" class="sr-only" aria-hidden="true">
+          <div class="honeypot" aria-hidden="true">
+            <label>Leave this field empty
+              <input type="text" name="_gotcha" tabindex="-1" autocomplete="off">
+            </label>
+          </div>
 
           <div class="field">
             <label for="a-position">Position applying for <span class="req" aria-hidden="true">*</span></label>

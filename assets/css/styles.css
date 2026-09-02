@@ -1322,6 +1322,11 @@ li { margin-bottom: .4rem; }
   white-space: nowrap;
   border: 0;
 }
+
+/* Spam trap. It has to be display:none rather than .sr-only: a clipped 1px
+   input is still a rendered field, and browser autofill and password managers
+   fill it for real people. Bots read the markup, not the stylesheet. */
+.honeypot { display: none !important; }
 .page-hero {
   padding-block: clamp(3rem, 6vw, 4.5rem) clamp(2rem, 4vw, 3rem);
   background:

@@ -8,7 +8,7 @@
   /* ----------------------------------------------------------------------
      Configuration
      ---------------------------------------------------------------------- */
-  // Fallback inbox used when a form's Formspree endpoint has not been set up yet.
+  // Fallback inbox used when a form has no endpoint set up yet.
   var FALLBACK_EMAIL = 'info@nixoraservices.com';
   var UNCONFIGURED = 'YOUR_FORM_ID';
 
@@ -224,8 +224,8 @@
     return names.slice(0, 3).join(', ') + ' and ' + (names.length - 3) + ' more';
   };
 
-  // Builds a readable mailto: body from the form fields — used as the fallback
-  // path while no Formspree endpoint is configured.
+  // Builds a readable mailto: body from the form fields — the fallback path
+  // for a form whose action was never pointed at an endpoint.
   var mailtoFallback = function (form) {
     var subjectField = form.querySelector('input[name="_subject"]');
     var subject = subjectField ? subjectField.value : 'Website enquiry — Nixora Services';
@@ -312,10 +312,6 @@
           });
         if (complete) subjectField.value = built;
       }
-
-      // Honeypot: silently accept and drop obvious bots.
-      var honey = form.querySelector('input[name="_gotcha"]');
-      if (honey && honey.value) return;
 
       var action = form.getAttribute('action') || '';
       var submitBtn = form.querySelector('button[type="submit"]');
