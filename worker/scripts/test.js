@@ -103,9 +103,23 @@ check('honeypot answers 200', r.status === 200);
 check('honeypot sends nothing', sent === null);
 
 // 5 — foreign origin
+sent = null;
 r = await worker.fetch(post(CONTACT, { origin: 'https://evil.example' }), ENV);
 check('foreign origin refused', r.status === 403, r.status);
-check('foreign origin gets no CORS header', !r.headers.get('access-control-allow-origin'));
+check('foreign origin sends nothing', sent === null);
+let refusal = await r.json();
+check('refusal names the origin', refusal.origin === 'https://evil.example', refusal.origin);
+check('refusal lists what is allowed', Array.isArray(refusal.allowed) && refusal.allowed.length === 2);
+check('refusal is readable by the page',
+  r.headers.get('access-control-allow-origin') === 'https://evil.example');
+
+// 5b — the settings typed with a trailing slash, or in capitals, still match
+sent = null;
+r = await worker.fetch(post(CONTACT), {
+  ...ENV, ALLOWED_ORIGINS: 'https://WWW.nixoraservices.com/ , https://nixoraservices.com/'
+});
+check('trailing slash in the setting tolerated', r.status === 200, r.status);
+check('and it still sends', sent && sent.body.subject.includes('Laura Gomez'));
 
 // 6 / 7 — method handling
 r = await worker.fetch(new Request('https://nixora-forms.workers.dev/', { method: 'GET' }), ENV);

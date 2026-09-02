@@ -1325,7 +1325,9 @@ li { margin-bottom: .4rem; }
 
 /* Spam trap. It has to be display:none rather than .sr-only: a clipped 1px
    input is still a rendered field, and browser autofill and password managers
-   fill it for real people. Bots read the markup, not the stylesheet. */
+   fill it for real people. Bots read the markup, not the stylesheet.
+   display:none already takes it out of the accessibility tree, so it carries
+   no aria-hidden — that would only warn about hiding a focusable element. */
 .honeypot { display: none !important; }
 .page-hero {
   padding-block: clamp(3rem, 6vw, 4.5rem) clamp(2rem, 4vw, 3rem);

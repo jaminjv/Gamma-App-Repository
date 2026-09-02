@@ -24,19 +24,31 @@ const json = (body, status, headers) =>
     headers: { 'content-type': 'application/json; charset=utf-8', ...headers }
   });
 
+/* An origin is a scheme, host and port — never a path, never a trailing
+   slash, never uppercase. Normalising both sides means a setting typed as
+   "https://www.nixoraservices.com/" still matches, rather than refusing every
+   submission from the site it was meant to allow. */
+const normalizeOrigin = (value) =>
+  String(value || '').trim().toLowerCase().replace(/\/+$/, '');
+
 function allowedOrigins(env) {
   return String(env.ALLOWED_ORIGINS || '')
     .split(',')
-    .map((value) => value.trim())
+    .map(normalizeOrigin)
     .filter(Boolean);
 }
 
-/* Echoes the origin back only when it is on the list. An unknown origin gets
-   no CORS header at all, so the browser blocks the response. */
+const originAllowed = (request, env) =>
+  allowedOrigins(env).indexOf(normalizeOrigin(request.headers.get('Origin'))) !== -1;
+
+/* Echoes the origin back when it is on the list. A refusal still carries the
+   header, so the page can read why it was refused: the request was already
+   turned away, and the reason is the site's own public address. Without it the
+   browser hides the response and all anyone sees is an opaque CORS failure. */
 function corsHeaders(request, env) {
   const origin = request.headers.get('Origin');
   const headers = { 'vary': 'Origin' };
-  if (origin && allowedOrigins(env).indexOf(origin) !== -1) {
+  if (origin) {
     headers['access-control-allow-origin'] = origin;
     headers['access-control-allow-methods'] = 'POST, OPTIONS';
     headers['access-control-allow-headers'] = 'Content-Type, Accept';
@@ -109,8 +121,16 @@ export default {
     }
 
     const origin = request.headers.get('Origin');
-    if (origin && allowedOrigins(env).indexOf(origin) === -1) {
-      return json({ ok: false, error: 'Origin not allowed.' }, 403, cors);
+    if (origin && !originAllowed(request, env)) {
+      const configured = allowedOrigins(env);
+      console.error('Refused origin ' + origin + '. ALLOWED_ORIGINS holds: ' +
+        (configured.length ? configured.join(', ') : '(nothing)'));
+      return json({
+        ok: false,
+        error: 'This site is not on the endpoint\'s allowed list.',
+        origin: normalizeOrigin(origin),
+        allowed: configured
+      }, 403, cors);
     }
 
     const declaredLength = Number(request.headers.get('Content-Length') || 0);
