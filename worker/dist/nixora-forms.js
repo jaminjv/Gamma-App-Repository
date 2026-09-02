@@ -573,8 +573,21 @@ async function send(env, { to, replyTo, subject, html, text }) {
   });
 
   if (!response.ok) {
-    const detail = await response.text();
-    throw new Error('Resend responded ' + response.status + ': ' + detail);
+    const body = await response.text();
+    // Resend answers with { message } on a rejection. Keep that sentence on
+    // the error: it names the actual problem — an unverified domain, a
+    // malformed from address, a key without sending access — where the status
+    // code alone would only say "it did not work".
+    let message = body;
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed && parsed.message) message = parsed.message;
+    } catch (ignored) { /* not JSON — keep the raw body */ }
+
+    const error = new Error('Resend responded ' + response.status + ': ' + message);
+    error.detail = String(message).slice(0, 300);
+    error.status = response.status;
+    throw error;
   }
   return response.json();
 }
@@ -651,7 +664,19 @@ export default {
       });
     } catch (error) {
       console.error('Sending failed:', error && error.message);
-      return json({ ok: false, error: 'The message could not be sent.' }, 502, cors);
+      // The detail goes back to the page as well as to the log. It is the
+      // mail service's own description of a misconfiguration, carrying no
+      // credential, and it reaches only origins already on the allowed list —
+      // which is to say the site's own pages. Leaving it in the log alone
+      // meant the one person who could fix it had the hardest path to reading
+      // it.
+      return json({
+        ok: false,
+        error: 'The message could not be sent.',
+        detail: error && error.detail ? error.detail : String(error && error.message || ''),
+        from: env.FROM_EMAIL,
+        to: to
+      }, 502, cors);
     }
 
     return wantsJson(request)

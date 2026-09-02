@@ -142,6 +142,12 @@ check('no-JS submission still sends', sent && sent.body.subject.includes('Laura 
 failNext = true;
 r = await worker.fetch(post(CONTACT), ENV);
 check('send failure surfaces as 502', r.status === 502, r.status);
+const failure = await r.json();
+check('502 carries the reason Resend gave',
+  failure.detail === 'domain not verified', JSON.stringify(failure.detail));
+check('502 names the from address it tried', failure.from === ENV.FROM_EMAIL);
+check('502 names the recipient it tried', failure.to === ENV.TO_EMAIL);
+check('502 leaks no credential', !JSON.stringify(failure).includes(ENV.RESEND_API_KEY));
 failNext = false;
 
 // 10 — misconfiguration
