@@ -179,6 +179,36 @@
   });
 
   /* ----------------------------------------------------------------------
+     Date fields
+
+     A date input's placeholder is drawn by the browser from the operating
+     system locale — MM/DD/YYYY here — and there is no way to set it from CSS
+     or HTML. So the field starts as text, carrying the hint we want, and
+     becomes a real date input the moment it is focused. That keeps the picker
+     and the date validation, and the hint returns if it is left empty.
+
+     Once a date is chosen the browser draws the value in its own format. That
+     part is not ours to style either.
+     ---------------------------------------------------------------------- */
+  document.querySelectorAll('input[data-date]').forEach(function (input) {
+    var toPicker = function () {
+      if (input.type === 'date') return;
+      input.type = 'date';
+      // Not in every browser, and not needed where it is absent: the field is
+      // already focused, so the picker is one tap away regardless.
+      if (input.showPicker) {
+        try { input.showPicker(); } catch (e) { /* needs a user gesture */ }
+      }
+    };
+
+    input.addEventListener('focus', toPicker);
+    input.addEventListener('click', toPicker);
+    input.addEventListener('blur', function () {
+      if (input.type === 'date' && !input.value) input.type = 'text';
+    });
+  });
+
+  /* ----------------------------------------------------------------------
      Forms
      ---------------------------------------------------------------------- */
   var showStatus = function (form, type, message) {

@@ -213,7 +213,13 @@
 
           <div class="field">
             <label for="a-dob">Date of birth <span class="req" aria-hidden="true">*</span></label>
-            <input id="a-dob" name="Date of Birth" type="date" autocomplete="bday" required>
+            <!-- Starts as text so the hint reads M/D/YYYY: a date input's own
+                 placeholder comes from the browser and cannot be set. The
+                 script swaps it to a real date field on focus, so the picker
+                 and the date validation are both still there. -->
+            <input id="a-dob" name="Date of Birth" type="text" placeholder="M/D/YYYY"
+                   inputmode="numeric" pattern="\d{1,2}/\d{1,2}/\d{4}"
+                   autocomplete="bday" data-date required>
           </div>
 
           <div class="field">
