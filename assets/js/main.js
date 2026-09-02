@@ -189,8 +189,39 @@
     box.classList.add('is-visible', type === 'ok' ? 'form-status--ok' : 'form-status--err');
   };
 
-  var firstInvalid = function (form) {
-    return form.querySelector(':invalid');
+  // A field's human name. The short data-label wins where one is set: the
+  // declaration checkboxes are wrapped in labels that are whole paragraphs,
+  // which would make an unreadable list.
+  var fieldLabel = function (form, el) {
+    var explicit = el.getAttribute('data-label');
+    if (explicit) return explicit;
+
+    var label = el.id ? form.querySelector('label[for="' + el.id + '"]') : null;
+    if (!label && el.closest) label = el.closest('label');
+    if (!label) return el.name || 'a required field';
+
+    var text = label.textContent.replace(/\*/g, '').replace(/\s+/g, ' ').trim();
+    return text.length > 42 ? text.slice(0, 40).replace(/[\s,.;:]+$/, '') + '…' : text;
+  };
+
+  var invalidFields = function (form) {
+    return Array.prototype.filter.call(form.elements, function (el) {
+      return el.willValidate && !el.checkValidity();
+    });
+  };
+
+  // Some labels end in their own punctuation — "How can we help?" — so the
+  // sentence must not add a second full stop after it.
+  var endSentence = function (text) {
+    return /[.?!…]$/.test(text) ? text : text + '.';
+  };
+
+  // Reads as a sentence rather than a dump: three names at most, then a count.
+  var listNames = function (names) {
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return names[0] + ' and ' + names[1];
+    if (names.length <= 3) return names[0] + ', ' + names[1] + ' and ' + names[2];
+    return names.slice(0, 3).join(', ') + ' and ' + (names.length - 3) + ' more';
   };
 
   // Builds a readable mailto: body from the form fields — used as the fallback
@@ -215,13 +246,50 @@
   };
 
   document.querySelectorAll('form[data-form]').forEach(function (form) {
+    var clearMark = function (e) {
+      var el = e.target;
+      if (el && el.hasAttribute && el.hasAttribute('aria-invalid') && el.checkValidity()) {
+        el.removeAttribute('aria-invalid');
+        if (!invalidFields(form).length) {
+          var box = form.querySelector('.form-status');
+          if (box && box.classList.contains('form-status--err')) {
+            box.classList.remove('is-visible', 'form-status--err');
+            box.textContent = '';
+          }
+        }
+      }
+    };
+    form.addEventListener('input', clearMark);
+    form.addEventListener('change', clearMark);
+
     form.addEventListener('submit', function (e) {
       e.preventDefault();
 
       if (!form.checkValidity()) {
+        // Leaving this to the browser is what made the button look dead: its
+        // validation bubble is easy to miss on a desktop and frequently never
+        // appears on a phone, so nothing on the page changed. The form now
+        // says what is missing, marks the fields, and scrolls to the first.
+        var missing = invalidFields(form);
+
+        Array.prototype.forEach.call(form.elements, function (el) {
+          if (el.removeAttribute) el.removeAttribute('aria-invalid');
+        });
+        missing.forEach(function (el) { el.setAttribute('aria-invalid', 'true'); });
+
+        showStatus(form, 'err', endSentence(missing.length === 1
+          ? 'One thing is still missing: ' + fieldLabel(form, missing[0])
+          : 'Please complete ' + listNames(missing.map(function (el) {
+              return fieldLabel(form, el);
+            }))));
+
+        var bad = missing[0];
+        if (bad) {
+          if (bad.scrollIntoView) bad.scrollIntoView({ block: 'center' });
+          bad.focus({ preventScroll: true });
+        }
+        // Still worth showing where the browser will show it.
         form.reportValidity();
-        var bad = firstInvalid(form);
-        if (bad) bad.focus();
         return;
       }
 

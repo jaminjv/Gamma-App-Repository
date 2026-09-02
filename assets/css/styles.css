@@ -1052,6 +1052,24 @@ li { margin-bottom: .4rem; }
 }
 .check input { width: 18px; height: 18px; flex: none; margin-top: .18rem; accent-color: var(--brand-600); }
 
+/* Fields the submit handler flagged as incomplete. The browser's own bubble
+   is easy to miss and on a phone often does not appear at all, so the field
+   itself has to show it. Cleared as soon as the field becomes valid. */
+.field [aria-invalid="true"],
+.field [aria-invalid="true"]:hover {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 5%, var(--bg));
+}
+.field [aria-invalid="true"]:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 22%, transparent);
+}
+.check input[aria-invalid="true"] {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+.check:has(input[aria-invalid="true"]) { color: var(--danger); }
+
 .form-note {
   font-size: .82rem;
   color: var(--muted);
