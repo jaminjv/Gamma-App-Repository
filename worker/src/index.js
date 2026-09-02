@@ -14,6 +14,12 @@ import { detectFormType, buildSpec } from './forms.js';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
+/* Stamped on every response the Worker makes about itself. Deploying through
+   the dashboard editor is easy to get wrong in a way that leaves the previous
+   version running and says nothing, which cost two rounds of fixing code that
+   was never live. Bump this whenever src/ changes. */
+const BUILD = '2026-09-02.1';
+
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
 const MAX_BODY_BYTES = 128 * 1024;
@@ -143,6 +149,7 @@ async function send(env, { to, replyTo, subject, html, text }) {
 async function selftest(env) {
   const key = cleanKey(env.RESEND_API_KEY);
   const report = {
+    build: BUILD,
     settings: {
       SITE_URL: env.SITE_URL || null,
       FROM_EMAIL: env.FROM_EMAIL || null,
@@ -228,7 +235,12 @@ export default {
     }
 
     if (request.method !== 'POST') {
-      return json({ ok: false, error: 'Send this form with POST.' }, 405, cors);
+      return json({
+        ok: false,
+        error: 'Send this form with POST.',
+        build: BUILD,
+        hint: 'Add /selftest to this URL to check the settings.'
+      }, 405, cors);
     }
 
     const origin = request.headers.get('Origin');

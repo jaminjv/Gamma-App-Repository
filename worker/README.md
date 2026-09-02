@@ -153,6 +153,22 @@ route the same settings are entered in the dashboard instead, and
 - For a hard ceiling, add a rate-limiting rule in the Cloudflare dashboard
   (**Security → WAF → Rate limiting rules**); the free plan includes one.
 
+## Which version is live
+
+Open the Worker's URL in a browser. It refuses the GET, and says which build
+answered:
+
+```json
+{"ok": false, "error": "Send this form with POST.", "build": "2026-09-02.1", …}
+```
+
+Compare that against `BUILD` at the top of `src/index.js`. Deploying through
+the dashboard editor is easy to get wrong in a way that silently leaves the
+previous version running, and without this there is nothing to tell you: the
+old build answers every request perfectly well, just as its older self.
+
+Bump `BUILD` whenever `src/` changes.
+
 ## Checking the settings — `/selftest`
 
 Open the Worker's URL with `/selftest` on the end in a browser:

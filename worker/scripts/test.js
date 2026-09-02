@@ -124,6 +124,9 @@ check('and it still sends', sent && sent.body.subject.includes('Laura Gomez'));
 // 6 / 7 — method handling
 r = await worker.fetch(new Request('https://nixora-forms.workers.dev/', { method: 'GET' }), ENV);
 check('GET refused', r.status === 405);
+const idle = await r.json();
+check('GET names the build that is live', typeof idle.build === 'string' && idle.build.length > 0, idle.build);
+check('GET points at the self-test', /selftest/.test(idle.hint || ''), idle.hint);
 r = await worker.fetch(new Request('https://nixora-forms.workers.dev/', {
   method: 'OPTIONS', headers: { Origin: 'https://nixoraservices.com' } }), ENV);
 check('preflight answered', r.status === 204);
