@@ -159,7 +159,7 @@ Open the Worker's URL in a browser. It refuses the GET, and says which build
 answered:
 
 ```json
-{"ok": false, "error": "Send this form with POST.", "build": "2026-09-02.1", …}
+{"ok": false, "error": "Send this form with POST.", "build": "2026-09-02.2", …}
 ```
 
 Compare that against `BUILD` at the top of `src/index.js`. Deploying through
@@ -192,6 +192,12 @@ lists as verified — then says which of those is wrong in a `verdict` line.
 
 It describes the key — present, length, plausible prefix — and never echoes
 it. The addresses it does print are the ones already published on the site.
+
+A key scoped to sending only cannot read the domain list, and Resend refuses
+it with a 401 saying so. That refusal is the correct answer for this endpoint:
+it proves the key is real and scoped exactly as it should be, so the verdict
+reports it as such rather than as a broken key. Domain verification then has
+to be read in the Resend dashboard instead.
 
 Reach for this before the logs: a rejected send is nearly always one of the
 three things it checks, and this is a URL rather than a log console.

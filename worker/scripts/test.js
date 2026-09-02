@@ -222,6 +222,16 @@ check('selftest names a refused key',
 check('selftest quotes Resend on a refused key',
   t.out.resend.message === 'API key is invalid', t.out.resend.message);
 
+// A sending-only key is refused the domain list, and that refusal is a pass:
+// it proves the key is real and scoped exactly as this endpoint needs.
+t = await selftest(ENV, () => new Response(
+  '{"message":"This API key is restricted to only send emails"}', { status: 401 }));
+check('selftest treats a sending-only key as correct',
+  /valid and scoped to sending/.test(t.out.verdict), t.out.verdict);
+check('selftest does not tell you to replace a sending-only key',
+  !/Create a new one/.test(t.out.verdict));
+check('selftest records the scope it found', t.out.resend.keyScope === 'sending only');
+
 t = await selftest({ ...ENV, FROM_EMAIL: 'Nixora <hello@otherdomain.com>' }, okDomains);
 check('selftest catches a from address on an unverified domain',
   /not listed as verified/.test(t.out.verdict), t.out.verdict);

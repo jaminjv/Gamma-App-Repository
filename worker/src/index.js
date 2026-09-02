@@ -18,7 +18,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-02.1';
+const BUILD = '2026-09-02.2';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -170,8 +170,14 @@ async function selftest(env) {
   }
 
   // Asking Resend for the domain list is the cheapest way to find out whether
-  // it accepts the key at all, and it doubles as a check that the address the
-  // Worker sends from belongs to a domain that is actually verified.
+  // it accepts the key at all, and where the key is allowed to read them it
+  // doubles as a check that the address the Worker sends from belongs to a
+  // domain that is actually verified.
+  //
+  // A sending-only key cannot read that list, and Resend refuses it with a 401
+  // that says so. That refusal is the right answer for this endpoint -- it is
+  // proof the key is real and scoped exactly as it should be -- so it must not
+  // be reported as a broken key.
   let response;
   try {
     response = await fetch('https://api.resend.com/domains', {
@@ -188,7 +194,18 @@ async function selftest(env) {
   if (response.status === 401 || response.status === 403 || response.status === 400) {
     let message = body;
     try { message = (JSON.parse(body) || {}).message || body; } catch (ignored) { /* raw */ }
-    report.resend.message = String(message).slice(0, 200);
+    message = String(message).slice(0, 200);
+    report.resend.message = message;
+
+    if (/restricted to only send/i.test(message)) {
+      report.resend.keyScope = 'sending only';
+      report.verdict = 'The key is valid and scoped to sending, which is what this ' +
+        'endpoint needs. A key like that cannot read the domain list, so whether ' +
+        'the sending domain is verified has to be checked in the Resend dashboard. ' +
+        'Submit the form to test the rest.';
+      return report;
+    }
+
     report.verdict = 'Resend refuses this API key. Create a new one with Sending ' +
       'access and replace RESEND_API_KEY.';
     return report;
