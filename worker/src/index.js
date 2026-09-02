@@ -132,12 +132,99 @@ async function send(env, { to, replyTo, subject, html, text }) {
   return response.json();
 }
 
+/* GET /selftest — answers "is this thing configured correctly" without
+   sending anything. Diagnosing a rejected send otherwise means reading the
+   Worker's log, which is the hardest place to reach for the person who has to
+   act on what it says; this is a URL you can open in a browser.
+
+   It reports what is set, never what it is set to, with one exception: the
+   addresses, which are printed on the website anyway. The key is described --
+   present, length, plausible prefix -- and never echoed. */
+async function selftest(env) {
+  const key = cleanKey(env.RESEND_API_KEY);
+  const report = {
+    settings: {
+      SITE_URL: env.SITE_URL || null,
+      FROM_EMAIL: env.FROM_EMAIL || null,
+      TO_EMAIL: recipient(env, 'contact') || null,
+      ALLOWED_ORIGINS: allowedOrigins(env)
+    },
+    key: {
+      present: Boolean(key),
+      length: key.length,
+      startsWithRe: key.slice(0, 3) === 're_',
+      hadStrayCharacters: key !== String(env.RESEND_API_KEY || '')
+    }
+  };
+
+  if (!key) {
+    report.verdict = 'RESEND_API_KEY is empty. Add it as a Secret and deploy again.';
+    return report;
+  }
+
+  // Asking Resend for the domain list is the cheapest way to find out whether
+  // it accepts the key at all, and it doubles as a check that the address the
+  // Worker sends from belongs to a domain that is actually verified.
+  let response;
+  try {
+    response = await fetch('https://api.resend.com/domains', {
+      headers: { authorization: 'Bearer ' + key }
+    });
+  } catch (error) {
+    report.verdict = 'Could not reach Resend: ' + (error && error.message);
+    return report;
+  }
+
+  const body = await response.text();
+  report.resend = { status: response.status };
+
+  if (response.status === 401 || response.status === 403 || response.status === 400) {
+    let message = body;
+    try { message = (JSON.parse(body) || {}).message || body; } catch (ignored) { /* raw */ }
+    report.resend.message = String(message).slice(0, 200);
+    report.verdict = 'Resend refuses this API key. Create a new one with Sending ' +
+      'access and replace RESEND_API_KEY.';
+    return report;
+  }
+
+  if (!response.ok) {
+    report.resend.message = body.slice(0, 200);
+    report.verdict = 'Resend answered ' + response.status + '.';
+    return report;
+  }
+
+  let domains = [];
+  try {
+    const parsed = JSON.parse(body);
+    domains = (parsed.data || parsed || []).map((d) => ({ name: d.name, status: d.status }));
+  } catch (ignored) { /* leave empty */ }
+  report.resend.domains = domains;
+
+  const match = /@([^>\s]+)>?\s*$/.exec(String(env.FROM_EMAIL || ''));
+  const sendingDomain = match ? match[1].toLowerCase() : null;
+  const verified = domains.some((d) =>
+    d.name && d.name.toLowerCase() === sendingDomain && String(d.status).toLowerCase() === 'verified');
+
+  report.verdict = !sendingDomain
+    ? 'FROM_EMAIL does not contain a readable address. It should look like: ' +
+      'Nixora Services <notifications@nixoraservices.com>'
+    : verified
+      ? 'All good. The key works and ' + sendingDomain + ' is verified for sending.'
+      : 'The key works, but ' + sendingDomain + ' is not listed as verified in this ' +
+        'Resend account. Check FROM_EMAIL against the domains above.';
+  return report;
+}
+
 export default {
   async fetch(request, env) {
     const cors = corsHeaders(request, env);
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: cors });
+    }
+
+    if (new URL(request.url).pathname === '/selftest') {
+      return json(await selftest(env), 200, cors);
     }
 
     if (request.method !== 'POST') {

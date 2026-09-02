@@ -153,6 +153,33 @@ route the same settings are entered in the dashboard instead, and
 - For a hard ceiling, add a rate-limiting rule in the Cloudflare dashboard
   (**Security → WAF → Rate limiting rules**); the free plan includes one.
 
+## Checking the settings — `/selftest`
+
+Open the Worker's URL with `/selftest` on the end in a browser:
+
+```
+https://<your-worker>.workers.dev/selftest
+```
+
+It sends nothing. It reports what is configured, asks Resend whether it
+accepts the key, and checks that the domain in `FROM_EMAIL` is one Resend
+lists as verified — then says which of those is wrong in a `verdict` line.
+
+```json
+{
+  "settings": { "FROM_EMAIL": "Nixora Services <notifications@nixoraservices.com>", … },
+  "key": { "present": true, "length": 36, "startsWithRe": true },
+  "resend": { "status": 200, "domains": [{ "name": "nixoraservices.com", "status": "verified" }] },
+  "verdict": "All good. The key works and nixoraservices.com is verified for sending."
+}
+```
+
+It describes the key — present, length, plausible prefix — and never echoes
+it. The addresses it does print are the ones already published on the site.
+
+Reach for this before the logs: a rejected send is nearly always one of the
+three things it checks, and this is a URL rather than a log console.
+
 ## Watching it run
 
 ```sh

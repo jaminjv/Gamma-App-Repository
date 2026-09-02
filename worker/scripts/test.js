@@ -176,5 +176,55 @@ await worker.fetch(post({ ...CONTACT, name: '<script>alert(1)</script>' }), ENV)
 check('submitted markup escaped', !sent.body.html.includes('<script>alert(1)</script>'));
 check('escaped form present', sent.body.html.includes('&lt;script&gt;'));
 
+// 12 — the self-test, which must never send and never echo the key
+let seenAuth = null;
+const selftest = async (env, resendReply) => {
+  const previous = globalThis.fetch;
+  seenAuth = null;
+  globalThis.fetch = async (url, init) => {
+    if (String(url).includes('/domains')) {
+      seenAuth = init.headers.authorization;
+      return resendReply(init);
+    }
+    sent = JSON.parse(init.body);
+    return new Response('{"id":"stub"}', { status: 200 });
+  };
+  sent = null;
+  const res = await worker.fetch(
+    new Request('https://nixora-forms.workers.dev/selftest', { method: 'GET' }), env);
+  const out = await res.json();
+  globalThis.fetch = previous;
+  return { status: res.status, out };
+};
+
+const okDomains = () => new Response(JSON.stringify({
+  data: [{ name: 'nixoraservices.com', status: 'verified' }]
+}), { status: 200 });
+
+let t = await selftest(ENV, okDomains);
+check('selftest answers 200', t.status === 200, t.status);
+check('selftest sends no email', sent === null);
+check('selftest never echoes the key', !JSON.stringify(t.out).includes(ENV.RESEND_API_KEY));
+check('selftest describes the key instead of showing it',
+  t.out.key.present === true && t.out.key.startsWithRe === true &&
+  t.out.key.length === ENV.RESEND_API_KEY.length, JSON.stringify(t.out.key));
+check('selftest passes a verified domain',
+  /All good/.test(t.out.verdict), t.out.verdict);
+check('selftest authenticates with the cleaned key',
+  seenAuth === 'Bearer ' + ENV.RESEND_API_KEY, seenAuth);
+
+t = await selftest(ENV, () => new Response('{"message":"API key is invalid"}', { status: 401 }));
+check('selftest names a refused key',
+  /refuses this API key/.test(t.out.verdict), t.out.verdict);
+check('selftest quotes Resend on a refused key',
+  t.out.resend.message === 'API key is invalid', t.out.resend.message);
+
+t = await selftest({ ...ENV, FROM_EMAIL: 'Nixora <hello@otherdomain.com>' }, okDomains);
+check('selftest catches a from address on an unverified domain',
+  /not listed as verified/.test(t.out.verdict), t.out.verdict);
+
+t = await selftest({ ...ENV, RESEND_API_KEY: '' }, okDomains);
+check('selftest reports an empty key', /is empty/.test(t.out.verdict), t.out.verdict);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
