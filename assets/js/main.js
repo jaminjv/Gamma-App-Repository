@@ -340,11 +340,22 @@
         headers: { Accept: 'application/json' }
       })
         .then(function (response) {
-          if (!response.ok) throw new Error('Request failed with status ' + response.status);
+          if (response.ok) return;
+          // The visitor gets the plain line below; whoever is diagnosing gets
+          // the status and the endpoint's own reason in the console, which is
+          // otherwise only visible in the endpoint's server logs.
+          return response.text().then(function (body) {
+            throw new Error('endpoint returned ' + response.status + ' — ' + body);
+          });
+        })
+        .then(function () {
           form.reset();
           showStatus(form, 'ok', 'Thank you — your message has been sent. We will be in touch within one business day.');
         })
-        .catch(function () {
+        .catch(function (error) {
+          if (window.console && console.error) {
+            console.error('[nixora] form submission failed:', action, error && error.message ? error.message : error);
+          }
           showStatus(form, 'err',
             'Something went wrong sending the form. Please email us directly at ' + FALLBACK_EMAIL + '.');
         })
