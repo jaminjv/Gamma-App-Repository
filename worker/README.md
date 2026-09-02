@@ -126,6 +126,48 @@ Replace the `action` on the three forms with that URL:
 Nothing else on the site changes: `assets/js/main.js` already posts the form
 with `fetch` and shows the existing success and error states.
 
+## Address suggestions
+
+With `GOOGLE_PLACES_KEY` set, typing in the application form's street field
+offers matching US addresses, and picking one fills the street, city, state
+and ZIP together.
+
+**The key never reaches the page.** The browser asks this Worker, and the
+Worker asks Google, so the key sits as a secret beside the Resend one rather
+than in the page source where anyone could read it out of view-source and
+spend the company's Maps quota. It also keeps Google's script off the site:
+nothing third-party loads until somebody starts typing an address.
+
+Two endpoints, both POST and both behind the same origin allowlist as the
+forms:
+
+| Path | Does |
+|---|---|
+| `/places/suggest` | `{input, sessionToken}` → up to five matching addresses |
+| `/places/details` | `{placeId, sessionToken}` → street, city, state, ZIP |
+
+The page sends one session token through the typing and the pick that follows,
+which Google bills as a single lookup rather than one per keystroke. Queries
+under four characters never leave the Worker.
+
+### Setting it up
+
+1. In [Google Cloud Console](https://console.cloud.google.com), create a
+   project and enable **Places API (New)**. Billing has to be on, though the
+   monthly free tier covers this volume many times over.
+2. **APIs & Services → Credentials → Create credentials → API key.**
+3. Restrict it: **API restrictions → Places API (New)**. An application
+   restriction is not needed and not useful here — the key is used from the
+   Worker, which has no fixed IP and sends no referrer. What protects it is
+   that it never leaves Cloudflare.
+4. Add it to the Worker as `GOOGLE_PLACES_KEY`, a **Secret**. Deploy.
+
+Leave it unset and the field is an ordinary text box. Everything about this is
+an enhancement over one: if Google is down, the key is wrong or the quota is
+spent, no list appears, the Worker answers with an empty one, and the
+applicant types their address exactly as before. A failure here costs a
+convenience and never an application.
+
 ## Sending every submission to a spreadsheet
 
 Set `SHEET_WEBHOOK_URL` and the Worker posts a copy of each submission to a
@@ -184,6 +226,7 @@ otherwise be executed as a formula being pinned to text.
 | `TO_EMAIL` | Default inbox |
 | `TO_APPLICATIONS`, `TO_CONTACT`, `TO_REVIEWS` | Optional per-form inboxes. Remove one to fall back to `TO_EMAIL` |
 | `ALLOWED_ORIGINS` | Comma-separated list of sites allowed to post. Anything else is refused, so the endpoint cannot be used as a free mailer |
+| `GOOGLE_PLACES_KEY` | **Secret**. Places API (New) key for the address suggestions. Unset turns them off |
 | `SHEET_WEBHOOK_URL` | Apps Script Web App URL. Empty turns the spreadsheet off |
 | `SHEET_TOKEN` | **Secret**. Must match `SHARED_TOKEN` in `google-apps-script.gs` |
 | `RESEND_API_KEY` | **Secret**, never in this file. Set with `wrangler secret put`, or as a Secret under Settings → Variables and Secrets |
@@ -208,7 +251,7 @@ Open the Worker's URL in a browser. It refuses the GET, and says which build
 answered:
 
 ```json
-{"ok": false, "error": "Send this form with POST.", "build": "2026-09-02.4", …}
+{"ok": false, "error": "Send this form with POST.", "build": "2026-09-02.5", …}
 ```
 
 Compare that against `BUILD` at the top of `src/index.js`. Deploying through
@@ -282,6 +325,7 @@ submission is never silently lost.
 worker/
   src/index.js          request handling, CORS, honeypot, Resend call
   src/forms.js          field names for the three forms → a render spec
+  src/places.js         address lookup, proxied so the Google key stays secret
   src/email.js          the HTML and plain-text template
   scripts/preview.js    renders samples locally, sends nothing
   scripts/test.js       exercises the Worker with the Resend call stubbed

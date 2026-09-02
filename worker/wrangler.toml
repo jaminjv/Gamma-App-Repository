@@ -23,6 +23,11 @@ TO_APPLICATIONS = "info@nixoraservices.com"
 TO_CONTACT = "info@nixoraservices.com"
 TO_REVIEWS = "info@nixoraservices.com"
 
+# Google Places key for the address suggestions on the application form. Set
+# it as a Secret: the page never sees it, it asks this Worker instead. Leave it
+# unset and the address field is a plain text box.
+# GOOGLE_PLACES_KEY is a Secret — do not put it here.
+
 # Google Sheet that receives a copy of every submission. Leave both blank to
 # turn the spreadsheet off entirely — the email is unaffected either way.
 # SHEET_WEBHOOK_URL is the Apps Script Web App URL; SHEET_TOKEN must match the

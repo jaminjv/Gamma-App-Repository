@@ -550,6 +550,117 @@ function sheetRow(form, type) {
 }
 
 /* ==========================================================================
+   Nixora Services LLC — address autocomplete.
+
+   The page never sees the Google key. It asks this Worker, and the Worker
+   asks Google, which means the key lives as a secret next to the Resend one
+   rather than in the page source where anyone can read it off a browser's
+   view-source and spend the company's Maps quota.
+
+   It also keeps Google's script off the site: no third-party JavaScript, and
+   nothing loaded before someone actually starts typing an address.
+   ========================================================================== */
+
+const AUTOCOMPLETE = 'https://places.googleapis.com/v1/places:autocomplete';
+const DETAILS = 'https://places.googleapis.com/v1/places/';
+
+/* Two calls made in the same session are billed as one lookup, so the page
+   generates a token when someone starts typing and sends it back when they
+   pick a result. */
+const body = (input, sessionToken) => ({
+  input,
+  regionCode: 'US',
+  includedRegionCodes: ['us'],
+  includedPrimaryTypes: ['street_address', 'subpremise', 'premise'],
+  ...(sessionToken ? { sessionToken } : {})
+});
+
+async function callGoogle(url, key, init) {
+  const response = await fetch(url, {
+    ...init,
+    headers: { 'content-type': 'application/json', 'X-Goog-Api-Key': key, ...(init.headers || {}) }
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    let message = text;
+    try { message = (JSON.parse(text).error || {}).message || text; } catch (ignored) { /* raw */ }
+    const error = new Error('Places responded ' + response.status + ': ' + message);
+    error.status = response.status;
+    error.detail = String(message).slice(0, 300);
+    throw error;
+  }
+  return JSON.parse(text || '{}');
+}
+
+async function suggest(env, input, sessionToken) {
+  const key = String(env.GOOGLE_PLACES_KEY || '').trim();
+  if (!key) return { configured: false, suggestions: [] };
+
+  const data = await callGoogle(AUTOCOMPLETE, key, {
+    method: 'POST',
+    body: JSON.stringify(body(input, sessionToken))
+  });
+
+  const suggestions = (data.suggestions || [])
+    .map((s) => s.placePrediction)
+    .filter(Boolean)
+    .slice(0, 5)
+    .map((p) => ({
+      id: p.placeId,
+      // The main text is the street line; the rest is the city and state.
+      line: (p.structuredFormat && p.structuredFormat.mainText &&
+             p.structuredFormat.mainText.text) || (p.text && p.text.text) || '',
+      context: (p.structuredFormat && p.structuredFormat.secondaryText &&
+                p.structuredFormat.secondaryText.text) || ''
+    }))
+    .filter((s) => s.line);
+
+  return { configured: true, suggestions };
+}
+
+/* Google returns the address in pieces; the form wants four fields. */
+const COMPONENT = (components, type) => {
+  const hit = components.find((c) => (c.types || []).indexOf(type) !== -1);
+  return hit ? { long: hit.longText || '', short: hit.shortText || '' } : { long: '', short: '' };
+};
+
+async function details(env, placeId, sessionToken) {
+  const key = String(env.GOOGLE_PLACES_KEY || '').trim();
+  if (!key) return { configured: false };
+
+  const url = DETAILS + encodeURIComponent(placeId) +
+    (sessionToken ? '?sessionToken=' + encodeURIComponent(sessionToken) : '');
+
+  const data = await callGoogle(url, key, {
+    method: 'GET',
+    headers: { 'X-Goog-FieldMask': 'addressComponents,formattedAddress' }
+  });
+
+  const parts = data.addressComponents || [];
+  const number = COMPONENT(parts, 'street_number').long;
+  // The abbreviated form of the street: "Market St", not "Market Street".
+  // That is how an address is written on an envelope, and what Google's own
+  // formatted address uses.
+  const route = COMPONENT(parts, 'route');
+  const street = route.short || route.long;
+  const unit = COMPONENT(parts, 'subpremise').long;
+
+  return {
+    configured: true,
+    address: {
+      street: [number, street].filter(Boolean).join(' ') + (unit ? ' ' + unit : ''),
+      // Some addresses carry no city, only the township that stands in for one.
+      city: COMPONENT(parts, 'locality').long ||
+            COMPONENT(parts, 'sublocality').long ||
+            COMPONENT(parts, 'administrative_area_level_3').long,
+      state: COMPONENT(parts, 'administrative_area_level_1').short,
+      zip: COMPONENT(parts, 'postal_code').long,
+      formatted: data.formattedAddress || ''
+    }
+  };
+}
+
+/* ==========================================================================
    Nixora Services LLC — form endpoint.
 
    Receives the three site forms, renders a branded notification and hands it
@@ -566,7 +677,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-02.4';
+const BUILD = '2026-09-02.5';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -768,6 +879,7 @@ async function selftest(env, options) {
     return report;
   }
 
+  report.places = { configured: Boolean(String(env.GOOGLE_PLACES_KEY || '').trim()) };
   report.sheet = { configured: Boolean(String(env.SHEET_WEBHOOK_URL || '').trim()) };
   if (report.sheet.configured) {
     report.sheet.tokenSet = Boolean(String(env.SHEET_TOKEN || '').trim());
@@ -860,7 +972,39 @@ export default {
       return new Response(null, { status: 204, headers: cors });
     }
 
+    const origin = request.headers.get('Origin');
     const url = new URL(request.url);
+
+    /* Address lookup. Both paths are POST because the site posts JSON to
+       them; a failure answers 200 with an empty list rather than an error,
+       so a Google outage or a spent quota costs the applicant a convenience
+       and never the ability to type their own address. */
+    if (url.pathname === '/places/suggest' || url.pathname === '/places/details') {
+      if (request.method !== 'POST') {
+        return json({ ok: false, error: 'Send this with POST.' }, 405, cors);
+      }
+      if (origin && !originAllowed(request, env)) {
+        return json({ ok: false, error: 'Origin not allowed.' }, 403, cors);
+      }
+
+      let payload = {};
+      try { payload = await request.json(); } catch (ignored) { /* empty */ }
+
+      try {
+        if (url.pathname === '/places/suggest') {
+          const input = String(payload.input || '').trim();
+          if (input.length < 4) return json({ ok: true, suggestions: [] }, 200, cors);
+          const result = await suggest(env, input, payload.sessionToken);
+          return json({ ok: true, ...result }, 200, cors);
+        }
+        const result = await details(env, String(payload.placeId || ''), payload.sessionToken);
+        return json({ ok: true, ...result }, 200, cors);
+      } catch (error) {
+        console.error('Places lookup failed:', error && error.message);
+        return json({ ok: false, suggestions: [], detail: error && error.detail }, 200, cors);
+      }
+    }
+
     if (url.pathname === '/selftest') {
       // ?send=1 posts one real message to the configured recipient. The
       // recipient never comes from the request, so this cannot be pointed at
@@ -877,7 +1021,6 @@ export default {
       }, 405, cors);
     }
 
-    const origin = request.headers.get('Origin');
     if (origin && !originAllowed(request, env)) {
       const configured = allowedOrigins(env);
       console.error('Refused origin ' + origin + '. ALLOWED_ORIGINS holds: ' +

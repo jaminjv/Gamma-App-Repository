@@ -11,6 +11,7 @@
 
 import { renderEmail, renderText, escapeHtml } from './email.js';
 import { detectFormType, buildSpec, sheetRow } from './forms.js';
+import { suggest, details } from './places.js';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
@@ -18,7 +19,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-02.4';
+const BUILD = '2026-09-02.5';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -220,6 +221,7 @@ async function selftest(env, options) {
     return report;
   }
 
+  report.places = { configured: Boolean(String(env.GOOGLE_PLACES_KEY || '').trim()) };
   report.sheet = { configured: Boolean(String(env.SHEET_WEBHOOK_URL || '').trim()) };
   if (report.sheet.configured) {
     report.sheet.tokenSet = Boolean(String(env.SHEET_TOKEN || '').trim());
@@ -312,7 +314,39 @@ export default {
       return new Response(null, { status: 204, headers: cors });
     }
 
+    const origin = request.headers.get('Origin');
     const url = new URL(request.url);
+
+    /* Address lookup. Both paths are POST because the site posts JSON to
+       them; a failure answers 200 with an empty list rather than an error,
+       so a Google outage or a spent quota costs the applicant a convenience
+       and never the ability to type their own address. */
+    if (url.pathname === '/places/suggest' || url.pathname === '/places/details') {
+      if (request.method !== 'POST') {
+        return json({ ok: false, error: 'Send this with POST.' }, 405, cors);
+      }
+      if (origin && !originAllowed(request, env)) {
+        return json({ ok: false, error: 'Origin not allowed.' }, 403, cors);
+      }
+
+      let payload = {};
+      try { payload = await request.json(); } catch (ignored) { /* empty */ }
+
+      try {
+        if (url.pathname === '/places/suggest') {
+          const input = String(payload.input || '').trim();
+          if (input.length < 4) return json({ ok: true, suggestions: [] }, 200, cors);
+          const result = await suggest(env, input, payload.sessionToken);
+          return json({ ok: true, ...result }, 200, cors);
+        }
+        const result = await details(env, String(payload.placeId || ''), payload.sessionToken);
+        return json({ ok: true, ...result }, 200, cors);
+      } catch (error) {
+        console.error('Places lookup failed:', error && error.message);
+        return json({ ok: false, suggestions: [], detail: error && error.detail }, 200, cors);
+      }
+    }
+
     if (url.pathname === '/selftest') {
       // ?send=1 posts one real message to the configured recipient. The
       // recipient never comes from the request, so this cannot be pointed at
@@ -329,7 +363,6 @@ export default {
       }, 405, cors);
     }
 
-    const origin = request.headers.get('Origin');
     if (origin && !originAllowed(request, env)) {
       const configured = allowedOrigins(env);
       console.error('Refused origin ' + origin + '. ALLOWED_ORIGINS holds: ' +

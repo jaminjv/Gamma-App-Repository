@@ -4,7 +4,7 @@
    Writes worker/dist/nixora-forms.js. The modules stay the source of truth —
    rebuild after editing them. */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -13,7 +13,7 @@ const src = join(here, '..', 'src');
 const out = join(here, '..', 'dist');
 
 // Order matters: each file may only use what the ones above it defined.
-const ORDER = ['email.js', 'forms.js', 'index.js'];
+const ORDER = ['email.js', 'forms.js', 'places.js', 'index.js'];
 
 const HEADER = `/* ==========================================================================
    Nixora Services LLC — form endpoint (single-file build).
@@ -28,13 +28,25 @@ const HEADER = `/* =============================================================
 
 `;
 
+// A module left out of ORDER produces a bundle that parses, deploys, and then
+// fails at the first call into the missing file. Adding src/places.js cost
+// exactly that, so a new module now stops the build instead.
+const present = readdirSync(src).filter((name) => name.endsWith('.js')).sort();
+const missing = present.filter((name) => ORDER.indexOf(name) === -1);
+if (missing.length) {
+  console.error('Not in ORDER, so it would be silently left out: ' + missing.join(', '));
+  process.exit(1);
+}
+
 const flatten = (name) => {
   const body = readFileSync(join(src, name), 'utf8');
   return body
     // The modules are concatenated, so cross-file imports have nothing left
     // to resolve and every name is already in scope.
     .replace(/^import\s+\{[^}]*\}\s+from\s+'[^']*';\s*$/gm, '')
-    .replace(/^export\s+(function|const|class)\s/gm, '$1 ')
+    // Covers `export async function` as well; `export default` is left alone,
+    // since the runtime looks for exactly that.
+    .replace(/^export\s+(?=(?:async\s+)?(?:function|const|class|let|var)\b)/gm, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 };

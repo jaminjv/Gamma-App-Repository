@@ -209,6 +209,202 @@
   });
 
   /* ----------------------------------------------------------------------
+     Address suggestions
+
+     Typing in the street field asks the form's own endpoint for matching US
+     addresses and offers them; picking one fills the street, city, state and
+     ZIP together. The Google key lives on that endpoint, not in this page.
+
+     Everything here is an enhancement over a working text field. If the
+     endpoint is unreachable, unconfigured or out of quota, no list appears
+     and the field behaves exactly as it did before — an applicant is never
+     stopped from typing their own address.
+     ---------------------------------------------------------------------- */
+  var addressInput = document.getElementById('a-address');
+
+  if (addressInput && window.fetch) {
+    var addressForm = addressInput.form;
+    var endpoint = addressForm && addressForm.getAttribute('action');
+
+    if (endpoint && endpoint.indexOf(UNCONFIGURED) === -1) {
+      var suggestUrl = new URL('places/suggest', endpoint).href;
+      var detailsUrl = new URL('places/details', endpoint).href;
+
+      var list = document.createElement('ul');
+      list.className = 'suggestions';
+      list.id = 'a-address-suggestions';
+      list.setAttribute('role', 'listbox');
+      list.hidden = true;
+      addressInput.parentNode.appendChild(list);
+
+      addressInput.setAttribute('role', 'combobox');
+      addressInput.setAttribute('aria-expanded', 'false');
+      addressInput.setAttribute('aria-controls', list.id);
+      addressInput.setAttribute('aria-autocomplete', 'list');
+      addressInput.setAttribute('autocomplete', 'off');
+
+      var options = [];
+      var active = -1;
+      var timer = null;
+      var lastQuery = '';
+      // One token covers the typing and the pick that follows, which Google
+      // bills as a single lookup rather than one per keystroke.
+      var token = null;
+
+      var newToken = function () {
+        token = (window.crypto && window.crypto.randomUUID)
+          ? window.crypto.randomUUID()
+          : String(Date.now()) + Math.random().toString(16).slice(2);
+      };
+      newToken();
+
+      var close = function () {
+        list.hidden = true;
+        list.innerHTML = '';
+        options = [];
+        active = -1;
+        addressInput.setAttribute('aria-expanded', 'false');
+        addressInput.removeAttribute('aria-activedescendant');
+      };
+
+      var highlight = function (index) {
+        var items = list.children;
+        for (var i = 0; i < items.length; i++) {
+          items[i].classList.toggle('is-active', i === index);
+          items[i].setAttribute('aria-selected', String(i === index));
+        }
+        active = index;
+        if (index >= 0 && items[index]) {
+          addressInput.setAttribute('aria-activedescendant', items[index].id);
+          if (items[index].scrollIntoView) items[index].scrollIntoView({ block: 'nearest' });
+        } else {
+          addressInput.removeAttribute('aria-activedescendant');
+        }
+      };
+
+      var setField = function (id, value) {
+        var el = document.getElementById(id);
+        if (!el || !value) return;
+        el.value = value;
+        // The submit handler marks empty required fields; filling one here
+        // has to clear that mark the same way typing would.
+        if (el.hasAttribute('aria-invalid') && el.checkValidity()) {
+          el.removeAttribute('aria-invalid');
+        }
+      };
+
+      var choose = function (option) {
+        close();
+        addressInput.value = option.line;
+
+        fetch(detailsUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ placeId: option.id, sessionToken: token })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (!data || !data.ok || !data.address) return;
+            setField('a-address', data.address.street || option.line);
+            setField('a-city', data.address.city);
+            setField('a-zip', data.address.zip);
+
+            var state = document.getElementById('a-state');
+            if (state && data.address.state) {
+              var match = Array.prototype.find.call(state.options, function (opt) {
+                return opt.value === data.address.state;
+              });
+              if (match) {
+                state.value = match.value;
+                if (state.hasAttribute('aria-invalid')) state.removeAttribute('aria-invalid');
+              }
+            }
+          })
+          .catch(function () { /* the street line is already in place */ })
+          .then(function () { newToken(); });
+      };
+
+      var render = function (suggestions) {
+        list.innerHTML = '';
+        options = suggestions;
+
+        if (!suggestions.length) return close();
+
+        suggestions.forEach(function (option, i) {
+          var item = document.createElement('li');
+          item.id = 'a-address-option-' + i;
+          item.setAttribute('role', 'option');
+          item.setAttribute('aria-selected', 'false');
+          item.innerHTML = '<span class="suggestions__line"></span>' +
+                           '<span class="suggestions__context"></span>';
+          item.firstChild.textContent = option.line;
+          item.lastChild.textContent = option.context;
+          // mousedown, not click: blur would close the list first.
+          item.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            choose(option);
+          });
+          list.appendChild(item);
+        });
+
+        list.hidden = false;
+        addressInput.setAttribute('aria-expanded', 'true');
+        highlight(-1);
+      };
+
+      var lookup = function () {
+        var query = addressInput.value.trim();
+        if (query.length < 4 || query === lastQuery) {
+          if (query.length < 4) close();
+          return;
+        }
+        lastQuery = query;
+
+        fetch(suggestUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ input: query, sessionToken: token })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            // A stale answer must not reopen a list for text already replaced.
+            if (addressInput.value.trim() !== query) return;
+            render((data && data.suggestions) || []);
+          })
+          .catch(function () { close(); });
+      };
+
+      addressInput.addEventListener('input', function () {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(lookup, 250);
+      });
+
+      addressInput.addEventListener('keydown', function (e) {
+        if (list.hidden || !options.length) return;
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          highlight((active + 1) % options.length);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          highlight(active <= 0 ? options.length - 1 : active - 1);
+        } else if (e.key === 'Enter' && active >= 0) {
+          // Only swallow Enter when a suggestion is actually highlighted, so
+          // the form can still be submitted from this field.
+          e.preventDefault();
+          choose(options[active]);
+        } else if (e.key === 'Escape') {
+          close();
+        }
+      });
+
+      addressInput.addEventListener('blur', function () {
+        window.setTimeout(close, 120);
+      });
+    }
+  }
+
+  /* ----------------------------------------------------------------------
      Forms
      ---------------------------------------------------------------------- */
   var showStatus = function (form, type, message) {

@@ -21,7 +21,30 @@ const ENV = {
 let sent = null, failNext = false, sheetPost = null, sheetFails = false;
 const SHEET_URL = 'https://script.google.com/macros/s/deadbeef/exec';
 const realFetch = globalThis.fetch;
+let placesCall = null, placesFails = false;
 globalThis.fetch = async (url, init) => {
+  if (String(url).includes('places.googleapis.com')) {
+    placesCall = { url: String(url), headers: init.headers,
+                   body: init.body ? JSON.parse(init.body) : null };
+    if (placesFails) {
+      return new Response('{"error":{"message":"API key not valid"}}', { status: 403 });
+    }
+    if (String(url).includes(':autocomplete')) {
+      return new Response(JSON.stringify({ suggestions: [
+        { placePrediction: { placeId: 'p1', structuredFormat: {
+          mainText: { text: '10 Market St' }, secondaryText: { text: 'St. Louis, MO, USA' } } } }
+      ] }), { status: 200 });
+    }
+    return new Response(JSON.stringify({
+      formattedAddress: '10 Market St, St. Louis, MO 63101, USA',
+      addressComponents: [
+        { longText: '10', shortText: '10', types: ['street_number'] },
+        { longText: 'Market Street', shortText: 'Market St', types: ['route'] },
+        { longText: 'St. Louis', shortText: 'St. Louis', types: ['locality'] },
+        { longText: 'Missouri', shortText: 'MO', types: ['administrative_area_level_1'] },
+        { longText: '63101', shortText: '63101', types: ['postal_code'] }
+      ] }), { status: 200 });
+  }
   if (String(url) === SHEET_URL) {
     sheetPost = JSON.parse(init.body);
     return sheetFails
@@ -327,6 +350,70 @@ t = await selftest(SHEET_ENV, () => new Response(
   '{"message":"This API key is restricted to only send emails"}', { status: 401 }));
 check('selftest reports the sheet is wired up',
   t.out.sheet.configured === true && t.out.sheet.tokenSet === true, JSON.stringify(t.out.sheet));
+
+// 14 — address lookup
+const PLACES_ENV = { ...ENV, GOOGLE_PLACES_KEY: 'AIza-test-key' };
+const places = (path, payload, env, origin) => worker.fetch(new Request(
+  'https://nixora-forms.workers.dev' + path, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: { 'content-type': 'application/json', Accept: 'application/json',
+               ...(origin === null ? {} : { Origin: origin || 'https://www.nixoraservices.com' }) }
+  }), env);
+
+placesCall = null;
+r = await places('/places/suggest', { input: '10 Market', sessionToken: 'tok-1' }, PLACES_ENV);
+let out = await r.json();
+check('suggest answers 200', r.status === 200, r.status);
+check('suggest returns the street line',
+  out.suggestions[0].line === '10 Market St', JSON.stringify(out.suggestions));
+check('suggest returns the city context',
+  out.suggestions[0].context === 'St. Louis, MO, USA');
+check('suggest limits results to the US', placesCall.body.includedRegionCodes[0] === 'us');
+check('suggest passes the session token', placesCall.body.sessionToken === 'tok-1');
+check('the key goes in the header, never the page',
+  placesCall.headers['X-Goog-Api-Key'] === 'AIza-test-key');
+
+placesCall = null;
+r = await places('/places/suggest', { input: '10' }, PLACES_ENV);
+out = await r.json();
+check('a short query never reaches Google', placesCall === null && out.suggestions.length === 0);
+
+placesCall = null;
+r = await places('/places/details', { placeId: 'p1', sessionToken: 'tok-1' }, PLACES_ENV);
+out = await r.json();
+check('details splits the address into the form fields',
+  out.address.street === '10 Market St' && out.address.city === 'St. Louis' &&
+  out.address.state === 'MO' && out.address.zip === '63101', JSON.stringify(out.address));
+check('details asks only for the address fields',
+  placesCall.headers['X-Goog-FieldMask'] === 'addressComponents,formattedAddress');
+check('details reuses the session token so it bills as one lookup',
+  placesCall.url.includes('sessionToken=tok-1'), placesCall.url);
+
+// A failure must cost a convenience, never the ability to type an address.
+placesFails = true;
+r = await places('/places/suggest', { input: '10 Market' }, PLACES_ENV);
+out = await r.json();
+check('a Google failure still answers 200', r.status === 200, r.status);
+check('with an empty list rather than an error', Array.isArray(out.suggestions) && out.suggestions.length === 0);
+check('and reports why for whoever is looking', /API key not valid/.test(out.detail || ''), out.detail);
+placesFails = false;
+
+placesCall = null;
+r = await places('/places/suggest', { input: '10 Market' }, ENV);
+out = await r.json();
+check('no key configured means no lookup', placesCall === null && out.configured === false);
+
+r = await places('/places/suggest', { input: '10 Market' }, PLACES_ENV, 'https://evil.example');
+check('another site cannot spend the Maps quota', r.status === 403, r.status);
+
+r = await worker.fetch(new Request('https://nixora-forms.workers.dev/places/suggest',
+  { method: 'GET' }), PLACES_ENV);
+check('GET on the lookup is refused', r.status === 405, r.status);
+
+t = await selftest(PLACES_ENV, () => new Response(
+  '{"message":"This API key is restricted to only send emails"}', { status: 401 }));
+check('selftest reports the address lookup is wired up', t.out.places.configured === true);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
