@@ -251,7 +251,7 @@ Open the Worker's URL in a browser. It refuses the GET, and says which build
 answered:
 
 ```json
-{"ok": false, "error": "Send this form with POST.", "build": "2026-09-02.5", …}
+{"ok": false, "error": "Send this form with POST.", "build": "2026-09-02.6", …}
 ```
 
 Compare that against `BUILD` at the top of `src/index.js`. Deploying through
@@ -293,6 +293,20 @@ to be read in the Resend dashboard instead.
 
 Reach for this before the logs: a rejected send is nearly always one of the
 three things it checks, and this is a URL rather than a log console.
+
+### `/selftest?places=1`
+
+Runs one real address lookup and repeats Google's answer:
+
+```json
+{"places": {"configured": true, "matches": 5, "example": {"line": "1 Market St", …}},
+ "verdict": "Address lookup works. 5 matches for a St. Louis address."}
+```
+
+A key that is refused, the legacy Places API enabled instead of the new one,
+and billing being off all fail differently and only Google can say which, so
+the refusal is quoted rather than summarised. An unset key is reported as a
+working state, since the field falls back to a plain text box by design.
 
 ### `/selftest?send=1`
 

@@ -677,7 +677,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-02.5';
+const BUILD = '2026-09-02.6';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -880,6 +880,31 @@ async function selftest(env, options) {
   }
 
   report.places = { configured: Boolean(String(env.GOOGLE_PLACES_KEY || '').trim()) };
+
+  // ?places=1 runs one real lookup and reports Google's answer verbatim.
+  // Whether the key works, whether the right API is enabled and whether
+  // billing is on all fail differently, and only Google can say which.
+  if (options && options.places) {
+    if (!report.places.configured) {
+      report.verdict = 'GOOGLE_PLACES_KEY is not set, so the address field is a ' +
+        'plain text box. That is a working state, not a fault.';
+      return report;
+    }
+    try {
+      const result = await suggest(env, '1 Market St, St. Louis', 'selftest-session');
+      report.places.matches = result.suggestions.length;
+      report.places.example = result.suggestions[0] || null;
+      report.verdict = result.suggestions.length
+        ? 'Address lookup works. ' + result.suggestions.length + ' matches for a St. Louis address.'
+        : 'Google accepted the key but returned nothing, which usually means the ' +
+          'wrong Places API is enabled — it has to be Places API (New).';
+    } catch (error) {
+      report.places.status = error && error.status;
+      report.places.message = error && error.detail;
+      report.verdict = 'Google refused the lookup: ' + (error && error.detail);
+    }
+    return report;
+  }
   report.sheet = { configured: Boolean(String(env.SHEET_WEBHOOK_URL || '').trim()) };
   if (report.sheet.configured) {
     report.sheet.tokenSet = Boolean(String(env.SHEET_TOKEN || '').trim());
@@ -1009,7 +1034,10 @@ export default {
       // ?send=1 posts one real message to the configured recipient. The
       // recipient never comes from the request, so this cannot be pointed at
       // anyone else.
-      return json(await selftest(env, { send: url.searchParams.get('send') === '1' }), 200, cors);
+      return json(await selftest(env, {
+        send: url.searchParams.get('send') === '1',
+        places: url.searchParams.get('places') === '1'
+      }), 200, cors);
     }
 
     if (request.method !== 'POST') {

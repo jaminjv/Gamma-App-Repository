@@ -415,5 +415,29 @@ t = await selftest(PLACES_ENV, () => new Response(
   '{"message":"This API key is restricted to only send emails"}', { status: 401 }));
 check('selftest reports the address lookup is wired up', t.out.places.configured === true);
 
+// ?places=1 runs a real lookup and repeats Google's answer
+const placesTest = async (env) => {
+  const res = await worker.fetch(new Request(
+    'https://nixora-forms.workers.dev/selftest?places=1', { method: 'GET' }), env);
+  return res.json();
+};
+
+let pt = await placesTest(PLACES_ENV);
+check('places selftest reports a working lookup',
+  /Address lookup works/.test(pt.verdict) && pt.places.matches === 1, pt.verdict);
+check('places selftest shows an example match',
+  pt.places.example.line === '10 Market St', JSON.stringify(pt.places.example));
+
+placesFails = true;
+pt = await placesTest(PLACES_ENV);
+check('places selftest quotes a refusal from Google',
+  /API key not valid/.test(pt.verdict), pt.verdict);
+check('and records the status Google gave', pt.places.status === 403, pt.places.status);
+placesFails = false;
+
+pt = await placesTest(ENV);
+check('places selftest calls an unset key a working state, not a fault',
+  /not set/.test(pt.verdict) && /working state/.test(pt.verdict), pt.verdict);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
