@@ -168,6 +168,33 @@ spent, no list appears, the Worker answers with an empty one, and the
 applicant types their address exactly as before. A failure here costs a
 convenience and never an application.
 
+## Address help without an account
+
+Two public services carry this, and neither needs a key, a project or a card:
+
+| Path | Uses | Does |
+|---|---|---|
+| `/address/zip` | Zippopotam | Five digits → a city and a state |
+| `/address/verify` | US Census Bureau geocoder | Checks a typed address exists, and returns its standardised form |
+
+Nothing here has to be configured. It runs alongside the Google suggestions
+rather than instead of them: Places suggests while somebody types, this checks
+what they ended up with, and when `GOOGLE_PLACES_KEY` is unset this is all
+there is.
+
+On the page, the ZIP fills the city and state **only when they are blank** —
+somebody who typed a city meant it — and the finished address gets one line
+under it: confirmed, a "did you mean" with the standardised version behind a
+button, or a note that it could not be confirmed.
+
+That last one is deliberately not an error. New construction, rural routes and
+recently renumbered streets are genuinely missing from the Census file, so an
+address it does not recognise is reported as unconfirmed, and the submission
+goes through either way. Nothing on this path can block an application.
+
+Both endpoints answer `200` with "unknown" rather than an error when the
+public service is slow or down, and each call gives up after a few seconds.
+
 ## Sending every submission to a spreadsheet
 
 Set `SHEET_WEBHOOK_URL` and the Worker posts a copy of each submission to a
@@ -340,6 +367,7 @@ worker/
   src/index.js          request handling, CORS, honeypot, Resend call
   src/forms.js          field names for the three forms → a render spec
   src/places.js         address lookup, proxied so the Google key stays secret
+  src/address.js        ZIP and address checks that need no account at all
   src/email.js          the HTML and plain-text template
   scripts/preview.js    renders samples locally, sends nothing
   scripts/test.js       exercises the Worker with the Resend call stubbed

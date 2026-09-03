@@ -1367,6 +1367,31 @@ li { margin-bottom: .4rem; }
 .suggestions__line { font-size: .95rem; color: var(--ink); }
 .suggestions__context { font-size: .8rem; color: var(--muted); }
 
+/* The line under the address field after it has been checked. Sized like the
+   existing hints so it reads as guidance, never as a validation failure —
+   an address the Census file has not heard of is usually still real. */
+.field-check {
+  margin: .45rem 0 0;
+  font-size: .82rem;
+  line-height: 1.45;
+}
+.field-check--ok { color: var(--accent-600); }
+.field-check--info { color: var(--on-tint); }
+.field-check--warn { color: var(--muted); }
+
+.field-check__use {
+  font: inherit;
+  font-weight: 700;
+  color: var(--on-tint);
+  background: none;
+  border: 0;
+  padding: 0 .1rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.field-check__use:hover { color: var(--on-tint-hover); }
+
 .page-hero {
   padding-block: clamp(3rem, 6vw, 4.5rem) clamp(2rem, 4vw, 3rem);
   background:

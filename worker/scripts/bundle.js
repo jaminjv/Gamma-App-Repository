@@ -13,7 +13,7 @@ const src = join(here, '..', 'src');
 const out = join(here, '..', 'dist');
 
 // Order matters: each file may only use what the ones above it defined.
-const ORDER = ['email.js', 'forms.js', 'places.js', 'index.js'];
+const ORDER = ['email.js', 'forms.js', 'places.js', 'address.js', 'index.js'];
 
 const HEADER = `/* ==========================================================================
    Nixora Services LLC — form endpoint (single-file build).

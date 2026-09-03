@@ -401,6 +401,132 @@
       addressInput.addEventListener('blur', function () {
         window.setTimeout(close, 120);
       });
+
+      /* ------------------------------------------------------------------
+         Checking the address afterwards
+
+         Independent of the suggestions above, and useful whether or not they
+         are switched on: the ZIP fills the city and state, and the finished
+         address is checked against the US Census file. Both are hints. An
+         address the file does not know is reported as unconfirmed rather
+         than wrong — new construction and recently renumbered streets are
+         genuinely missing from it — and nothing here can block a submission.
+         ------------------------------------------------------------------ */
+      var zipInput = document.getElementById('a-zip');
+      var cityInput = document.getElementById('a-city');
+      var stateInput = document.getElementById('a-state');
+
+      var note = document.createElement('p');
+      note.className = 'field-check';
+      note.hidden = true;
+      note.setAttribute('role', 'status');
+      note.setAttribute('aria-live', 'polite');
+      if (zipInput && zipInput.parentNode) {
+        addressInput.parentNode.appendChild(note);
+      }
+
+      var showNote = function (kind, text, action) {
+        note.className = 'field-check field-check--' + kind;
+        note.textContent = text;
+        if (action) {
+          var button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'field-check__use';
+          button.textContent = 'Use this';
+          button.addEventListener('click', action);
+          note.appendChild(document.createTextNode(' '));
+          note.appendChild(button);
+        }
+        note.hidden = false;
+      };
+
+      var hideNote = function () { note.hidden = true; note.textContent = ''; };
+
+      // The ZIP is the cheapest correction on the form: five digits settle
+      // two fields that are otherwise typed and mistyped.
+      if (zipInput) {
+        zipInput.addEventListener('blur', function () {
+          var zip = zipInput.value.trim();
+          if (!/^\d{5}$/.test(zip)) return;
+
+          fetch(new URL('address/zip', endpoint).href, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ zip: zip })
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              if (!data || !data.found) return;
+              // Only ever fills a blank. Someone who typed a city meant it.
+              if (cityInput && !cityInput.value.trim()) setField('a-city', data.city);
+              if (stateInput && !stateInput.value && data.state) {
+                var match = Array.prototype.find.call(stateInput.options, function (opt) {
+                  return opt.value === data.state;
+                });
+                if (match) {
+                  stateInput.value = match.value;
+                  if (stateInput.hasAttribute('aria-invalid')) stateInput.removeAttribute('aria-invalid');
+                }
+              }
+            })
+            .catch(function () { /* a hint that did not arrive */ });
+        });
+      }
+
+      var sameAddress = function (a, b) {
+        var tidy = function (t) { return String(t || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
+        return tidy(a) === tidy(b);
+      };
+
+      var verify = function () {
+        var street = addressInput.value.trim();
+        var zip = zipInput ? zipInput.value.trim() : '';
+        if (!street || !/^\d{5}$/.test(zip)) return hideNote();
+
+        fetch(new URL('address/verify', endpoint).href, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            street: street,
+            city: cityInput ? cityInput.value.trim() : '',
+            state: stateInput ? stateInput.value : '',
+            zip: zip
+          })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (!data || !data.checked) return hideNote();
+
+            if (!data.verified) {
+              return showNote('warn',
+                'We could not confirm this address. Check it, or leave it as it is if you know it is right.');
+            }
+
+            var found = data.address;
+            if (sameAddress(found.street, street)) {
+              return showNote('ok', 'Address confirmed.');
+            }
+
+            showNote('info', 'Did you mean ' + found.formatted + '?', function () {
+              setField('a-address', found.street);
+              setField('a-city', found.city);
+              setField('a-zip', found.zip);
+              if (stateInput && found.state) {
+                var match = Array.prototype.find.call(stateInput.options, function (opt) {
+                  return opt.value === found.state;
+                });
+                if (match) stateInput.value = match.value;
+              }
+              showNote('ok', 'Address confirmed.');
+            });
+          })
+          .catch(function () { hideNote(); });
+      };
+
+      // Checked once both halves are present, from whichever is filled last.
+      addressInput.addEventListener('blur', function () { window.setTimeout(verify, 200); });
+      if (zipInput) zipInput.addEventListener('blur', function () { window.setTimeout(verify, 400); });
+      addressInput.addEventListener('input', hideNote);
     }
   }
 

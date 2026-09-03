@@ -22,7 +22,10 @@ let sent = null, failNext = false, sheetPost = null, sheetFails = false;
 const SHEET_URL = 'https://script.google.com/macros/s/deadbeef/exec';
 const realFetch = globalThis.fetch;
 let placesCall = null, placesFails = false;
+let censusReply = null, zipReply = null;
 globalThis.fetch = async (url, init) => {
+  if (String(url).includes('geocoding.geo.census.gov')) return censusReply();
+  if (String(url).includes('zippopotam.us')) return zipReply();
   if (String(url).includes('places.googleapis.com')) {
     placesCall = { url: String(url), headers: init.headers,
                    body: init.body ? JSON.parse(init.body) : null };
@@ -438,6 +441,55 @@ placesFails = false;
 pt = await placesTest(ENV);
 check('places selftest calls an unset key a working state, not a fault',
   /not set/.test(pt.verdict) && /working state/.test(pt.verdict), pt.verdict);
+
+// 15 — address help that needs no account
+const addr = (path, payload) => worker.fetch(new Request(
+  'https://nixora-forms.workers.dev' + path, {
+    method: 'POST', body: JSON.stringify(payload),
+    headers: { 'content-type': 'application/json', Accept: 'application/json',
+               Origin: 'https://www.nixoraservices.com' }
+  }), ENV).then((res) => res.json());
+
+zipReply = () => new Response(JSON.stringify({
+  places: [{ 'place name': 'Saint Louis', 'state abbreviation': 'MO' }] }), { status: 200 });
+
+let a = await addr('/address/zip', { zip: '63101' });
+check('a ZIP gives back a city and state',
+  a.found === true && a.city === 'Saint Louis' && a.state === 'MO', JSON.stringify(a));
+
+a = await addr('/address/zip', { zip: '631' });
+check('a partial ZIP is not looked up', a.found === false);
+
+zipReply = () => { throw new Error('service down'); };
+a = await addr('/address/zip', { zip: '63101' });
+check('an unreachable ZIP service answers unknown, not an error', a.ok === true && a.found === false);
+
+censusReply = () => new Response(JSON.stringify({ result: { addressMatches: [{
+  matchedAddress: '10 MARKET ST, SAINT LOUIS, MO, 63101',
+  addressComponents: { fromAddress: '10', streetName: 'MARKET', suffixType: 'ST',
+                       city: 'SAINT LOUIS', state: 'MO', zip: '63101' } }] } }), { status: 200 });
+
+a = await addr('/address/verify', { street: '10 Market St', city: 'St. Louis', state: 'MO', zip: '63101' });
+check('a real address verifies', a.checked === true && a.verified === true);
+check('and comes back in title case, not shouting',
+  a.address.street === '10 Market St' && a.address.city === 'Saint Louis', JSON.stringify(a.address));
+check('with the state left uppercase', a.address.state === 'MO');
+
+censusReply = () => new Response(JSON.stringify({ result: { addressMatches: [] } }), { status: 200 });
+a = await addr('/address/verify', { street: '9999 Nowhere Rd', city: 'St. Louis', state: 'MO', zip: '63101' });
+check('an address the file does not know is unconfirmed, not wrong',
+  a.checked === true && a.verified === false, JSON.stringify(a));
+
+censusReply = () => { throw new Error('census down'); };
+a = await addr('/address/verify', { street: '10 Market St', city: 'St. Louis', state: 'MO', zip: '63101' });
+check('an unreachable geocoder answers unchecked', a.ok === true && a.checked === false);
+
+a = await addr('/address/verify', { street: '', city: '', state: '', zip: '' });
+check('an empty address is never sent anywhere', a.checked === false);
+
+r = await worker.fetch(new Request('https://nixora-forms.workers.dev/address/zip',
+  { method: 'GET' }), ENV);
+check('GET on the address help is refused', r.status === 405, r.status);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
