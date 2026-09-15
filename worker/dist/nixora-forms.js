@@ -788,7 +788,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-03.1';
+const BUILD = '2026-09-03.2';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -990,7 +990,17 @@ async function selftest(env, options) {
     return report;
   }
 
-  report.places = { configured: Boolean(String(env.GOOGLE_PLACES_KEY || '').trim()) };
+  // Described, never echoed — the same treatment the Resend key gets. A key
+  // that is the wrong length or has the wrong prefix is a key from another
+  // project, or one that lost characters on the way into the dashboard, and
+  // neither is visible from "API key not valid".
+  const placesKey = String(env.GOOGLE_PLACES_KEY || '').trim();
+  report.places = {
+    configured: Boolean(placesKey),
+    keyLength: placesKey.length,
+    startsWithAIza: placesKey.slice(0, 4) === 'AIza',
+    expectedLength: 39
+  };
 
   // ?places=1 runs one real lookup and reports Google's answer verbatim.
   // Whether the key works, whether the right API is enabled and whether
@@ -1012,7 +1022,21 @@ async function selftest(env, options) {
     } catch (error) {
       report.places.status = error && error.status;
       report.places.message = error && error.detail;
-      report.verdict = 'Google refused the lookup: ' + (error && error.detail);
+
+      // "API key not valid" says nothing about which of its causes applies,
+      // so the shape of what was stored is reported alongside it.
+      const shape = report.places.startsWithAIza && report.places.keyLength === 39
+        ? 'The stored key has the right shape, so it is more likely the wrong ' +
+          'key — one from a deleted project, or from a project where Places API ' +
+          '(New) is not enabled. A key created in the last few minutes can also ' +
+          'need a little longer.'
+        : 'The stored key does not look like a Google key: it is ' +
+          report.places.keyLength + ' characters and ' +
+          (report.places.startsWithAIza ? 'starts with AIza' : 'does not start with AIza') +
+          ', where a Google key is 39 and does. Whatever is in GOOGLE_PLACES_KEY ' +
+          'is not the key you copied.';
+
+      report.verdict = 'Google refused the lookup: ' + (error && error.detail) + ' — ' + shape;
     }
     return report;
   }

@@ -436,6 +436,16 @@ pt = await placesTest(PLACES_ENV);
 check('places selftest quotes a refusal from Google',
   /API key not valid/.test(pt.verdict), pt.verdict);
 check('and records the status Google gave', pt.places.status === 403, pt.places.status);
+check('a refusal names the shape of what is stored',
+  /does not look like a Google key/.test(pt.verdict), pt.verdict);
+check('and never echoes the key itself', !JSON.stringify(pt).includes(PLACES_ENV.GOOGLE_PLACES_KEY));
+
+// A key with the right shape points the finger somewhere else entirely
+pt = await placesTest({ ...PLACES_ENV, GOOGLE_PLACES_KEY: 'AIza' + 'x'.repeat(35) });
+check('a well-formed key that is refused blames the project, not the paste',
+  /right shape/.test(pt.verdict) && /deleted project/.test(pt.verdict), pt.verdict);
+check('and reports its measurements',
+  pt.places.keyLength === 39 && pt.places.startsWithAIza === true, JSON.stringify(pt.places));
 placesFails = false;
 
 pt = await placesTest(ENV);
