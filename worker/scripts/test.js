@@ -23,7 +23,7 @@ const SHEET_URL = 'https://script.google.com/macros/s/deadbeef/exec';
 const SHEET_RESULT = 'https://script.googleusercontent.com/macros/echo?key=deadbeef';
 const realFetch = globalThis.fetch;
 let placesCall = null, placesFails = false;
-let censusReply = null, zipReply = null;
+let censusReply = null, zipReply = null, resultGone = false;
 globalThis.fetch = async (url, init) => {
   if (String(url).includes('geocoding.geo.census.gov')) return censusReply();
   if (String(url).includes('zippopotam.us')) return zipReply();
@@ -60,8 +60,11 @@ globalThis.fetch = async (url, init) => {
   }
   if (String(url) === SHEET_RESULT) {
     if (init && init.method !== 'GET') throw new Error('the result is fetched with GET');
+    // The one-use result URL often 404s by the time it is asked for. That
+    // says nothing about doPost, which already ran.
+    if (resultGone) return new Response('<!DOCTYPE html>gone', { status: 404 });
     return sheetFails
-      ? new Response('<html>Script error</html>', { status: 200 })
+      ? new Response('{"ok":false,"error":"Bad token"}', { status: 200 })
       : new Response('{"ok":true}', { status: 200 });
   }
   if (String(url).includes('api.resend.com')) {
@@ -354,6 +357,13 @@ check('a broken sheet does not fail the submission', r.status === 200, r.status)
 check('and the email still went', sent !== null && sent.body.subject.includes('Pepito Perez'));
 sheetFails = false;
 
+// The redirect is the success signal: doPost only gets that far by finishing.
+resultGone = true; sheetPost = null;
+r = await worker.fetch(post(APP), SHEET_ENV);
+check('a result URL that has expired is not read as a lost row',
+  r.status === 200 && sheetPost !== null);
+resultGone = false;
+
 // Without the setting there is no sheet call at all.
 sheetPost = null;
 r = await worker.fetch(post(APP), ENV);
@@ -365,11 +375,16 @@ check('selftest reports the sheet is wired up',
   t.out.sheet.configured === true && t.out.sheet.tokenSet === true, JSON.stringify(t.out.sheet));
 
 // 13b — ?sheet=1 writes one row and reports what came back
-const sheetTest = async (env, reply) => {
+// `reply` answers the result URL (the second hop); `postReply` overrides the
+// POST itself, which is where a missing deployment or a thrown script shows
+// up. Getting these two the wrong way round is what let the redirect bug
+// through, so they are now distinct on purpose.
+const sheetTest = async (env, reply, postReply) => {
   const previous = globalThis.fetch;
   sheetPost = null;
   globalThis.fetch = async (url, init) => {
     if (String(url) === SHEET_URL) {
+      if (postReply) return postReply();
       sheetPost = JSON.parse(init.body);
       return new Response(null, { status: 302, headers: { location: SHEET_RESULT } });
     }
@@ -392,32 +407,38 @@ check('to a tab of its own, not among the applicants',
 check('and says it landed', /accepted a row/.test(sh.verdict), sh.verdict);
 
 // The three ways this fails look alike from outside and are fixed differently
-sh = await sheetTest(SHEET_ENV, () => new Response(
-  '<!DOCTYPE html><html lang="en"><head><script>window[\'ppConfig\']', { status: 404 }));
+const htmlAt = (status) => () => new Response(
+  '<!DOCTYPE html><html lang="en"><head><script>window[\'ppConfig\']', { status });
+
+sh = await sheetTest(SHEET_ENV, null, htmlAt(404));
 check('a 404 is read as a deleted deployment, not a permission problem',
   /no longer exists \(404\)/.test(sh.verdict) && /deleted/.test(sh.verdict), sh.verdict);
 check('and says the stored URL is the thing to replace',
   /SHEET_WEBHOOK_URL/.test(sh.verdict), sh.verdict);
 
-sh = await sheetTest(SHEET_ENV, () => new Response(
-  '<!DOCTYPE html><html lang="en"><head><script>window[\'ppConfig\']', { status: 403 }));
+sh = await sheetTest(SHEET_ENV, null, htmlAt(403));
 check('a 403 is read as the access setting, not a broken script',
   /"Who has access"/.test(sh.verdict) && /"Anyone"/.test(sh.verdict), sh.verdict);
+check('a failing POST never counts as a written row', sheetPost === null);
 check('and says to edit the deployment so the URL survives',
   /Edit the existing deployment/.test(sh.verdict), sh.verdict);
 
-sh = await sheetTest(SHEET_ENV, () => new Response(
+sh = await sheetTest(SHEET_ENV, null, () => new Response(
   '<html><head><title>Sign in - Google Accounts</title>accounts.google.com', { status: 200 }));
 check('a sign-in page is read as the wrong access setting',
   /no longer deployed for "Anyone"/.test(sh.verdict), sh.verdict);
 
-sh = await sheetTest(SHEET_ENV, () => new Response(
+sh = await sheetTest(SHEET_ENV, null, () => new Response(
   '<!DOCTYPE html><html><body>Script error: TypeError', { status: 200 }));
 check('an error page is read as the script having thrown',
   /the script itself threw/.test(sh.verdict), sh.verdict);
 
 sh = await sheetTest(SHEET_ENV, () => new Response('{"ok":false,"error":"Bad token"}', { status: 200 }));
 check('a refused row is quoted', /Bad token/.test(sh.verdict), sh.verdict);
+
+sh = await sheetTest(SHEET_ENV, () => new Response('<!DOCTYPE html>gone', { status: 404 }));
+check('an expired result URL still counts as written',
+  /accepted a row/.test(sh.verdict), sh.verdict);
 
 sh = await sheetTest(ENV, () => new Response('{"ok":true}', { status: 200 }));
 check('an unset sheet is reported as such, and the email said to be unaffected',

@@ -230,12 +230,22 @@ Apps Script never answers a POST directly. It runs `doPost`, then redirects to
 where the result is waiting — and following a 302 turns the request into a
 GET, which lands on `doGet`, which this script does not define.
 
-So the Worker follows that redirect by hand: POST once with
-`redirect: 'manual'`, then GET the location. Letting it follow automatically
-means every append looks like a failure while quietly succeeding — the row is
-written, and what comes back is an error page for a call that already worked.
-The script's own execution log is the giveaway: `doPost` completed, `doGet`
-failed, once per submission.
+So the Worker posts with `redirect: 'manual'` and reads the first response
+itself. **The redirect is the success signal**: Apps Script only gets as far
+as redirecting once `doPost` has run to completion. A script that threw
+answers `200` with an error page, and a deployment that cannot be reached
+answers `403` or `404` — so the status of that first response already says
+whether the row was written.
+
+The location it points at is fetched too, because it carries the script's own
+`{ok:false, error}` for a row it declined, such as a bad token. But it is a
+one-use URL that sometimes `404`s by the time it is asked for, and that says
+nothing about `doPost`, which already ran. Treating that second hop as the
+verdict reports written rows as lost.
+
+Letting fetch follow the redirect on its own is worse still: a 302 turns the
+POST into a GET, which lands on `doGet`. The script's execution log is the
+giveaway — `doPost` completed, `doGet` failed, once per submission.
 
 ### What happens when the sheet is down
 

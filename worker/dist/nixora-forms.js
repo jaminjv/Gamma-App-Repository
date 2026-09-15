@@ -788,7 +788,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-15.4';
+const BUILD = '2026-09-15.5';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -930,22 +930,37 @@ async function send(env, { to, replyTo, subject, html, text }) {
    The redirect is followed by hand instead: POST once, then GET the location
    the way Apps Script intends. */
 async function postToAppsScript(endpoint, payload) {
-  let response = await fetch(endpoint, {
+  const posted = await fetch(endpoint, {
     method: 'POST',
     redirect: 'manual',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload)
   });
 
-  // Two hops is all Apps Script uses; the bound stops a redirect loop from
-  // becoming a Worker that never returns.
-  for (let hop = 0; hop < 3 && response.status >= 300 && response.status < 400; hop++) {
-    const location = response.headers.get('location');
-    if (!location) break;
-    response = await fetch(location, { method: 'GET', redirect: 'manual' });
+  // A redirect is the success signal, and the only reliable one. Apps Script
+  // redirects to where the output is waiting *after* doPost has run to
+  // completion; a script that threw answers 200 with an error page instead,
+  // and a deployment that cannot be reached answers 403 or 404. So the status
+  // of this first response already says whether the row was written.
+  if (posted.status >= 300 && posted.status < 400) {
+    const location = posted.headers.get('location');
+    const result = { status: 200, body: '{"ok":true}', redirected: true };
+    if (!location) return result;
+
+    // The body is worth having when it can be had — it carries the script's
+    // own {ok:false, error} for a row it declined, such as a bad token. But
+    // that second hop is a one-use URL and sometimes 404s by the time it is
+    // asked for, which says nothing about whether doPost succeeded.
+    try {
+      const echoed = await fetch(location, { method: 'GET' });
+      const body = (await echoed.text()).slice(0, 300);
+      if (echoed.ok && /"ok"\s*:/.test(body)) return { status: 200, body, redirected: true };
+    } catch (ignored) { /* the redirect already told us what we needed */ }
+
+    return result;
   }
 
-  return { status: response.status, body: (await response.text()).slice(0, 300) };
+  return { status: posted.status, body: (await posted.text()).slice(0, 300) };
 }
 
 async function appendToSheet(env, form, type) {
