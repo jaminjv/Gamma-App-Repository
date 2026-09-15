@@ -278,7 +278,7 @@ Open the Worker's URL in a browser. It refuses the GET, and says which build
 answered:
 
 ```json
-{"ok": false, "error": "Send this form with POST.", "build": "2026-09-02.6", …}
+{"ok": false, "error": "Send this form with POST.", "build": "2026-09-15.1", …}
 ```
 
 Compare that against `BUILD` at the top of `src/index.js`. Deploying through
@@ -334,6 +334,18 @@ A key that is refused, the legacy Places API enabled instead of the new one,
 and billing being off all fail differently and only Google can say which, so
 the refusal is quoted rather than summarised. An unset key is reported as a
 working state, since the field falls back to a plain text box by design.
+
+### `/selftest?sheet=1`
+
+Writes one row to a tab called **Endpoint tests**, so "is the spreadsheet
+still there" is answered by opening a URL rather than by reading a log, and
+without putting a fake applicant among the real ones.
+
+Apps Script answers `200` with an HTML error page when the script itself
+threw, and redirects to a sign-in page when the spreadsheet has been deleted
+or the deployment removed — so the status settles nothing and the body is
+read. A sign-in page is reported as exactly that: the sheet is gone and needs
+setting up again.
 
 ### `/selftest?send=1`
 

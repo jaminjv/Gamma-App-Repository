@@ -354,6 +354,42 @@ t = await selftest(SHEET_ENV, () => new Response(
 check('selftest reports the sheet is wired up',
   t.out.sheet.configured === true && t.out.sheet.tokenSet === true, JSON.stringify(t.out.sheet));
 
+// 13b — ?sheet=1 writes one row and reports what came back
+const sheetTest = async (env, reply) => {
+  const previous = globalThis.fetch;
+  sheetPost = null;
+  globalThis.fetch = async (url, init) => {
+    if (String(url) === SHEET_URL) {
+      sheetPost = JSON.parse(init.body);
+      return reply();
+    }
+    return previous(url, init);
+  };
+  const res = await worker.fetch(new Request(
+    'https://nixora-forms.workers.dev/selftest?sheet=1', { method: 'GET' }), env);
+  const out = await res.json();
+  globalThis.fetch = previous;
+  return out;
+};
+
+let sh = await sheetTest(SHEET_ENV, () => new Response('{"ok":true}', { status: 200 }));
+check('sheet test writes a row', sheetPost !== null);
+check('to a tab of its own, not among the applicants',
+  sheetPost.tab === 'Endpoint tests', sheetPost.tab);
+check('and says it landed', /accepted a row/.test(sh.verdict), sh.verdict);
+
+sh = await sheetTest(SHEET_ENV, () => new Response(
+  '<HTML><HEAD><TITLE>Sign in - Google Accounts</TITLE>', { status: 200 }));
+check('a sign-in page is read as a deleted sheet',
+  /deleted or the Web App deployment was removed/.test(sh.verdict), sh.verdict);
+
+sh = await sheetTest(SHEET_ENV, () => new Response('{"ok":false,"error":"Bad token"}', { status: 200 }));
+check('a refused row is quoted', /Bad token/.test(sh.verdict), sh.verdict);
+
+sh = await sheetTest(ENV, () => new Response('{"ok":true}', { status: 200 }));
+check('an unset sheet is reported as such, and the email said to be unaffected',
+  /SHEET_WEBHOOK_URL is empty/.test(sh.verdict) && /email is unaffected/.test(sh.verdict), sh.verdict);
+
 // 14 — address lookup
 const PLACES_ENV = { ...ENV, GOOGLE_PLACES_KEY: 'AIza-test-key' };
 const places = (path, payload, env, origin) => worker.fetch(new Request(

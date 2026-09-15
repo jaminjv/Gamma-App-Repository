@@ -788,7 +788,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-03.2';
+const BUILD = '2026-09-15.1';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -941,6 +941,34 @@ async function appendToSheet(env, form, type) {
   return { configured: true, ok: true, tab: row.tab };
 }
 
+/* Writes one row to a tab of its own, so the answer to "is the spreadsheet
+   still there" does not depend on reading a log, and does not put a fake
+   applicant among the real ones. */
+async function trySheet(env) {
+  const endpoint = String(env.SHEET_WEBHOOK_URL || '').trim();
+  if (!endpoint) return { configured: false };
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      token: String(env.SHEET_TOKEN || ''),
+      tab: 'Endpoint tests',
+      columns: ['Received', 'Note'],
+      values: [new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC',
+               'Written by /selftest?sheet=1. Nobody filled in a form.']
+    })
+  });
+
+  // Apps Script answers 200 with an HTML error page when the script threw,
+  // and 302 to a sign-in page when the spreadsheet is gone or the deployment
+  // was removed, so the status alone settles nothing.
+  const body = (await response.text()).slice(0, 300);
+  const ok = response.ok && /"ok"\s*:\s*true/.test(body);
+
+  return { configured: true, ok, status: response.status, answer: body };
+}
+
 /* Everything the self-test can read is correct and the send still fails, so
    the only thing left to look at is what Resend says when it is actually asked
    to send. This performs one real send to the configured recipient -- never to
@@ -1043,6 +1071,29 @@ async function selftest(env, options) {
   report.sheet = { configured: Boolean(String(env.SHEET_WEBHOOK_URL || '').trim()) };
   if (report.sheet.configured) {
     report.sheet.tokenSet = Boolean(String(env.SHEET_TOKEN || '').trim());
+  }
+
+  if (options && options.sheet) {
+    if (!report.sheet.configured) {
+      report.verdict = 'SHEET_WEBHOOK_URL is empty, so nothing is being written ' +
+        'to a spreadsheet. The email is unaffected.';
+      return report;
+    }
+    try {
+      const attempt = await trySheet(env);
+      report.sheet.test = attempt;
+      report.verdict = attempt.ok
+        ? 'The spreadsheet accepted a row. Look for a tab called "Endpoint tests".'
+        : /accounts\.google\.com|<HTML|sign in/i.test(attempt.answer)
+          ? 'The script answered with a sign-in page, which is what happens when ' +
+            'the spreadsheet has been deleted or the Web App deployment was ' +
+            'removed. It needs setting up again.'
+          : 'The script refused the row (' + attempt.status + '): ' + attempt.answer;
+    } catch (error) {
+      report.sheet.test = { ok: false, error: String(error && error.message).slice(0, 200) };
+      report.verdict = 'Could not reach the script at all: ' + (error && error.message);
+    }
+    return report;
   }
 
   if (options && options.send) {
@@ -1193,7 +1244,8 @@ export default {
       // anyone else.
       return json(await selftest(env, {
         send: url.searchParams.get('send') === '1',
-        places: url.searchParams.get('places') === '1'
+        places: url.searchParams.get('places') === '1',
+        sheet: url.searchParams.get('sheet') === '1'
       }), 200, cors);
     }
 
