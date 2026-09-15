@@ -378,10 +378,23 @@ check('to a tab of its own, not among the applicants',
   sheetPost.tab === 'Endpoint tests', sheetPost.tab);
 check('and says it landed', /accepted a row/.test(sh.verdict), sh.verdict);
 
+// The three ways this fails look alike from outside and are fixed differently
 sh = await sheetTest(SHEET_ENV, () => new Response(
-  '<HTML><HEAD><TITLE>Sign in - Google Accounts</TITLE>', { status: 200 }));
-check('a sign-in page is read as a deleted sheet',
-  /deleted or the Web App deployment was removed/.test(sh.verdict), sh.verdict);
+  '<!DOCTYPE html><html lang="en"><head><script>window[\'ppConfig\']', { status: 404 }));
+check('a 404 is read as a deleted deployment, not a permission problem',
+  /no longer exists \(404\)/.test(sh.verdict) && /deleted/.test(sh.verdict), sh.verdict);
+check('and says the stored URL is the thing to replace',
+  /SHEET_WEBHOOK_URL/.test(sh.verdict), sh.verdict);
+
+sh = await sheetTest(SHEET_ENV, () => new Response(
+  '<html><head><title>Sign in - Google Accounts</title>accounts.google.com', { status: 200 }));
+check('a sign-in page is read as the wrong access setting',
+  /no longer deployed for "Anyone"/.test(sh.verdict), sh.verdict);
+
+sh = await sheetTest(SHEET_ENV, () => new Response(
+  '<!DOCTYPE html><html><body>Script error: TypeError', { status: 200 }));
+check('an error page is read as the script having thrown',
+  /the script itself threw/.test(sh.verdict), sh.verdict);
 
 sh = await sheetTest(SHEET_ENV, () => new Response('{"ok":false,"error":"Bad token"}', { status: 200 }));
 check('a refused row is quoted', /Bad token/.test(sh.verdict), sh.verdict);

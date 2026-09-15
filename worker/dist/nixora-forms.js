@@ -788,7 +788,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-15.1';
+const BUILD = '2026-09-15.2';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -1082,13 +1082,28 @@ async function selftest(env, options) {
     try {
       const attempt = await trySheet(env);
       report.sheet.test = attempt;
+      // These fail differently and are fixed differently, so they are told
+      // apart rather than lumped together as "something is wrong with the
+      // sheet". A 404 in particular sends people hunting for a permission
+      // problem that is not there.
+      const signIn = /accounts\.google\.com|ServiceLogin|sign in to continue/i
+        .test(attempt.answer);
+      const html = /^\s*<!doctype html|^\s*<html/i.test(attempt.answer);
+
       report.verdict = attempt.ok
         ? 'The spreadsheet accepted a row. Look for a tab called "Endpoint tests".'
-        : /accounts\.google\.com|<HTML|sign in/i.test(attempt.answer)
-          ? 'The script answered with a sign-in page, which is what happens when ' +
-            'the spreadsheet has been deleted or the Web App deployment was ' +
-            'removed. It needs setting up again.'
-          : 'The script refused the row (' + attempt.status + '): ' + attempt.answer;
+        : attempt.status === 404
+          ? 'The script URL no longer exists (404). The spreadsheet or its Web App ' +
+            'deployment has been deleted, so SHEET_WEBHOOK_URL points at nothing. ' +
+            'It needs setting up again, and the new /exec URL stored here.'
+          : signIn
+            ? 'The script answered with a sign-in page, which means the Web App is ' +
+              'no longer deployed for "Anyone". Redeploy it with that access.'
+            : html
+              ? 'The script answered with an error page (' + attempt.status + '), which ' +
+                'is what Apps Script returns when the script itself threw. Open the ' +
+                'script and check its executions.'
+              : 'The script refused the row (' + attempt.status + '): ' + attempt.answer;
     } catch (error) {
       report.sheet.test = { ok: false, error: String(error && error.message).slice(0, 200) };
       report.verdict = 'Could not reach the script at all: ' + (error && error.message);
