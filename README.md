@@ -114,7 +114,16 @@ The stated cost is real and was accepted: somebody living at an address Google
 does not have cannot apply, and will not be told why in terms they can act on.
 New construction and recently renumbered streets are the usual cases.
 
-The email address is checked for a domain that can receive mail, and a
+The applicant has to enter a code emailed to the address they typed before
+the form will send. The client asked for it knowing the cost, and for this
+form the trade reads the right way round: an application is worth a few
+minutes of somebody's patience, and every reply that bounces is a person who
+was never reached.
+
+The contact and review forms carry no code. Friction there costs more
+enquiries than it saves bounces.
+
+The email address is also checked for a domain that can receive mail, and a
 submission is refused when the domain does not exist. That catches the
 mistyped domain, which is where bounced replies come from; it says nothing
 about whether the mailbox exists, which cannot be known without sending to it.

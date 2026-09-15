@@ -1392,6 +1392,46 @@ li { margin-bottom: .4rem; }
 }
 .field-check__use:hover { color: var(--on-tint-hover); }
 
+/* Emailed verification code. Sits under the email field, quiet until it is
+   needed, and states plainly why it is being asked for — a code with no
+   explanation reads like an obstacle rather than a step. */
+.verify { margin-top: .6rem; }
+.verify__ask {
+  margin: 0 0 .5rem;
+  font-size: .8rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.verify__row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.verify__row + .verify__row { margin-top: .5rem; }
+/* A class that sets display beats the browser's own [hidden] rule, so the
+   code box stayed on screen after being told to go away. */
+.verify__row[hidden] { display: none; }
+
+.btn--small {
+  font-size: .85rem;
+  padding: .5rem .95rem;
+}
+
+.verify__code {
+  width: 7.5rem;
+  flex: none;
+  font-size: 1.05rem;
+  letter-spacing: .28em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A verified address is left visible but no longer editable, so the code
+   cannot be checked against one address and the form sent with another. */
+.verify--done .verify__row { display: none; }
+.verify--done .verify__ask { color: var(--accent-600); font-weight: 600; }
+
 .page-hero {
   padding-block: clamp(3rem, 6vw, 4.5rem) clamp(2rem, 4vw, 3rem);
   background:

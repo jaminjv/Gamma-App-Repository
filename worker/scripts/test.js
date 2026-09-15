@@ -9,6 +9,11 @@
 const target = process.argv[2] || '../src/index.js';
 const worker = (await import(target)).default;
 
+// The proofs are always minted by the source module, including when the
+// bundled build is under test — so that run also checks the two agree on
+// what a valid proof looks like.
+const verify = await import('../src/verify.js');
+
 const ENV = {
   SITE_URL: 'https://www.nixoraservices.com',
   FROM_EMAIL: 'Nixora Services <notifications@nixoraservices.com>',
@@ -86,6 +91,10 @@ const post = (fields, opts = {}) => {
   return new Request('https://nixora-forms.workers.dev/', { method: 'POST', body: fd, headers });
 };
 
+// An application carries proof that its address was verified; without it the
+// Worker refuses, which is the point of the feature.
+const proofFor = (email) => verify.makeProof(ENV, email);
+
 const APP = {
   'Position Applied For': 'Regular Cleaning', 'Full Name': 'Pepito Perez',
   email: 'pepito@ejemplo.com', Phone: '(314) 409-7141', 'Date of Birth': '1990-02-02',
@@ -95,6 +104,7 @@ const APP = {
   'Electronic Signature': 'Pepito Perez', 'Signed On': '2026-09-01',
   _subject: 'ignored by the worker', _gotcha: ''
 };
+APP['Email Verified'] = await proofFor(APP.email);
 const CONTACT = { name: 'Laura Gomez', email: 'laura@x.com', Phone: '(314) 555-4410',
   'Service Needed': 'Pressure Washing', Message: 'Quote please' };
 const REVIEW = { name: 'Carlos Ruiz', Rating: '4', 'Reviewer Type': 'Client', Message: 'Great crew' };
@@ -627,6 +637,77 @@ dohReply = mailable;
 r = await worker.fetch(new Request('https://nixora-forms.workers.dev/email/check',
   { method: 'GET' }), ENV);
 check('GET on the email check is refused', r.status === 405, r.status);
+
+// 17 — the emailed code
+const codeCall = (path, payload) => worker.fetch(new Request(
+  'https://nixora-forms.workers.dev' + path, {
+    method: 'POST', body: JSON.stringify(payload),
+    headers: { 'content-type': 'application/json', Accept: 'application/json',
+               Origin: 'https://www.nixoraservices.com' }
+  }), ENV).then((res) => res.json());
+
+dohReply = mailable;
+sent = null;
+let c = await codeCall('/email/send-code', { email: 'Pepito@Ejemplo.com' });
+check('a code is emailed', c.ok === true && sent !== null);
+check('to the address that asked for it', sent.body.to[0] === 'pepito@ejemplo.com', sent.body.to);
+check('and the subject carries it', /^\d{6} is your Nixora/.test(sent.body.subject), sent.body.subject);
+check('the browser gets a signed challenge, not the code',
+  typeof c.challenge === 'string' && !c.challenge.includes(sent.body.subject.slice(0, 6)), c.challenge);
+
+const emailedCode = sent.body.subject.slice(0, 6);
+
+let v = await codeCall('/email/verify-code',
+  { email: 'pepito@ejemplo.com', code: emailedCode, challenge: c.challenge });
+check('the right code is accepted', v.ok === true && typeof v.proof === 'string');
+
+v = await codeCall('/email/verify-code',
+  { email: 'pepito@ejemplo.com', code: '000000', challenge: c.challenge });
+check('a wrong code is refused', v.ok === false && v.reason === 'wrong');
+
+v = await codeCall('/email/verify-code',
+  { email: 'otro@ejemplo.com', code: emailedCode, challenge: c.challenge });
+check('a code cannot be moved to another address', v.ok === false);
+
+// The proof is what the form carries, and it is tied to one address.
+const goodProof = await codeCall('/email/verify-code',
+  { email: 'pepito@ejemplo.com', code: emailedCode, challenge: c.challenge });
+
+sent = null;
+r = await worker.fetch(post({ ...APP, 'Email Verified': goodProof.proof }), ENV);
+check('an application with a valid proof goes through', r.status === 200, r.status);
+
+sent = null;
+r = await worker.fetch(post({ ...APP, 'Email Verified': '' }), ENV);
+check('an application with no proof is refused', r.status === 403, r.status);
+check('and nothing was emailed', sent === null);
+
+sent = null;
+r = await worker.fetch(post({ ...APP, email: 'someone-else@ejemplo.com' }), ENV);
+check('a proof issued for another address does not travel', r.status === 403, r.status);
+
+const stale = '1700000000000.abc';
+r = await worker.fetch(post({ ...APP, 'Email Verified': stale }), ENV);
+refusal = await r.json();
+check('an expired proof says so', refusal.reason === 'expired', refusal.reason);
+
+// Contact and review carry no code: friction there costs more than it saves.
+sent = null;
+r = await worker.fetch(post(CONTACT), ENV);
+check('a contact message needs no code', r.status === 200 && sent !== null);
+sent = null;
+r = await worker.fetch(post(REVIEW), ENV);
+check('a review needs no code', r.status === 200 && sent !== null);
+
+dohReply = noSuchDomain;
+sent = null;
+c = await codeCall('/email/send-code', { email: 'pepito@noexiste-xyz.com' });
+check('no code is mailed to a domain that cannot receive it',
+  c.ok === false && sent === null, JSON.stringify(c));
+dohReply = mailable;
+
+c = await codeCall('/email/send-code', { email: 'not-an-address' });
+check('something that is not an address gets no code', c.ok === false);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

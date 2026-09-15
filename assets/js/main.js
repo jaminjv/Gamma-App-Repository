@@ -258,7 +258,12 @@
          form down with it — nobody could apply at all, and neither side
          would know why. */
       var chosenStreet = null;
-      var lookupWorks = true;
+      // Starts off, and is turned on only by a lookup that plainly worked —
+      // a well-formed answer carrying a list. Anything else, including an
+      // answer this page does not recognise, leaves the field accepting a
+      // typed address. Being strict is worth nothing next to being the
+      // reason somebody could not apply.
+      var lookupWorks = false;
 
       var ADDRESS_RULE = 'Pick your address from the list that appears as you type.';
 
@@ -399,10 +404,9 @@
             if (addressInput.value.trim() !== query) return;
             // configured:false means no key is set, which is a working state
             // for the field — it just cannot be strict about it.
-            if (data && data.configured === false) {
-              lookupWorks = false;
-              refreshAddressValidity();
-            }
+            lookupWorks = Boolean(data && data.configured !== false &&
+              Object.prototype.toString.call(data.suggestions) === '[object Array]');
+            refreshAddressValidity();
             render((data && data.suggestions) || []);
           })
           .catch(function () {
@@ -572,6 +576,33 @@
   }
 
   /* ----------------------------------------------------------------------
+     One field, two rules
+
+     The email field is refused for two unrelated reasons — a domain that
+     cannot receive mail, and an address whose code has not been entered —
+     and setCustomValidity holds exactly one message. Whichever block wrote
+     last used to win, which meant the domain check silently cleared the
+     verification requirement and let an unverified application through.
+
+     Reasons are recorded by name and the message is decided in one place.
+     ---------------------------------------------------------------------- */
+  var validityReasons = new WeakMap();
+  var REASON_ORDER = ['domain', 'verify'];
+
+  var setReason = function (input, name, message) {
+    var reasons = validityReasons.get(input) || {};
+    if (message) reasons[name] = message;
+    else delete reasons[name];
+    validityReasons.set(input, reasons);
+
+    var first = '';
+    REASON_ORDER.forEach(function (key) {
+      if (!first && reasons[key]) first = reasons[key];
+    });
+    input.setCustomValidity(first);
+  };
+
+  /* ----------------------------------------------------------------------
      Email addresses that cannot receive mail
 
      Replies were bouncing, because a mistyped domain looks perfectly valid
@@ -640,12 +671,12 @@
             // A lookup that did not answer is not evidence against an
             // address, so an unchecked result leaves the field alone.
             if (!data.checked) {
-              input.setCustomValidity('');
+              setReason(input, 'domain', '');
               return clearNote();
             }
 
             if (!data.deliverable) {
-              input.setCustomValidity(
+              setReason(input, 'domain',
                 'This email cannot receive mail — the domain "' + data.domain +
                 '" does not exist. Check the spelling.');
               input.setAttribute('aria-invalid', 'true');
@@ -653,7 +684,7 @@
                 '". Check the spelling — this is where replies would go.');
             }
 
-            input.setCustomValidity('');
+            setReason(input, 'domain', '');
             input.removeAttribute('aria-invalid');
 
             if (data.suggestion) {
@@ -669,7 +700,7 @@
             clearNote();
           })
           .catch(function () {
-            input.setCustomValidity('');
+            setReason(input, 'domain', '');
             clearNote();
           });
       };
@@ -677,10 +708,187 @@
       input.addEventListener('blur', function () { window.setTimeout(check, 150); });
       input.addEventListener('input', function () {
         // Typing clears the previous verdict; it is about text that is gone.
-        input.setCustomValidity('');
+        // Only this block's verdict — the code requirement is not ours.
+        setReason(input, 'domain', '');
         clearNote();
       });
     });
+  }
+
+  /* ----------------------------------------------------------------------
+     Proving the applicant owns the email they typed
+
+     A domain check catches a mistyped domain but says nothing about the
+     mailbox, and replies were still bouncing. So the application form emails
+     a code and asks for it back. Nothing is stored: the endpoint signs the
+     code, the page holds the signature, and the code itself only ever exists
+     in the inbox.
+
+     Only this form. A code in the way of a contact message would cost more
+     enquiries than it saves bounces — someone asking for a quote can be
+     replied to, and if the address is wrong, that is their loss to notice.
+     ---------------------------------------------------------------------- */
+  var verifyEmail = document.getElementById('a-email');
+  var verifyBox = document.getElementById('a-verify');
+
+  if (verifyEmail && verifyBox && window.fetch) {
+    var verifyForm = verifyEmail.form;
+    var verifyAction = verifyForm && verifyForm.getAttribute('action');
+
+    if (verifyAction && verifyAction.indexOf(UNCONFIGURED) === -1) {
+      var proofField = document.getElementById('a-email-proof');
+      var codeRow = document.getElementById('a-code-row');
+      var codeInput = document.getElementById('a-code');
+      var sendButton = document.getElementById('a-send-code');
+      var checkButton = document.getElementById('a-check-code');
+      var askLine = verifyBox.querySelector('.verify__ask');
+
+      var sendUrl = new URL('email/send-code', verifyAction).href;
+      var checkUrl = new URL('email/verify-code', verifyAction).href;
+
+      var challenge = null;
+      var verifiedAddress = null;
+      var sentOnce = false;
+      var ASK = askLine.textContent;
+
+      var NEEDS_CODE = 'Verify your email address — send yourself the code and enter it below.';
+
+      var refreshEmailValidity = function () {
+        var value = verifyEmail.value.trim().toLowerCase();
+        setReason(verifyEmail, 'verify',
+          !value || value === verifiedAddress ? '' : NEEDS_CODE);
+      };
+
+      var tell = function (text, kind) {
+        askLine.textContent = text;
+        verifyBox.classList.toggle('verify--done', kind === 'done');
+      };
+
+      // `next` lets the caller change the label it comes back to, so a button
+      // that has done its job once can say so instead of reverting.
+      var busy = function (button, on, label, next) {
+        button.disabled = on;
+        if (on) {
+          button.setAttribute('data-label', button.textContent.trim());
+          button.textContent = label;
+          return;
+        }
+        button.textContent = next || button.getAttribute('data-label') || button.textContent;
+      };
+
+      // The block only appears once there is a plausible address to verify,
+      // so it does not greet people as an obstacle before they have typed.
+      var showBox = function () {
+        verifyBox.hidden = !(verifyEmail.value.trim() && verifyEmail.validity.typeMismatch === false);
+      };
+
+      sendButton.addEventListener('click', function () {
+        var address = verifyEmail.value.trim();
+        if (!address) return verifyEmail.focus();
+
+        busy(sendButton, true, 'Sending…');
+        fetch(sendUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ email: address })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (!data || !data.ok) {
+              return tell((data && data.error) ||
+                'We could not send the code. Please try again in a moment.');
+            }
+            challenge = data.challenge;
+            codeRow.hidden = false;
+            sentOnce = true;
+            tell('We sent a 6-digit code to ' + address + '. It is good for 15 minutes.');
+            codeInput.focus();
+          })
+          .catch(function () {
+            tell('We could not send the code. Please check your connection and try again.');
+          })
+          .then(function () {
+            busy(sendButton, false, null, sentOnce ? 'Send again' : 'Send code');
+          });
+      });
+
+      checkButton.addEventListener('click', function () {
+        var typed = codeInput.value.replace(/\D/g, '');
+        if (typed.length !== 6) {
+          codeInput.focus();
+          return tell('Enter the 6 digits from the email.');
+        }
+
+        busy(checkButton, true, 'Checking…');
+        fetch(checkUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            email: verifyEmail.value.trim(), code: typed, challenge: challenge
+          })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (!data || !data.ok) {
+              codeInput.select();
+              return tell((data && data.error) || 'That code is not right.');
+            }
+            proofField.value = data.proof;
+            verifiedAddress = verifyEmail.value.trim().toLowerCase();
+            verifyEmail.removeAttribute('aria-invalid');
+            refreshEmailValidity();
+            tell('Email verified.', 'done');
+          })
+          .catch(function () { tell('We could not check the code. Please try again.'); })
+          .then(function () { busy(checkButton, false); });
+      });
+
+      codeInput.addEventListener('keydown', function (e) {
+        // Enter in the code box means "check this", not "submit the form".
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          checkButton.click();
+        }
+      });
+
+      verifyEmail.addEventListener('input', function () {
+        showBox();
+        // Changing the address undoes the proof: it was issued for the old
+        // one, and the endpoint will refuse it against the new one anyway.
+        if (verifyEmail.value.trim().toLowerCase() !== verifiedAddress) {
+          proofField.value = '';
+          challenge = null;
+          codeRow.hidden = true;
+          codeInput.value = '';
+          sendButton.textContent = 'Send code';
+          sentOnce = false;
+          tell(ASK);
+        }
+        refreshEmailValidity();
+      });
+
+      verifyEmail.addEventListener('blur', showBox);
+
+      // A sent application clears the form, and the block has to go back to
+      // asking rather than still reading "Email verified" over empty fields.
+      verifyForm.addEventListener('reset', function () {
+        window.setTimeout(function () {
+          verifiedAddress = null;
+          challenge = null;
+          proofField.value = '';
+          codeRow.hidden = true;
+          codeInput.value = '';
+          sendButton.textContent = 'Send code';
+          sentOnce = false;
+          tell(ASK);
+          showBox();
+          refreshEmailValidity();
+        }, 0);
+      });
+
+      showBox();
+      refreshEmailValidity();
+    }
   }
 
   /* ----------------------------------------------------------------------

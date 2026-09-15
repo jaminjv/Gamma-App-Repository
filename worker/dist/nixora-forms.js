@@ -873,6 +873,105 @@ async function checkEmail(address) {
 }
 
 /* ==========================================================================
+   Nixora Services LLC — proving an applicant owns the email they typed.
+
+   A code is emailed and typed back. Nothing is stored anywhere: the code is
+   signed, and the signature is what travels to the browser and back. The
+   browser never holds the code — that only ever reaches the inbox — and
+   cannot check a guess without the signing key, so guesses have to be made
+   one network round trip at a time.
+
+   The signing key is derived from the Resend key rather than configured
+   separately, so this needs no new setting. It is a derivation, not the key
+   itself: holding it reveals nothing about the account it came from. Set
+   VERIFY_SECRET to use something else.
+   ========================================================================== */
+
+const CODE_MINUTES = 15;      // long enough to go and look, short enough to expire
+const PROOF_HOURS = 3;        // long enough to finish a long application form
+
+const encoder = new TextEncoder();
+
+const b64url = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes)))
+  .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+async function signingKey(env) {
+  const base = String(env.VERIFY_SECRET || '').trim() ||
+    'derived:' + String(env.RESEND_API_KEY || '').trim();
+
+  return crypto.subtle.importKey(
+    'raw', encoder.encode(base), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+}
+
+async function sign(env, parts) {
+  const key = await signingKey(env);
+  return b64url(await crypto.subtle.sign('HMAC', key, encoder.encode(parts.join('|'))));
+}
+
+/* Compares without leaking, through timing, how much of the value matched. */
+function sameString(a, b) {
+  const left = String(a || '');
+  const right = String(b || '');
+  if (left.length !== right.length) return false;
+
+  let difference = 0;
+  for (let i = 0; i < left.length; i++) {
+    difference |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  }
+  return difference === 0;
+}
+
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+
+/* Six digits, drawn from the system's random source rather than Math.random.
+   Short enough to read off a phone and type, and a guess still costs a round
+   trip against an endpoint that answers one at a time. */
+function makeCode() {
+  const bytes = crypto.getRandomValues(new Uint32Array(1));
+  return String(bytes[0] % 1000000).padStart(6, '0');
+}
+
+async function makeChallenge(env, email, code) {
+  const expires = Date.now() + CODE_MINUTES * 60 * 1000;
+  const signature = await sign(env, ['code', normalizeEmail(email), code, String(expires)]);
+  return expires + '.' + signature;
+}
+
+async function checkChallenge(env, email, code, challenge) {
+  const parts = String(challenge || '').split('.');
+  if (parts.length !== 2) return { ok: false, reason: 'malformed' };
+
+  const expires = Number(parts[0]);
+  if (!expires || Date.now() > expires) return { ok: false, reason: 'expired' };
+
+  const expected = await sign(env, ['code', normalizeEmail(email), String(code || ''), parts[0]]);
+  if (!sameString(expected, parts[1])) return { ok: false, reason: 'wrong' };
+
+  return { ok: true };
+}
+
+/* What the form carries once the code has been accepted. Tied to the address
+   it was issued for, so it cannot be moved to a different one. */
+async function makeProof(env, email) {
+  const expires = Date.now() + PROOF_HOURS * 60 * 60 * 1000;
+  const signature = await sign(env, ['proof', normalizeEmail(email), String(expires)]);
+  return expires + '.' + signature;
+}
+
+async function checkProof(env, email, proof) {
+  const parts = String(proof || '').split('.');
+  if (parts.length !== 2) return { ok: false, reason: 'missing' };
+
+  const expires = Number(parts[0]);
+  if (!expires || Date.now() > expires) return { ok: false, reason: 'expired' };
+
+  const expected = await sign(env, ['proof', normalizeEmail(email), parts[0]]);
+  if (!sameString(expected, parts[1])) return { ok: false, reason: 'mismatch' };
+
+  return { ok: true };
+}
+
+/* ==========================================================================
    Nixora Services LLC — form endpoint.
 
    Receives the three site forms, renders a branded notification and hands it
@@ -889,7 +988,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-15.6';
+const BUILD = '2026-09-15.7';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -1324,6 +1423,28 @@ async function selftest(env, options) {
   return report;
 }
 
+/* The code email. Deliberately plain: the code is the whole message, and it
+   has to be readable at a glance on a phone held in the other hand. */
+function codeEmail(env, code, siteUrl) {
+  return {
+    eyebrow: 'Email verification',
+    title: code,
+    subtitle: 'is your code for the Nixora Services application form. ' +
+      'It is good for 15 minutes.',
+    subtitleText: 'is your code for the Nixora Services application form. ' +
+      'It is good for 15 minutes.',
+    actions: [],
+    sections: [],
+    signature: null,
+    logoUrl: siteUrl + '/assets/img/mail-logo.png',
+    footer: 'If you did not start an application at ' +
+      '<a href="' + escapeHtml(siteUrl) + '/apply.html" style="color:#054a8b;">nixoraservices.com</a>, ' +
+      'you can ignore this email — nothing was submitted.',
+    footerText: 'If you did not start an application at ' + siteUrl +
+      '/apply.html, you can ignore this email — nothing was submitted.'
+  };
+}
+
 export default {
   async fetch(request, env) {
     const cors = corsHeaders(request, env);
@@ -1404,6 +1525,72 @@ export default {
       return json({ ok: true, ...(await checkEmail(payload.email)) }, 200, cors);
     }
 
+    /* Emails a code, and checks it back. Nothing is stored: the code travels
+       signed, and the signature is what the browser holds. */
+    if (url.pathname === '/email/send-code' || url.pathname === '/email/verify-code') {
+      if (request.method !== 'POST') {
+        return json({ ok: false, error: 'Send this with POST.' }, 405, cors);
+      }
+      if (origin && !originAllowed(request, env)) {
+        return json({ ok: false, error: 'Origin not allowed.' }, 403, cors);
+      }
+
+      let payload = {};
+      try { payload = await request.json(); } catch (ignored) { /* empty */ }
+
+      const address = normalizeEmail(payload.email);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+        return json({ ok: false, error: 'That does not look like an email address.' }, 200, cors);
+      }
+
+      if (url.pathname === '/email/verify-code') {
+        const typed = String(payload.code || '').replace(/\D/g, '');
+        const result = await checkChallenge(env, address, typed, payload.challenge);
+        if (!result.ok) {
+          return json({
+            ok: false,
+            reason: result.reason,
+            error: result.reason === 'expired'
+              ? 'That code has expired. Send yourself a new one.'
+              : 'That code is not right. Check the email and try again.'
+          }, 200, cors);
+        }
+        return json({ ok: true, proof: await makeProof(env, address) }, 200, cors);
+      }
+
+      // No point mailing a code to a domain that cannot receive mail.
+      const reachable = await checkEmail(address);
+      if (reachable.checked && !reachable.deliverable) {
+        return json({
+          ok: false,
+          error: 'That domain cannot receive mail, so the code would bounce.',
+          domain: reachable.domain
+        }, 200, cors);
+      }
+
+      const code = makeCode();
+      const siteUrl = String(env.SITE_URL || 'https://www.nixoraservices.com').replace(/\/$/, '');
+
+      try {
+        await send(env, {
+          to: address,
+          replyTo: '',
+          subject: code + ' is your Nixora Services verification code',
+          html: renderEmail(codeEmail(env, code, siteUrl)),
+          text: renderText(codeEmail(env, code, siteUrl))
+        });
+      } catch (error) {
+        console.error('Verification code failed to send:', error && error.message);
+        return json({
+          ok: false,
+          error: 'We could not send the code. Please try again in a moment.',
+          detail: error && error.detail
+        }, 200, cors);
+      }
+
+      return json({ ok: true, challenge: await makeChallenge(env, address, code) }, 200, cors);
+    }
+
     if (url.pathname === '/selftest') {
       // ?send=1 posts one real message to the configured recipient. The
       // recipient never comes from the request, so this cannot be pointed at
@@ -1461,6 +1648,23 @@ export default {
     if (!to || !env.FROM_EMAIL || !cleanKey(env.RESEND_API_KEY)) {
       console.error('Worker is missing TO_EMAIL, FROM_EMAIL or RESEND_API_KEY.');
       return json({ ok: false, error: 'The form endpoint is not configured.' }, 500, cors);
+    }
+
+    /* An application has to carry proof that its email was verified. The
+       contact and review forms do not: those are people writing in, and a
+       code in the way of an enquiry costs more than it saves. */
+    if (type === 'application') {
+      const proof = await checkProof(env, form.get('email'), form.get('Email Verified'));
+      if (!proof.ok) {
+        console.error('Application without a verified email:', proof.reason);
+        return json({
+          ok: false,
+          error: proof.reason === 'expired'
+            ? 'Your email verification has expired. Verify it again and resend.'
+            : 'This application needs a verified email address.',
+          reason: proof.reason
+        }, 403, cors);
+      }
     }
 
     const spec = buildSpec(form, type);

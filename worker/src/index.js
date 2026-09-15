@@ -14,6 +14,8 @@ import { detectFormType, buildSpec, sheetRow } from './forms.js';
 import { suggest, details } from './places.js';
 import { lookupZip, verifyAddress } from './address.js';
 import { checkEmail } from './email-check.js';
+import { makeCode, makeChallenge, checkChallenge, makeProof, checkProof, normalizeEmail }
+  from './verify.js';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
@@ -21,7 +23,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-15.6';
+const BUILD = '2026-09-15.7';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -456,6 +458,28 @@ async function selftest(env, options) {
   return report;
 }
 
+/* The code email. Deliberately plain: the code is the whole message, and it
+   has to be readable at a glance on a phone held in the other hand. */
+function codeEmail(env, code, siteUrl) {
+  return {
+    eyebrow: 'Email verification',
+    title: code,
+    subtitle: 'is your code for the Nixora Services application form. ' +
+      'It is good for 15 minutes.',
+    subtitleText: 'is your code for the Nixora Services application form. ' +
+      'It is good for 15 minutes.',
+    actions: [],
+    sections: [],
+    signature: null,
+    logoUrl: siteUrl + '/assets/img/mail-logo.png',
+    footer: 'If you did not start an application at ' +
+      '<a href="' + escapeHtml(siteUrl) + '/apply.html" style="color:#054a8b;">nixoraservices.com</a>, ' +
+      'you can ignore this email — nothing was submitted.',
+    footerText: 'If you did not start an application at ' + siteUrl +
+      '/apply.html, you can ignore this email — nothing was submitted.'
+  };
+}
+
 export default {
   async fetch(request, env) {
     const cors = corsHeaders(request, env);
@@ -536,6 +560,72 @@ export default {
       return json({ ok: true, ...(await checkEmail(payload.email)) }, 200, cors);
     }
 
+    /* Emails a code, and checks it back. Nothing is stored: the code travels
+       signed, and the signature is what the browser holds. */
+    if (url.pathname === '/email/send-code' || url.pathname === '/email/verify-code') {
+      if (request.method !== 'POST') {
+        return json({ ok: false, error: 'Send this with POST.' }, 405, cors);
+      }
+      if (origin && !originAllowed(request, env)) {
+        return json({ ok: false, error: 'Origin not allowed.' }, 403, cors);
+      }
+
+      let payload = {};
+      try { payload = await request.json(); } catch (ignored) { /* empty */ }
+
+      const address = normalizeEmail(payload.email);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+        return json({ ok: false, error: 'That does not look like an email address.' }, 200, cors);
+      }
+
+      if (url.pathname === '/email/verify-code') {
+        const typed = String(payload.code || '').replace(/\D/g, '');
+        const result = await checkChallenge(env, address, typed, payload.challenge);
+        if (!result.ok) {
+          return json({
+            ok: false,
+            reason: result.reason,
+            error: result.reason === 'expired'
+              ? 'That code has expired. Send yourself a new one.'
+              : 'That code is not right. Check the email and try again.'
+          }, 200, cors);
+        }
+        return json({ ok: true, proof: await makeProof(env, address) }, 200, cors);
+      }
+
+      // No point mailing a code to a domain that cannot receive mail.
+      const reachable = await checkEmail(address);
+      if (reachable.checked && !reachable.deliverable) {
+        return json({
+          ok: false,
+          error: 'That domain cannot receive mail, so the code would bounce.',
+          domain: reachable.domain
+        }, 200, cors);
+      }
+
+      const code = makeCode();
+      const siteUrl = String(env.SITE_URL || 'https://www.nixoraservices.com').replace(/\/$/, '');
+
+      try {
+        await send(env, {
+          to: address,
+          replyTo: '',
+          subject: code + ' is your Nixora Services verification code',
+          html: renderEmail(codeEmail(env, code, siteUrl)),
+          text: renderText(codeEmail(env, code, siteUrl))
+        });
+      } catch (error) {
+        console.error('Verification code failed to send:', error && error.message);
+        return json({
+          ok: false,
+          error: 'We could not send the code. Please try again in a moment.',
+          detail: error && error.detail
+        }, 200, cors);
+      }
+
+      return json({ ok: true, challenge: await makeChallenge(env, address, code) }, 200, cors);
+    }
+
     if (url.pathname === '/selftest') {
       // ?send=1 posts one real message to the configured recipient. The
       // recipient never comes from the request, so this cannot be pointed at
@@ -593,6 +683,23 @@ export default {
     if (!to || !env.FROM_EMAIL || !cleanKey(env.RESEND_API_KEY)) {
       console.error('Worker is missing TO_EMAIL, FROM_EMAIL or RESEND_API_KEY.');
       return json({ ok: false, error: 'The form endpoint is not configured.' }, 500, cors);
+    }
+
+    /* An application has to carry proof that its email was verified. The
+       contact and review forms do not: those are people writing in, and a
+       code in the way of an enquiry costs more than it saves. */
+    if (type === 'application') {
+      const proof = await checkProof(env, form.get('email'), form.get('Email Verified'));
+      if (!proof.ok) {
+        console.error('Application without a verified email:', proof.reason);
+        return json({
+          ok: false,
+          error: proof.reason === 'expired'
+            ? 'Your email verification has expired. Verify it again and resend.'
+            : 'This application needs a verified email address.',
+          reason: proof.reason
+        }, 403, cors);
+      }
     }
 
     const spec = buildSpec(form, type);

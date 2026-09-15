@@ -204,6 +204,30 @@
             <div class="field">
               <label for="a-email">Email <span class="req" aria-hidden="true">*</span></label>
               <input id="a-email" name="email" type="email" autocomplete="email" required placeholder="you@email.com">
+
+              <!-- Filled in by the script once the emailed code is accepted.
+                   The endpoint refuses an application without it. -->
+              <input type="hidden" name="Email Verified" id="a-email-proof">
+
+              <div class="verify" id="a-verify" hidden>
+                <p class="verify__ask">
+                  We will email you a 6-digit code to confirm this address.
+                  Replies about your application go there.
+                </p>
+                <div class="verify__row">
+                  <button class="btn btn--ghost btn--small" type="button" id="a-send-code">
+                    Send code
+                  </button>
+                </div>
+                <div class="verify__row" id="a-code-row" hidden>
+                  <label class="sr-only" for="a-code">Verification code</label>
+                  <input id="a-code" type="text" inputmode="numeric" autocomplete="one-time-code"
+                         maxlength="6" placeholder="000000" class="verify__code">
+                  <button class="btn btn--primary btn--small" type="button" id="a-check-code">
+                    Verify
+                  </button>
+                </div>
+              </div>
             </div>
             <div class="field">
               <label for="a-phone">Phone <span class="req" aria-hidden="true">*</span></label>

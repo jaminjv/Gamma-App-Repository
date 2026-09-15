@@ -185,6 +185,34 @@ this catches.
 A lookup that does not answer leaves the field alone: a DNS query that timed
 out is not evidence against somebody's email address.
 
+## Proving the applicant owns the email
+
+The application form emails a 6-digit code and asks for it back. The endpoint
+refuses an application that does not carry proof the code was entered.
+
+Nothing is stored. `/email/send-code` signs `email + code + expiry` and returns
+the signature; the page holds that, never the code, which only ever reaches
+the inbox. `/email/verify-code` recomputes the signature over what was typed
+and, on a match, returns a second signature tied to that address — which the
+form sends as `Email Verified` and the Worker checks before accepting.
+
+So a code cannot be checked offline (the signing key is not in the page), and
+a proof cannot be moved to a different address (it is signed with the one it
+was issued for). Codes last 15 minutes, proofs 3 hours.
+
+The signing key is derived from `RESEND_API_KEY` rather than configured, so
+this needs no new setting. It is a derivation, not the key: holding it reveals
+nothing about the Resend account. Set `VERIFY_SECRET` to use something else.
+
+**Only the application form.** A code in the way of a contact message would
+cost more enquiries than it saves bounces — the tests assert that contact and
+review still go through without one.
+
+Guessing has to happen one network round trip at a time, which for six digits
+is impractical but not impossible. If that ever matters, a rate-limiting rule
+in the Cloudflare dashboard (**Security → WAF → Rate limiting rules**) is the
+place to put the ceiling.
+
 ## Address help without an account
 
 Two public services carry this, and neither needs a key, a project or a card:
@@ -294,6 +322,7 @@ otherwise be executed as a formula being pinned to text.
 | `TO_APPLICATIONS`, `TO_CONTACT`, `TO_REVIEWS` | Optional per-form inboxes. Remove one to fall back to `TO_EMAIL` |
 | `ALLOWED_ORIGINS` | Comma-separated list of sites allowed to post. Anything else is refused, so the endpoint cannot be used as a free mailer |
 | `GOOGLE_PLACES_KEY` | **Secret**. Places API (New) key for the address suggestions. Unset turns them off |
+| `VERIFY_SECRET` | Optional **Secret**. Signs the emailed verification codes; derived from `RESEND_API_KEY` when unset |
 | `SHEET_WEBHOOK_URL` | Apps Script Web App URL. Empty turns the spreadsheet off |
 | `SHEET_TOKEN` | **Secret**. Must match `SHARED_TOKEN` in `google-apps-script.gs` |
 | `RESEND_API_KEY` | **Secret**, never in this file. Set with `wrangler secret put`, or as a Secret under Settings → Variables and Secrets |
@@ -421,6 +450,7 @@ worker/
   src/places.js         address lookup, proxied so the Google key stays secret
   src/address.js        ZIP and address checks that need no account at all
   src/email-check.js    whether an email domain can receive mail
+  src/verify.js         the emailed code, signed rather than stored
   src/email.js          the HTML and plain-text template
   scripts/preview.js    renders samples locally, sends nothing
   scripts/test.js       exercises the Worker with the Resend call stubbed
