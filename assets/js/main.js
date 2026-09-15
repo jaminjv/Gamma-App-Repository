@@ -179,6 +179,103 @@
   });
 
   /* ----------------------------------------------------------------------
+     Language
+
+     A real Spanish version rather than the browser's, which turned the ZIP
+     label into "cremallera" and made a mess of the state names. The English
+     text stays in the markup and is the default; the Spanish rides along in
+     data-es attributes and is swapped in.
+
+     What the form *submits* never changes. Option values stay English, so
+     the email, the spreadsheet and the endpoint's field names are the same
+     whichever language the applicant read.
+     ---------------------------------------------------------------------- */
+  var LANG_KEY = 'nixora-lang';
+  var langToggle = document.getElementById('langToggle');
+
+  // Filled the first time Spanish is applied, so English survives the swap.
+  var englishText = new WeakMap();
+  var englishPlaceholder = new WeakMap();
+
+  var applyLanguage = function (lang) {
+    var spanish = lang === 'es';
+    document.documentElement.setAttribute('lang', spanish ? 'es' : 'en');
+
+    document.querySelectorAll('[data-es]').forEach(function (el) {
+      if (!englishText.has(el)) englishText.set(el, el.textContent);
+      el.textContent = spanish ? el.getAttribute('data-es') : englishText.get(el);
+    });
+
+    document.querySelectorAll('[data-es-ph]').forEach(function (el) {
+      if (!englishPlaceholder.has(el)) englishPlaceholder.set(el, el.placeholder);
+      el.placeholder = spanish ? el.getAttribute('data-es-ph') : englishPlaceholder.get(el);
+    });
+
+    if (langToggle) {
+      langToggle.setAttribute('aria-label',
+        spanish ? 'Switch to English' : 'Cambiar a español');
+    }
+  };
+
+  // Spanish by default for a browser set to Spanish — most applicants are
+  // Spanish-speaking, and the point is that nobody has to go looking.
+  var storedLang = null;
+  try { storedLang = localStorage.getItem(LANG_KEY); } catch (e) { /* private mode */ }
+
+  var startingLang = storedLang ||
+    (String(navigator.language || '').toLowerCase().indexOf('es') === 0 ? 'es' : 'en');
+
+  if (langToggle) {
+    applyLanguage(startingLang);
+
+    langToggle.addEventListener('click', function () {
+      var next = document.documentElement.getAttribute('lang') === 'es' ? 'en' : 'es';
+      applyLanguage(next);
+      try { localStorage.setItem(LANG_KEY, next); } catch (e) { /* private mode */ }
+    });
+  }
+
+  /* The handful of sentences the script writes rather than the markup. Keyed
+     by the English, so a string with no translation still reads correctly. */
+  var SPANISH = {
+    'Sending…': 'Enviando…',
+    'Thank you — your message has been sent. We will be in touch within one business day.':
+      'Gracias — tu mensaje fue enviado. Te contactaremos dentro de un día hábil.',
+    'One thing is still missing: ': 'Falta una cosa: ',
+    'Please complete ': 'Completa ',
+    ' and ': ' y ',
+    ' more': ' más',
+    'Pick your address from the list that appears as you type.':
+      'Elige tu dirección de la lista que aparece mientras escribes.',
+    'Verify your email address — send yourself the code and enter it below.':
+      'Verifica tu correo — envíate el código e ingrésalo abajo.',
+    'Address confirmed.': 'Dirección confirmada.',
+    'We could not confirm this address. Check it, or leave it as it is if you know it is right.':
+      'No pudimos confirmar esta dirección. Revísala, o déjala así si sabes que es correcta.',
+    'Use this': 'Usar esta',
+    'Did you mean ': '¿Quisiste decir ',
+    'Something went wrong sending the form. Please email us directly at ':
+      'Algo salió mal al enviar el formulario. Escríbenos directamente a ',
+    'Checking…': 'Comprobando…',
+    'Send code': 'Enviar código',
+    'Send again': 'Enviar de nuevo',
+    'Email verified.': 'Correo verificado.',
+    'Enter the 6 digits from the email.': 'Ingresa los 6 dígitos del correo.',
+    'That code is not right.': 'Ese código no es correcto.',
+    'We could not send the code. Please try again in a moment.':
+      'No pudimos enviar el código. Inténtalo de nuevo en un momento.',
+    'We could not send the code. Please check your connection and try again.':
+      'No pudimos enviar el código. Revisa tu conexión e inténtalo de nuevo.',
+    'We could not check the code. Please try again.':
+      'No pudimos comprobar el código. Inténtalo de nuevo.'
+  };
+
+  var t = function (text) {
+    if (document.documentElement.getAttribute('lang') !== 'es') return text;
+    return SPANISH[text] || text;
+  };
+
+  /* ----------------------------------------------------------------------
      Date fields
 
      A date input's placeholder is drawn by the browser from the operating
@@ -272,7 +369,7 @@
         var value = addressInput.value.trim();
         // An empty field is already caught by `required`, which says it better.
         if (!value) return addressInput.setCustomValidity('');
-        addressInput.setCustomValidity(value === chosenStreet ? '' : ADDRESS_RULE);
+        addressInput.setCustomValidity(value === chosenStreet ? '' : t(ADDRESS_RULE));
       };
       // One token covers the typing and the pick that follows, which Google
       // bills as a single lookup rather than one per keystroke.
@@ -477,7 +574,7 @@
           var button = document.createElement('button');
           button.type = 'button';
           button.className = 'field-check__use';
-          button.textContent = 'Use this';
+          button.textContent = t('Use this');
           button.addEventListener('click', action);
           note.appendChild(document.createTextNode(' '));
           note.appendChild(button);
@@ -544,15 +641,15 @@
 
             if (!data.verified) {
               return showNote('warn',
-                'We could not confirm this address. Check it, or leave it as it is if you know it is right.');
+                t('We could not confirm this address. Check it, or leave it as it is if you know it is right.'));
             }
 
             var found = data.address;
             if (sameAddress(found.street, street)) {
-              return showNote('ok', 'Address confirmed.');
+              return showNote('ok', t('Address confirmed.'));
             }
 
-            showNote('info', 'Did you mean ' + found.formatted + '?', function () {
+            showNote('info', t('Did you mean ') + found.formatted + '?', function () {
               setField('a-address', found.street);
               setField('a-city', found.city);
               setField('a-zip', found.zip);
@@ -562,7 +659,7 @@
                 });
                 if (match) stateInput.value = match.value;
               }
-              showNote('ok', 'Address confirmed.');
+              showNote('ok', t('Address confirmed.'));
             });
           })
           .catch(function () { hideNote(); });
@@ -638,14 +735,14 @@
         note.textContent = '';
       };
 
-      var say = function (kind, text, fix) {
+      var announce = function (kind, text, fix) {
         note.className = 'field-check field-check--' + kind;
         note.textContent = text;
         if (fix) {
           var button = document.createElement('button');
           button.type = 'button';
           button.className = 'field-check__use';
-          button.textContent = 'Use this';
+          button.textContent = t('Use this');
           button.addEventListener('click', fix);
           note.appendChild(document.createTextNode(' '));
           note.appendChild(button);
@@ -676,12 +773,17 @@
             }
 
             if (!data.deliverable) {
-              setReason(input, 'domain',
-                'This email cannot receive mail — the domain "' + data.domain +
-                '" does not exist. Check the spelling.');
+              setReason(input, 'domain', document.documentElement.getAttribute('lang') === 'es'
+                ? 'Este correo no puede recibir mensajes — el dominio "' + data.domain +
+                  '" no existe. Revisa que esté bien escrito.'
+                : 'This email cannot receive mail — the domain "' + data.domain +
+                  '" does not exist. Check the spelling.');
               input.setAttribute('aria-invalid', 'true');
-              return say('warn', 'We cannot deliver to "' + data.domain +
-                '". Check the spelling — this is where replies would go.');
+              return announce('warn', document.documentElement.getAttribute('lang') === 'es'
+                ? 'No podemos entregar a "' + data.domain +
+                  '". Revisa que esté bien escrito — ahí llegarían las respuestas.'
+                : 'We cannot deliver to "' + data.domain +
+                  '". Check the spelling — this is where replies would go.');
             }
 
             setReason(input, 'domain', '');
@@ -689,7 +791,7 @@
 
             if (data.suggestion) {
               var fixed = value.replace(/@.*$/, '@' + data.suggestion);
-              return say('info', 'Did you mean ' + fixed + '?', function () {
+              return announce('info', t('Did you mean ') + fixed + '?', function () {
                 input.value = fixed;
                 lastChecked = '';
                 clearNote();
@@ -756,7 +858,7 @@
       var refreshEmailValidity = function () {
         var value = verifyEmail.value.trim().toLowerCase();
         setReason(verifyEmail, 'verify',
-          !value || value === verifiedAddress ? '' : NEEDS_CODE);
+          !value || value === verifiedAddress ? '' : t(NEEDS_CODE));
       };
 
       var tell = function (text, kind) {
@@ -786,7 +888,7 @@
         var address = verifyEmail.value.trim();
         if (!address) return verifyEmail.focus();
 
-        busy(sendButton, true, 'Sending…');
+        busy(sendButton, true, t('Sending…'));
         fetch(sendUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -796,19 +898,21 @@
           .then(function (data) {
             if (!data || !data.ok) {
               return tell((data && data.error) ||
-                'We could not send the code. Please try again in a moment.');
+                t('We could not send the code. Please try again in a moment.'));
             }
             challenge = data.challenge;
             codeRow.hidden = false;
             sentOnce = true;
-            tell('We sent a 6-digit code to ' + address + '. It is good for 15 minutes.');
+            tell(document.documentElement.getAttribute('lang') === 'es'
+              ? 'Enviamos un código de 6 dígitos a ' + address + '. Es válido por 15 minutos.'
+              : 'We sent a 6-digit code to ' + address + '. It is good for 15 minutes.');
             codeInput.focus();
           })
           .catch(function () {
-            tell('We could not send the code. Please check your connection and try again.');
+            tell(t('We could not send the code. Please check your connection and try again.'));
           })
           .then(function () {
-            busy(sendButton, false, null, sentOnce ? 'Send again' : 'Send code');
+            busy(sendButton, false, null, t(sentOnce ? 'Send again' : 'Send code'));
           });
       });
 
@@ -816,10 +920,10 @@
         var typed = codeInput.value.replace(/\D/g, '');
         if (typed.length !== 6) {
           codeInput.focus();
-          return tell('Enter the 6 digits from the email.');
+          return tell(t('Enter the 6 digits from the email.'));
         }
 
-        busy(checkButton, true, 'Checking…');
+        busy(checkButton, true, t('Checking…'));
         fetch(checkUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -831,15 +935,15 @@
           .then(function (data) {
             if (!data || !data.ok) {
               codeInput.select();
-              return tell((data && data.error) || 'That code is not right.');
+              return tell((data && data.error) || t('That code is not right.'));
             }
             proofField.value = data.proof;
             verifiedAddress = verifyEmail.value.trim().toLowerCase();
             verifyEmail.removeAttribute('aria-invalid');
             refreshEmailValidity();
-            tell('Email verified.', 'done');
+            tell(t('Email verified.'), 'done');
           })
-          .catch(function () { tell('We could not check the code. Please try again.'); })
+          .catch(function () { tell(t('We could not check the code. Please try again.')); })
           .then(function () { busy(checkButton, false); });
       });
 
@@ -860,7 +964,7 @@
           challenge = null;
           codeRow.hidden = true;
           codeInput.value = '';
-          sendButton.textContent = 'Send code';
+          sendButton.textContent = t('Send code');
           sentOnce = false;
           tell(ASK);
         }
@@ -878,7 +982,7 @@
           proofField.value = '';
           codeRow.hidden = true;
           codeInput.value = '';
-          sendButton.textContent = 'Send code';
+          sendButton.textContent = t('Send code');
           sentOnce = false;
           tell(ASK);
           showBox();
@@ -931,10 +1035,11 @@
 
   // Reads as a sentence rather than a dump: three names at most, then a count.
   var listNames = function (names) {
+    var and = t(' and ');
     if (names.length === 1) return names[0];
-    if (names.length === 2) return names[0] + ' and ' + names[1];
-    if (names.length <= 3) return names[0] + ', ' + names[1] + ' and ' + names[2];
-    return names.slice(0, 3).join(', ') + ' and ' + (names.length - 3) + ' more';
+    if (names.length === 2) return names[0] + and + names[1];
+    if (names.length <= 3) return names[0] + ', ' + names[1] + and + names[2];
+    return names.slice(0, 3).join(', ') + and + (names.length - 3) + t(' more');
   };
 
   // Builds a readable mailto: body from the form fields — the fallback path
@@ -1001,8 +1106,8 @@
         showStatus(form, 'err', explained.length
           ? endSentence(explained[0].validationMessage)
           : endSentence(missing.length === 1
-              ? 'One thing is still missing: ' + fieldLabel(form, missing[0])
-              : 'Please complete ' + listNames(missing.map(function (el) {
+              ? t('One thing is still missing: ') + fieldLabel(form, missing[0])
+              : t('Please complete ') + listNames(missing.map(function (el) {
                   return fieldLabel(form, el);
                 }))));
 
@@ -1054,7 +1159,7 @@
       var originalLabel = submitBtn ? submitBtn.textContent : '';
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Sending…';
+        submitBtn.textContent = t('Sending…');
       }
 
       fetch(action, {
@@ -1073,14 +1178,14 @@
         })
         .then(function () {
           form.reset();
-          showStatus(form, 'ok', 'Thank you — your message has been sent. We will be in touch within one business day.');
+          showStatus(form, 'ok', t('Thank you — your message has been sent. We will be in touch within one business day.'));
         })
         .catch(function (error) {
           if (window.console && console.error) {
             console.error('[nixora] form submission failed:', action, error && error.message ? error.message : error);
           }
           showStatus(form, 'err',
-            'Something went wrong sending the form. Please email us directly at ' + FALLBACK_EMAIL + '.');
+            t('Something went wrong sending the form. Please email us directly at ') + FALLBACK_EMAIL + '.');
         })
         .then(function () {
           if (submitBtn) {

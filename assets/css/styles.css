@@ -1444,6 +1444,35 @@ li { margin-bottom: .4rem; }
 .verify--done .verify__row { display: none; }
 .verify--done .verify__ask { color: var(--accent-600); font-weight: 600; }
 
+/* Language switch. Both codes are always visible, one lit: a flag would
+   claim a country the language does not belong to, and a globe icon says
+   "settings" more than it says "español". */
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  font-family: var(--font-display);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  padding: .42rem .6rem;
+  border: 1.5px solid var(--line);
+  border-radius: 100px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color .16s ease, color .16s ease;
+}
+.lang-toggle:hover { border-color: var(--brand-400); }
+.lang-toggle__on { color: var(--on-tint); }
+.lang-toggle__off { color: var(--muted); }
+:root[lang="es"] .lang-toggle__on { color: var(--muted); }
+:root[lang="es"] .lang-toggle__off { color: var(--on-tint); }
+
+@media (max-width: 420px) {
+  .lang-toggle { padding: .42rem .5rem; font-size: .72rem; }
+}
+
 .page-hero {
   padding-block: clamp(3rem, 6vw, 4.5rem) clamp(2rem, 4vw, 3rem);
   background:

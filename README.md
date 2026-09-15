@@ -27,7 +27,7 @@ apply.html          Job application form (pre-selects the role via ?role=)
 thank-you.html      Post-submission confirmation page
 team.html           Staff-only shortcuts into Google Workspace (noindex)
 assets/css/styles.css   All styling (design tokens at the top)
-assets/js/main.js       Navigation, scroll reveal, form handling
+assets/js/main.js       Navigation, scroll reveal, English/Spanish switch, form handling
 assets/img/             Logo lockup (light + dark), wave mark, social-share image
 robots.txt, sitemap.xml SEO
 .nojekyll               Tells GitHub Pages to serve files as-is
@@ -147,6 +147,44 @@ identity documents belong behind a login, not in a mailbox. Both are post-offer
 paperwork — they are collected with the I-9 and W-4, from someone who has
 already been hired, not from every stranger who fills in a public form. See the
 note in the commit history before adding either.
+
+### English and Spanish
+
+The form carries its own `EN / ES` switch in the header, next to the theme
+toggle. It starts in Spanish when the browser asks for Spanish, remembers the
+choice in `localStorage` under `nixora-lang`, and sets `lang` on `<html>` so
+the CSS can show which side is active.
+
+It exists because browser auto-translation mangles this particular form.
+Chrome renders the ZIP Code label as *CREMALLERA* — the zipper — and mistranslates
+several state names in the dropdown. Most applicants are Spanish speakers, so
+the page they see by default is the one the machine got wrong.
+
+The translation is attribute-driven: `data-es` on an element holds its Spanish
+text, `data-es-ph` holds a Spanish placeholder. Switching back to English
+restores the original text from a `WeakMap` captured on first use, so nothing
+is lost and no English string has to be duplicated in the markup.
+
+**The submitted values stay in English.** Only the labels, hints, buttons and
+messages change; every `<option value="...">` keeps its English value, so the
+email and the spreadsheet read the same whichever language the applicant used.
+The `#a-state` select is also marked `translate="no"`, which stops the browser
+translating the state names even when the page is left in English.
+
+The runtime messages — validation, verification, address errors — go through a
+small `t()` lookup against a `SPANISH` dictionary in `assets/js/main.js`. To add
+a message, add the English string to that dictionary; anything missing falls
+through to English rather than breaking.
+
+### Apply buttons
+
+Every Apply link on the site points at `apply.html#apply-form`, the form itself,
+not the page top or the `#careers` list. The role buttons keep their query
+string — `apply.html?role=green-team#apply-form`. On a phone, landing anywhere
+above the form means scrolling past the whole page before being able to type.
+
+The one exception is *View Open Positions*, which still goes to `#careers`,
+because it is not an Apply button.
 
 ---
 
