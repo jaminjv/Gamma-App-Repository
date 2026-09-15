@@ -91,6 +91,10 @@ function applicationSpec(form) {
       title: 'Applicant',
       rows: rows([
         ['Email', email ? mailLink(email) : '', email],
+        // Also in the table, not only on the button above: a number inside a
+        // tel: link cannot be selected with the cursor, and it gets copied
+        // and pasted elsewhere more often than it gets tapped.
+        textRow('Phone', phone),
         textRow('Date of birth', formatDate(get(form, A.dob))),
         ['Address', address.map(escapeHtml).join('<br>'), address.join(', ')],
         ['Emergency contact',

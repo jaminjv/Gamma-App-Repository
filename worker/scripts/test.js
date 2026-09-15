@@ -23,8 +23,9 @@ const SHEET_URL = 'https://script.google.com/macros/s/deadbeef/exec';
 const SHEET_RESULT = 'https://script.googleusercontent.com/macros/echo?key=deadbeef';
 const realFetch = globalThis.fetch;
 let placesCall = null, placesFails = false;
-let censusReply = null, zipReply = null, resultGone = false;
+let censusReply = null, zipReply = null, resultGone = false, dohReply = null;
 globalThis.fetch = async (url, init) => {
+  if (String(url).includes('cloudflare-dns.com')) return dohReply(String(url));
   if (String(url).includes('geocoding.geo.census.gov')) return censusReply();
   if (String(url).includes('zippopotam.us')) return zipReply();
   if (String(url).includes('places.googleapis.com')) {
@@ -590,6 +591,42 @@ check('an empty address is never sent anywhere', a.checked === false);
 r = await worker.fetch(new Request('https://nixora-forms.workers.dev/address/zip',
   { method: 'GET' }), ENV);
 check('GET on the address help is refused', r.status === 405, r.status);
+
+// 16 — email addresses that cannot receive mail
+const mailable = () => new Response(JSON.stringify({
+  Status: 0, Answer: [{ type: 15, data: '10 mx.example.com.' }] }), { status: 200 });
+const noSuchDomain = () => new Response(JSON.stringify({ Status: 3 }), { status: 200 });
+
+dohReply = mailable;
+let e = await addr('/email/check', { email: 'pepito@gmail.com' });
+check('a domain that takes mail is deliverable',
+  e.checked === true && e.deliverable === true, JSON.stringify(e));
+check('and gets no correction', e.suggestion === '');
+
+dohReply = noSuchDomain;
+e = await addr('/email/check', { email: 'pepito@noexiste-xyz.com' });
+check('a domain that does not exist is not deliverable',
+  e.checked === true && e.deliverable === false, JSON.stringify(e));
+check('and the domain is named back', e.domain === 'noexiste-xyz.com');
+
+dohReply = mailable;
+e = await addr('/email/check', { email: 'pepito@gmial.com' });
+check('a near-miss of a common domain is corrected', e.suggestion === 'gmail.com', e.suggestion);
+e = await addr('/email/check', { email: 'junior@nixoraservices.com' });
+check('a real domain that is nobody\'s typo is left alone', e.suggestion === '', e.suggestion);
+
+e = await addr('/email/check', { email: 'not-an-address' });
+check('something that is not an address is not looked up', e.checked === false);
+
+dohReply = () => { throw new Error('DNS unreachable'); };
+e = await addr('/email/check', { email: 'pepito@gmail.com' });
+check('a lookup that fails is not evidence against the address',
+  e.ok === true && e.checked === false, JSON.stringify(e));
+dohReply = mailable;
+
+r = await worker.fetch(new Request('https://nixora-forms.workers.dev/email/check',
+  { method: 'GET' }), ENV);
+check('GET on the email check is refused', r.status === 405, r.status);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

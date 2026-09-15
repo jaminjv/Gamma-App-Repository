@@ -323,6 +323,10 @@ function applicationSpec(form) {
       title: 'Applicant',
       rows: rows([
         ['Email', email ? mailLink(email) : '', email],
+        // Also in the table, not only on the button above: a number inside a
+        // tel: link cannot be selected with the cursor, and it gets copied
+        // and pasted elsewhere more often than it gets tapped.
+        textRow('Phone', phone),
         textRow('Date of birth', formatDate(get(form, A.dob))),
         ['Address', address.map(escapeHtml).join('<br>'), address.join(', ')],
         ['Emergency contact',
@@ -772,6 +776,103 @@ async function verifyAddress({ street, city, state, zip }) {
 }
 
 /* ==========================================================================
+   Nixora Services LLC — is this address able to receive mail at all?
+
+   Two free checks, in order of certainty:
+
+     · the domain has MX records, so mail sent there has somewhere to go
+     · the domain is not a near-miss of a common one (gmial.com, hotmial.com)
+
+   Neither proves the mailbox exists. Nothing does, short of sending to it or
+   paying a verification service — so this catches the mistyped domain, which
+   is where most bounces come from, and says nothing about the part before
+   the @.
+   ========================================================================== */
+
+const DOH = 'https://cloudflare-dns.com/dns-query';
+
+/* Domains people mean, and the misspellings that reach them as bounces.
+   Only near-misses of addresses that are typed thousands of times a day —
+   a general-purpose spell checker would start "correcting" real domains. */
+const COMMON = [
+  'gmail.com', 'googlemail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
+  'live.com', 'icloud.com', 'me.com', 'aol.com', 'comcast.net', 'att.net',
+  'sbcglobal.net', 'verizon.net', 'msn.com', 'protonmail.com'
+];
+
+/* Levenshtein, bounded: anything more than two edits away is a different
+   domain rather than a typo of this one. */
+function editDistance(a, b, limit) {
+  if (Math.abs(a.length - b.length) > limit) return limit + 1;
+
+  let previous = Array.from({ length: b.length + 1 }, (unused, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+    let best = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+      current[j] = Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + cost);
+      if (current[j] < best) best = current[j];
+    }
+    if (best > limit) return limit + 1;
+    previous = current;
+  }
+  return previous[b.length];
+}
+
+function suggestDomain(domain) {
+  const clean = String(domain || '').toLowerCase();
+  if (!clean || COMMON.indexOf(clean) !== -1) return '';
+
+  for (const candidate of COMMON) {
+    if (editDistance(clean, candidate, 2) <= 2) return candidate;
+  }
+  return '';
+}
+
+async function checkEmail(address) {
+  const value = String(address || '').trim().toLowerCase();
+  const match = /^[^\s@]+@([^\s@]+\.[^\s@]+)$/.exec(value);
+  if (!match) return { checked: false };
+
+  const domain = match[1];
+  const suggestion = suggestDomain(domain);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const response = await fetch(
+      DOH + '?name=' + encodeURIComponent(domain) + '&type=MX',
+      { headers: { accept: 'application/dns-json' }, signal: controller.signal }
+    );
+    if (!response.ok) return { checked: false, suggestion };
+
+    const data = await response.json();
+    // Status 3 is NXDOMAIN: the domain itself does not exist.
+    const exists = data.Status === 0;
+    const mx = (data.Answer || []).filter((record) => record.type === 15);
+
+    // Some domains take mail on the A record with no MX. Rare, and worth not
+    // rejecting someone over, so it counts as deliverable.
+    const hasMail = mx.length > 0 || (exists && !data.Answer);
+
+    return {
+      checked: true,
+      domain,
+      exists,
+      deliverable: exists && (mx.length > 0 || hasMail),
+      mxCount: mx.length,
+      suggestion
+    };
+  } catch (error) {
+    // A DNS lookup that did not answer is not evidence against the address.
+    return { checked: false, suggestion };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* ==========================================================================
    Nixora Services LLC — form endpoint.
 
    Receives the three site forms, renders a branded notification and hands it
@@ -788,7 +889,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-15.5';
+const BUILD = '2026-09-15.6';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -1284,6 +1385,23 @@ export default {
         : await verifyAddress(payload || {});
 
       return json({ ok: true, ...result }, 200, cors);
+    }
+
+    /* Whether an address can receive mail at all. Answers "unknown" rather
+       than an error when the lookup does not come back, because a DNS query
+       that timed out is not evidence against somebody's email address. */
+    if (url.pathname === '/email/check') {
+      if (request.method !== 'POST') {
+        return json({ ok: false, error: 'Send this with POST.' }, 405, cors);
+      }
+      if (origin && !originAllowed(request, env)) {
+        return json({ ok: false, error: 'Origin not allowed.' }, 403, cors);
+      }
+
+      let payload = {};
+      try { payload = await request.json(); } catch (ignored) { /* empty */ }
+
+      return json({ ok: true, ...(await checkEmail(payload.email)) }, 200, cors);
     }
 
     if (url.pathname === '/selftest') {

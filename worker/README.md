@@ -168,6 +168,23 @@ spent, no list appears, the Worker answers with an empty one, and the
 applicant types their address exactly as before. A failure here costs a
 convenience and never an application.
 
+## Email addresses that cannot receive mail
+
+`/email/check` takes `{email}` and reports whether the domain has anywhere to
+deliver mail, using Cloudflare's DNS-over-HTTPS. No key, nothing to configure.
+
+The page refuses a submission whose domain does not exist, and offers a
+correction for a near-miss of a common one — `gmial.com`, `hotmial.com` —
+which it suggests rather than imposes.
+
+**It cannot tell you the mailbox exists.** Nothing can, short of sending to it
+or paying a verification service, so the part before the `@` is taken on
+trust. The mistyped domain is where the bounces come from, and that is what
+this catches.
+
+A lookup that does not answer leaves the field alone: a DNS query that timed
+out is not evidence against somebody's email address.
+
 ## Address help without an account
 
 Two public services carry this, and neither needs a key, a project or a card:
@@ -403,6 +420,7 @@ worker/
   src/forms.js          field names for the three forms → a render spec
   src/places.js         address lookup, proxied so the Google key stays secret
   src/address.js        ZIP and address checks that need no account at all
+  src/email-check.js    whether an email domain can receive mail
   src/email.js          the HTML and plain-text template
   scripts/preview.js    renders samples locally, sends nothing
   scripts/test.js       exercises the Worker with the Resend call stubbed

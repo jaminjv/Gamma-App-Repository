@@ -13,6 +13,7 @@ import { renderEmail, renderText, escapeHtml } from './email.js';
 import { detectFormType, buildSpec, sheetRow } from './forms.js';
 import { suggest, details } from './places.js';
 import { lookupZip, verifyAddress } from './address.js';
+import { checkEmail } from './email-check.js';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
@@ -20,7 +21,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-15.5';
+const BUILD = '2026-09-15.6';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -516,6 +517,23 @@ export default {
         : await verifyAddress(payload || {});
 
       return json({ ok: true, ...result }, 200, cors);
+    }
+
+    /* Whether an address can receive mail at all. Answers "unknown" rather
+       than an error when the lookup does not come back, because a DNS query
+       that timed out is not evidence against somebody's email address. */
+    if (url.pathname === '/email/check') {
+      if (request.method !== 'POST') {
+        return json({ ok: false, error: 'Send this with POST.' }, 405, cors);
+      }
+      if (origin && !originAllowed(request, env)) {
+        return json({ ok: false, error: 'Origin not allowed.' }, 403, cors);
+      }
+
+      let payload = {};
+      try { payload = await request.json(); } catch (ignored) { /* empty */ }
+
+      return json({ ok: true, ...(await checkEmail(payload.email)) }, 200, cors);
     }
 
     if (url.pathname === '/selftest') {

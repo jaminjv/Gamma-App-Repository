@@ -101,6 +101,25 @@ account, say — deploy the Worker again and change that URL; nothing in
 
 ## The application form
 
+The street address has to be one Google offered. Typing a plausible-looking
+address that was never in the list is refused, which is what the client asked
+for after invented addresses came through.
+
+It stops being enforced the moment the lookup stops working — a Google outage,
+a spent quota, no key configured. Otherwise a service the company does not run
+could take the whole application form down, nobody would be able to apply, and
+neither side would know why.
+
+The stated cost is real and was accepted: somebody living at an address Google
+does not have cannot apply, and will not be told why in terms they can act on.
+New construction and recently renumbered streets are the usual cases.
+
+The email address is checked for a domain that can receive mail, and a
+submission is refused when the domain does not exist. That catches the
+mistyped domain, which is where bounced replies come from; it says nothing
+about whether the mailbox exists, which cannot be known without sending to it.
+
+
 The application is signed by typing a full legal name, stamped with the date
 the form was submitted rather than the date the page loaded.
 

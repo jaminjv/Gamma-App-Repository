@@ -247,6 +247,28 @@
       var active = -1;
       var timer = null;
       var lastQuery = '';
+
+      /* The address has to be one Google offered, not one typed freely.
+         Enforced through setCustomValidity so it blocks the submit the same
+         way a missing required field does, with the same message and the
+         same red mark, rather than through a second mechanism.
+
+         It stops being enforced the moment the lookup stops working. A
+         Google outage or a spent quota must not take the whole application
+         form down with it — nobody could apply at all, and neither side
+         would know why. */
+      var chosenStreet = null;
+      var lookupWorks = true;
+
+      var ADDRESS_RULE = 'Pick your address from the list that appears as you type.';
+
+      var refreshAddressValidity = function () {
+        if (!lookupWorks) return addressInput.setCustomValidity('');
+        var value = addressInput.value.trim();
+        // An empty field is already caught by `required`, which says it better.
+        if (!value) return addressInput.setCustomValidity('');
+        addressInput.setCustomValidity(value === chosenStreet ? '' : ADDRESS_RULE);
+      };
       // One token covers the typing and the pick that follows, which Google
       // bills as a single lookup rather than one per keystroke.
       var token = null;
@@ -296,6 +318,8 @@
       var choose = function (option) {
         close();
         addressInput.value = option.line;
+        chosenStreet = option.line;
+        refreshAddressValidity();
 
         fetch(detailsUrl, {
           method: 'POST',
@@ -305,7 +329,11 @@
           .then(function (r) { return r.json(); })
           .then(function (data) {
             if (!data || !data.ok || !data.address) return;
-            setField('a-address', data.address.street || option.line);
+            // The details call returns the tidied street, which replaces what
+            // the suggestion showed — so that is what counts as chosen.
+            chosenStreet = data.address.street || option.line;
+            setField('a-address', chosenStreet);
+            refreshAddressValidity();
             setField('a-city', data.address.city);
             setField('a-zip', data.address.zip);
 
@@ -369,12 +397,25 @@
           .then(function (data) {
             // A stale answer must not reopen a list for text already replaced.
             if (addressInput.value.trim() !== query) return;
+            // configured:false means no key is set, which is a working state
+            // for the field — it just cannot be strict about it.
+            if (data && data.configured === false) {
+              lookupWorks = false;
+              refreshAddressValidity();
+            }
             render((data && data.suggestions) || []);
           })
-          .catch(function () { close(); });
+          .catch(function () {
+            // Unreachable, out of quota, refused: whatever the reason, the
+            // field goes back to accepting a typed address.
+            lookupWorks = false;
+            refreshAddressValidity();
+            close();
+          });
       };
 
       addressInput.addEventListener('input', function () {
+        refreshAddressValidity();
         window.clearTimeout(timer);
         timer = window.setTimeout(lookup, 250);
       });
@@ -531,6 +572,118 @@
   }
 
   /* ----------------------------------------------------------------------
+     Email addresses that cannot receive mail
+
+     Replies were bouncing, because a mistyped domain looks perfectly valid
+     to a browser: gmial.com passes every format check there is. This asks
+     the endpoint whether the domain has anywhere to deliver mail, and
+     refuses the submission when it does not.
+
+     What it cannot do is prove the mailbox exists. Nothing can, short of
+     sending to it or paying a verification service, so the part before the @
+     is still taken on trust. The mistyped domain is where the bounces come
+     from, and that is what this catches.
+     ---------------------------------------------------------------------- */
+  var emailFields = document.querySelectorAll('form[data-form] input[type="email"]');
+
+  if (emailFields.length && window.fetch) {
+    emailFields.forEach(function (input) {
+      var emailForm = input.form;
+      var action = emailForm && emailForm.getAttribute('action');
+      if (!action || action.indexOf(UNCONFIGURED) !== -1) return;
+
+      var checkUrl = new URL('email/check', action).href;
+      var note = document.createElement('p');
+      note.className = 'field-check';
+      note.hidden = true;
+      note.setAttribute('role', 'status');
+      note.setAttribute('aria-live', 'polite');
+      input.parentNode.appendChild(note);
+
+      var lastChecked = '';
+
+      var clearNote = function () {
+        note.hidden = true;
+        note.textContent = '';
+      };
+
+      var say = function (kind, text, fix) {
+        note.className = 'field-check field-check--' + kind;
+        note.textContent = text;
+        if (fix) {
+          var button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'field-check__use';
+          button.textContent = 'Use this';
+          button.addEventListener('click', fix);
+          note.appendChild(document.createTextNode(' '));
+          note.appendChild(button);
+        }
+        note.hidden = false;
+      };
+
+      var check = function () {
+        var value = input.value.trim();
+        if (!value || value === lastChecked) return;
+        if (!input.validity.valid && !input.validity.customError) return;
+        lastChecked = value;
+
+        fetch(checkUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ email: value })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (!data || input.value.trim() !== value) return;
+
+            // A lookup that did not answer is not evidence against an
+            // address, so an unchecked result leaves the field alone.
+            if (!data.checked) {
+              input.setCustomValidity('');
+              return clearNote();
+            }
+
+            if (!data.deliverable) {
+              input.setCustomValidity(
+                'This email cannot receive mail — the domain "' + data.domain +
+                '" does not exist. Check the spelling.');
+              input.setAttribute('aria-invalid', 'true');
+              return say('warn', 'We cannot deliver to "' + data.domain +
+                '". Check the spelling — this is where replies would go.');
+            }
+
+            input.setCustomValidity('');
+            input.removeAttribute('aria-invalid');
+
+            if (data.suggestion) {
+              var fixed = value.replace(/@.*$/, '@' + data.suggestion);
+              return say('info', 'Did you mean ' + fixed + '?', function () {
+                input.value = fixed;
+                lastChecked = '';
+                clearNote();
+                check();
+              });
+            }
+
+            clearNote();
+          })
+          .catch(function () {
+            input.setCustomValidity('');
+            clearNote();
+          });
+      };
+
+      input.addEventListener('blur', function () { window.setTimeout(check, 150); });
+      input.addEventListener('input', function () {
+        // Typing clears the previous verdict; it is about text that is gone.
+        input.setCustomValidity('');
+        clearNote();
+      });
+    });
+  }
+
+  /* ----------------------------------------------------------------------
      Forms
      ---------------------------------------------------------------------- */
   var showStatus = function (form, type, message) {
@@ -629,11 +782,25 @@
         });
         missing.forEach(function (el) { el.setAttribute('aria-invalid', 'true'); });
 
-        showStatus(form, 'err', endSentence(missing.length === 1
-          ? 'One thing is still missing: ' + fieldLabel(form, missing[0])
-          : 'Please complete ' + listNames(missing.map(function (el) {
-              return fieldLabel(form, el);
-            }))));
+        // A field carrying a rule of its own — an address that has to come
+        // from the list, an email whose domain cannot receive mail — has a
+        // message written for it. Naming the field would not explain why it
+        // is being refused when it visibly has something in it.
+        var explained = missing.filter(function (el) {
+          return el.validity && el.validity.customError && el.validationMessage;
+        });
+
+        showStatus(form, 'err', explained.length
+          ? endSentence(explained[0].validationMessage)
+          : endSentence(missing.length === 1
+              ? 'One thing is still missing: ' + fieldLabel(form, missing[0])
+              : 'Please complete ' + listNames(missing.map(function (el) {
+                  return fieldLabel(form, el);
+                }))));
+
+        // Take the visitor to the field that needs explaining, not to the
+        // first blank one further up.
+        if (explained.length) missing = explained.concat(missing);
 
         var bad = missing[0];
         if (bad) {
