@@ -788,7 +788,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-15.2';
+const BUILD = '2026-09-15.3';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -1096,7 +1096,12 @@ async function selftest(env, options) {
           ? 'The script URL no longer exists (404). The spreadsheet or its Web App ' +
             'deployment has been deleted, so SHEET_WEBHOOK_URL points at nothing. ' +
             'It needs setting up again, and the new /exec URL stored here.'
-          : signIn
+          : attempt.status === 403
+            ? 'The deployment exists but refuses this request (403). That is what ' +
+              '"Who has access" set to anything other than "Anyone" does: the Worker ' +
+              'arrives signed in as nobody. Edit the existing deployment rather than ' +
+              'making a new one, so the URL stays the same.'
+            : signIn
             ? 'The script answered with a sign-in page, which means the Web App is ' +
               'no longer deployed for "Anyone". Redeploy it with that access.'
             : html

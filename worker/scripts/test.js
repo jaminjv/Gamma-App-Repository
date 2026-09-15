@@ -387,6 +387,13 @@ check('and says the stored URL is the thing to replace',
   /SHEET_WEBHOOK_URL/.test(sh.verdict), sh.verdict);
 
 sh = await sheetTest(SHEET_ENV, () => new Response(
+  '<!DOCTYPE html><html lang="en"><head><script>window[\'ppConfig\']', { status: 403 }));
+check('a 403 is read as the access setting, not a broken script',
+  /"Who has access"/.test(sh.verdict) && /"Anyone"/.test(sh.verdict), sh.verdict);
+check('and says to edit the deployment so the URL survives',
+  /Edit the existing deployment/.test(sh.verdict), sh.verdict);
+
+sh = await sheetTest(SHEET_ENV, () => new Response(
   '<html><head><title>Sign in - Google Accounts</title>accounts.google.com', { status: 200 }));
 check('a sign-in page is read as the wrong access setting',
   /no longer deployed for "Anyone"/.test(sh.verdict), sh.verdict);
