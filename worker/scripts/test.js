@@ -20,6 +20,7 @@ const ENV = {
 
 let sent = null, failNext = false, sheetPost = null, sheetFails = false;
 const SHEET_URL = 'https://script.google.com/macros/s/deadbeef/exec';
+const SHEET_RESULT = 'https://script.googleusercontent.com/macros/echo?key=deadbeef';
 const realFetch = globalThis.fetch;
 let placesCall = null, placesFails = false;
 let censusReply = null, zipReply = null;
@@ -49,7 +50,16 @@ globalThis.fetch = async (url, init) => {
       ] }), { status: 200 });
   }
   if (String(url) === SHEET_URL) {
+    // Apps Script never answers a POST directly: it runs doPost and then
+    // redirects to where the result is waiting.
     sheetPost = JSON.parse(init.body);
+    if (init.redirect !== 'manual') {
+      throw new Error('the sheet POST must not auto-follow the redirect');
+    }
+    return new Response(null, { status: 302, headers: { location: SHEET_RESULT } });
+  }
+  if (String(url) === SHEET_RESULT) {
+    if (init && init.method !== 'GET') throw new Error('the result is fetched with GET');
     return sheetFails
       ? new Response('<html>Script error</html>', { status: 200 })
       : new Response('{"ok":true}', { status: 200 });
@@ -361,8 +371,9 @@ const sheetTest = async (env, reply) => {
   globalThis.fetch = async (url, init) => {
     if (String(url) === SHEET_URL) {
       sheetPost = JSON.parse(init.body);
-      return reply();
+      return new Response(null, { status: 302, headers: { location: SHEET_RESULT } });
     }
+    if (String(url) === SHEET_RESULT) return reply();
     return previous(url, init);
   };
   const res = await worker.fetch(new Request(
@@ -374,6 +385,8 @@ const sheetTest = async (env, reply) => {
 
 let sh = await sheetTest(SHEET_ENV, () => new Response('{"ok":true}', { status: 200 }));
 check('sheet test writes a row', sheetPost !== null);
+check('the row survives the Apps Script redirect',
+  /accepted a row/.test(sh.verdict), sh.verdict);
 check('to a tab of its own, not among the applicants',
   sheetPost.tab === 'Endpoint tests', sheetPost.tab);
 check('and says it landed', /accepted a row/.test(sh.verdict), sh.verdict);

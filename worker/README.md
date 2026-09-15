@@ -224,6 +224,19 @@ into the company's hiring records. It is checked before anything is written.
 Leaving `SHEET_WEBHOOK_URL` empty turns the spreadsheet off. The email is
 unaffected either way.
 
+### The redirect
+
+Apps Script never answers a POST directly. It runs `doPost`, then redirects to
+where the result is waiting — and following a 302 turns the request into a
+GET, which lands on `doGet`, which this script does not define.
+
+So the Worker follows that redirect by hand: POST once with
+`redirect: 'manual'`, then GET the location. Letting it follow automatically
+means every append looks like a failure while quietly succeeding — the row is
+written, and what comes back is an error page for a call that already worked.
+The script's own execution log is the giveaway: `doPost` completed, `doGet`
+failed, once per submission.
+
 ### What happens when the sheet is down
 
 The email is sent first, and a failure to append is logged and reported

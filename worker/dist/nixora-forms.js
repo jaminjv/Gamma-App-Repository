@@ -788,7 +788,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
    the dashboard editor is easy to get wrong in a way that leaves the previous
    version running and says nothing, which cost two rounds of fixing code that
    was never live. Bump this whenever src/ changes. */
-const BUILD = '2026-09-15.3';
+const BUILD = '2026-09-15.4';
 
 // A job application with long notes is a few kilobytes. Anything past this is
 // not a person filling in a form.
@@ -922,22 +922,44 @@ async function send(env, { to, replyTo, subject, html, text }) {
    its row is worth knowing about, but it is not worth failing a job
    application over, so a failure here is logged and reported through the
    self-test rather than shown to the person who filled in the form. */
+/* Apps Script answers a POST with a 302 to where the result is waiting, and
+   following a 302 turns the request into a GET — which lands on doGet, which
+   this script does not define. So doPost ran, the row was written, and the
+   Worker read back an error page for a call that had already succeeded.
+
+   The redirect is followed by hand instead: POST once, then GET the location
+   the way Apps Script intends. */
+async function postToAppsScript(endpoint, payload) {
+  let response = await fetch(endpoint, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  // Two hops is all Apps Script uses; the bound stops a redirect loop from
+  // becoming a Worker that never returns.
+  for (let hop = 0; hop < 3 && response.status >= 300 && response.status < 400; hop++) {
+    const location = response.headers.get('location');
+    if (!location) break;
+    response = await fetch(location, { method: 'GET', redirect: 'manual' });
+  }
+
+  return { status: response.status, body: (await response.text()).slice(0, 300) };
+}
+
 async function appendToSheet(env, form, type) {
   const endpoint = String(env.SHEET_WEBHOOK_URL || '').trim();
   if (!endpoint) return { configured: false };
 
   const row = sheetRow(form, type);
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ token: String(env.SHEET_TOKEN || ''), ...row })
-  });
+  const answer = await postToAppsScript(endpoint,
+    { token: String(env.SHEET_TOKEN || ''), ...row });
 
   // Apps Script answers 200 with an HTML error page when the script itself
   // threw, so the status alone does not settle it.
-  const body = (await response.text()).slice(0, 300);
-  const ok = response.ok && /"ok"\s*:\s*true/.test(body);
-  if (!ok) throw new Error('Sheet responded ' + response.status + ': ' + body);
+  const ok = answer.status < 400 && /"ok"\s*:\s*true/.test(answer.body);
+  if (!ok) throw new Error('Sheet responded ' + answer.status + ': ' + answer.body);
   return { configured: true, ok: true, tab: row.tab };
 }
 
@@ -948,25 +970,16 @@ async function trySheet(env) {
   const endpoint = String(env.SHEET_WEBHOOK_URL || '').trim();
   if (!endpoint) return { configured: false };
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      token: String(env.SHEET_TOKEN || ''),
-      tab: 'Endpoint tests',
-      columns: ['Received', 'Note'],
-      values: [new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC',
-               'Written by /selftest?sheet=1. Nobody filled in a form.']
-    })
+  const answer = await postToAppsScript(endpoint, {
+    token: String(env.SHEET_TOKEN || ''),
+    tab: 'Endpoint tests',
+    columns: ['Received', 'Note'],
+    values: [new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC',
+             'Written by /selftest?sheet=1. Nobody filled in a form.']
   });
 
-  // Apps Script answers 200 with an HTML error page when the script threw,
-  // and 302 to a sign-in page when the spreadsheet is gone or the deployment
-  // was removed, so the status alone settles nothing.
-  const body = (await response.text()).slice(0, 300);
-  const ok = response.ok && /"ok"\s*:\s*true/.test(body);
-
-  return { configured: true, ok, status: response.status, answer: body };
+  const ok = answer.status < 400 && /"ok"\s*:\s*true/.test(answer.body);
+  return { configured: true, ok, status: answer.status, answer: answer.body };
 }
 
 /* Everything the self-test can read is correct and the send still fails, so
