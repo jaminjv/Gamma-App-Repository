@@ -98,7 +98,8 @@ const proofFor = (email) => verify.makeProof(ENV, email);
 const APP = {
   'Position Applied For': 'Regular Cleaning', 'Full Name': 'Pepito Perez',
   email: 'pepito@ejemplo.com', Phone: '(314) 409-7141', 'Date of Birth': '1990-02-02',
-  'Street Address': '9 Oak St', City: 'St. Louis', State: 'MO', 'ZIP Code': '63101',
+  'Street Address': '9 Oak St', 'Apt or Unit': 'Apt 4B',
+  City: 'St. Louis', State: 'MO', 'ZIP Code': '63101',
   'Emergency Contact': 'Maria Perez', 'Emergency Phone': '(314) 555-2222',
   'Certified Accurate': 'yes', 'Accepted Digital Data Handling': 'yes',
   'Electronic Signature': 'Pepito Perez', 'Signed On': '2026-09-01',
@@ -131,6 +132,8 @@ check('bearer token sent', sent.headers.authorization === 'Bearer re_test_key');
 check('html carries the hosted logo',
   sent.body.html.includes('https://www.nixoraservices.com/assets/img/mail-logo.png'));
 check('dob formatted', sent.body.html.includes('February 2, 1990'));
+check('the unit rides on the street line, as on an envelope',
+  sent.body.html.includes('9 Oak St, Apt 4B'), 'missing from the address block');
 check('tel link normalised', sent.body.html.includes('tel:+13144097141'));
 check('unchecked declaration omitted',
   !sent.body.html.includes('Accepted SMS and WhatsApp updates'));
@@ -347,6 +350,7 @@ check('sheet columns and values line up',
 
 const cell = (name) => sheetPost.values[sheetPost.columns.indexOf(name)];
 check('sheet row keeps the applicant', cell('Full Name') === 'Pepito Perez', cell('Full Name'));
+check('the unit gets a column of its own', cell('Apt or Unit') === 'Apt 4B', cell('Apt or Unit'));
 check('sheet row formats the date of birth', cell('Date of Birth') === 'February 2, 1990', cell('Date of Birth'));
 check('sheet row records a ticked declaration as Yes', cell('Certified Accurate') === 'Yes');
 check('sheet row records an unticked one as No',

@@ -1024,6 +1024,18 @@ li { margin-bottom: .4rem; }
 .field-row--3 { grid-template-columns: 2fr 1fr 1fr; }
 @media (max-width: 620px) { .field-row--3 { grid-template-columns: 1fr; } }
 
+/* The street address keeps most of the width: it carries the suggestion list,
+   which needs room to show a street and a city on one line. */
+.field-row--address { grid-template-columns: 3fr 1fr; }
+@media (max-width: 620px) { .field-row--address { grid-template-columns: 1fr; } }
+
+/* The two hints are different lengths, so one wraps and the other does not,
+   and the inputs stopped lining up. Pushing each input to the bottom of its
+   cell keeps them level however the text above them falls. */
+@media (min-width: 621px) {
+  .field-row--address .field > input { margin-top: auto; }
+}
+
 .fieldset {
   margin: 0 0 1.4rem;
   padding: 1.1rem 1.2rem .4rem;

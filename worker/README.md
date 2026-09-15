@@ -227,6 +227,13 @@ rather than instead of them: Places suggests while somebody types, this checks
 what they ended up with, and when `GOOGLE_PLACES_KEY` is unset this is all
 there is.
 
+The apartment or unit number is typed freely, in a field of its own. The
+lookup returns buildings; a unit number is almost never in it, so requiring
+the address to come from the list would otherwise have meant nobody living in
+an apartment could give a complete one. It travels on the street line in the
+email, the way it is written on an envelope, and gets its own column in the
+spreadsheet.
+
 On the page, the ZIP fills the city and state **only when they are blank** —
 somebody who typed a city meant it — and the finished address gets one line
 under it: confirmed, a "did you mean" with the standardised version behind a

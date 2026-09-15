@@ -16,6 +16,7 @@ const A = {
   phone: 'Phone',
   dob: 'Date of Birth',
   street: 'Street Address',
+  unit: 'Apt or Unit',
   city: 'City',
   state: 'State',
   zip: 'ZIP Code',
@@ -69,7 +70,9 @@ function applicationSpec(form) {
   const position = get(form, A.position);
 
   const cityLine = [get(form, A.city), get(form, A.state)].filter(Boolean).join(', ');
-  const address = [get(form, A.street), [cityLine, get(form, A.zip)].filter(Boolean).join(' ')]
+  // The unit goes on the street line, the way it is written on an envelope.
+  const streetLine = [get(form, A.street), get(form, A.unit)].filter(Boolean).join(', ');
+  const address = [streetLine, [cityLine, get(form, A.zip)].filter(Boolean).join(' ')]
     .filter(Boolean);
 
   const emergency = [get(form, A.ecName), get(form, A.ecPhone)].filter(Boolean).join(' · ');
@@ -263,6 +266,7 @@ const SHEET_ROWS = {
     ['Phone', get(form, A.phone)],
     ['Date of Birth', formatDate(get(form, A.dob))],
     ['Street Address', get(form, A.street)],
+    ['Apt or Unit', get(form, A.unit)],
     ['City', get(form, A.city)],
     ['State', get(form, A.state)],
     ['ZIP Code', get(form, A.zip)],

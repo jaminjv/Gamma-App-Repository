@@ -246,10 +246,21 @@
                    autocomplete="bday" data-date required>
           </div>
 
-          <div class="field">
-            <label for="a-address">Street address <span class="req" aria-hidden="true">*</span></label>
-            <span class="hint">Start typing and choose your address from the list.</span>
-            <input id="a-address" name="Street Address" type="text" autocomplete="street-address" required placeholder="Number and street">
+          <div class="field-row field-row--address">
+            <div class="field">
+              <label for="a-address">Street address <span class="req" aria-hidden="true">*</span></label>
+              <span class="hint">Start typing and choose your address from the list.</span>
+              <input id="a-address" name="Street Address" type="text" autocomplete="street-address" required placeholder="Number and street">
+            </div>
+            <div class="field">
+              <label for="a-unit">Apt / Unit</label>
+              <!-- Typed freely on purpose: the lookup returns buildings, and a
+                   unit number is almost never in it. Leaving this out would
+                   have meant nobody in an apartment could give a full address. -->
+              <span class="hint">If any.</span>
+              <input id="a-unit" name="Apt or Unit" type="text" autocomplete="address-line2"
+                     maxlength="20" placeholder="Apt 4B">
+            </div>
           </div>
 
           <div class="field-row field-row--3">

@@ -24,6 +24,7 @@ const SAMPLES = {
     Phone: '(314) 555-0000',
     'Date of Birth': '1990-02-02',
     'Street Address': '9 Oak St',
+    'Apt or Unit': 'Apt 4B',
     City: 'St. Louis',
     State: 'MO',
     'ZIP Code': '63101',
